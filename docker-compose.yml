@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - cargo-cache:/usr/local/cargo/registry
+    environment:
+      - RUST_LOG=info
+      - BIND_ADDR=0.0.0.0:3000
+      - DATABASE_URL=sqlite:/app/gantry_board.db?mode=rwc
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  cargo-cache:
