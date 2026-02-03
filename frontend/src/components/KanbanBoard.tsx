@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
+import { DndContext, DragOverlay } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useListTasks,
@@ -41,9 +42,11 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           getListTasksQueryKey({ project_id: projectId }),
         );
 
-        // Optimistically update
+        // Optimistically update - only update status since that's what we change on drag
         queryClient.setQueryData<Task[]>(getListTasksQueryKey({ project_id: projectId }), (old) =>
-          old?.map((task) => (task.id === id ? { ...task, ...data } : task)),
+          old?.map((task) =>
+            task.id === id && data.status ? { ...task, status: data.status } : task,
+          ),
         );
 
         return { previousTasks };
