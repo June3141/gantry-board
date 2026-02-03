@@ -265,3 +265,37 @@ async fn test_list_tasks_returns_created_tasks() {
     let tasks: Vec<serde_json::Value> = response.json();
     assert_eq!(tasks.len(), 2);
 }
+
+#[tokio::test]
+async fn test_update_task_validates_empty_title() {
+    let server = create_test_server().await;
+    let project_id = create_test_project(&server).await;
+
+    let create_response = server
+        .post("/api/tasks")
+        .json(&json!({
+            "project_id": project_id,
+            "title": "Valid Title"
+        }))
+        .await;
+    let created: serde_json::Value = create_response.json();
+    let task_id = created["id"].as_str().unwrap();
+
+    let response = server
+        .patch(&format!("/api/tasks/{}", task_id))
+        .json(&json!({
+            "title": ""
+        }))
+        .await;
+
+    response.assert_status(StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_list_tasks_requires_project_id() {
+    let server = create_test_server().await;
+
+    let response = server.get("/api/tasks").await;
+
+    response.assert_status(StatusCode::BAD_REQUEST);
+}
