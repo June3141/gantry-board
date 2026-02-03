@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type WsMessageOneOfFiveType =
-  (typeof WsMessageOneOfFiveType)[keyof typeof WsMessageOneOfFiveType];
+export type WsMessageOneOfFiveType = typeof WsMessageOneOfFiveType[keyof typeof WsMessageOneOfFiveType];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WsMessageOneOfFiveType = {

@@ -25,8 +25,12 @@ case "$FILE_PATH" in
     ;;
   *.ts | *.tsx | *.css)
     if [[ -f "$FILE_PATH" ]]; then
+      REL_PATH="$FILE_PATH"
+      if [[ "$REL_PATH" == frontend/* ]]; then
+        REL_PATH="${REL_PATH#frontend/}"
+      fi
       cd frontend
-      npx prettier --write "$FILE_PATH" --log-level silent 2>/dev/null || true
+      npx prettier --write "$REL_PATH" --log-level silent 2>/dev/null || true
     fi
     ;;
 esac

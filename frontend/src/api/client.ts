@@ -37,5 +37,10 @@ export const customInstance = async <T>({
     return undefined as T;
   }
 
-  return response.json();
+  const contentType = response.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  return response.text() as Promise<T>;
 };
