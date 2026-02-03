@@ -103,6 +103,9 @@ pub async fn update_project(
     let now = Utc::now();
 
     let name = req.name.as_ref().unwrap_or(&existing.name);
+    // NOTE: With Option<String>, None means "don't update" (keeps existing value).
+    // To support explicitly setting description to NULL, use Option<Option<String>>
+    // or a custom enum in UpdateProjectRequest. This is acceptable for Phase 1.
     let description = req.description.as_ref().or(existing.description.as_ref());
 
     sqlx::query(
