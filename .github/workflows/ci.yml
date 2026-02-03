@@ -10,6 +10,29 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  pr-title:
+    name: PR title lint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title format
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # gitmoji + scope: subject
+          pattern='^(✨|🐛|📝|✅|♻️|🔧|🎨|⚡️|🔥|💥|🚀|🚧|🔒|⬆️|🗃️|🎉) [a-z]+: .+$'
+          if ! echo "$PR_TITLE" | grep -qP "$pattern"; then
+            echo "::error::PR title must match gitmoji + scope format."
+            echo "  Expected: <emoji> <scope>: <subject>"
+            echo "  Example:  ✨ backend: add health check endpoint"
+            echo "  Got:      $PR_TITLE"
+            exit 1
+          fi
+          if [ ${#PR_TITLE} -gt 70 ]; then
+            echo "::error::PR title must be 70 characters or less (got ${#PR_TITLE})."
+            exit 1
+          fi
+
   rust:
     name: Rust (build, test, clippy)
     runs-on: ubuntu-latest

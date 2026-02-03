@@ -107,10 +107,36 @@ Always separate test commits from implementation commits:
 
 ## Pull Request Rules
 
-- Title: English, max 70 characters
-- Summary section must not be empty
-- All PRs must reference related issues
+### PR Title Format
+
+PR タイトルはコミットメッセージと同じ gitmoji + scope 形式を使う（squash merge 時にそのままコミットメッセージになるため）:
+
+```
+<emoji> <scope>: <subject>
+```
+
+- Max 70 characters
+- Same emoji/scope rules as commit messages
+- Examples:
+  - `✨ backend: add task CRUD endpoints`
+  - `🐛 frontend: fix board drag-and-drop race condition`
+  - `🔧 ci: add PR title validation`
+
+### PR Body
+
+PR テンプレート (`.github/pull_request_template.md`) のセクションをすべて埋める:
+
+- **Summary**: 変更内容を 1-3 文で説明
+- **Changes**: 主な変更点をリスト
+- **Why**: なぜこの変更が必要か
+- **Test Plan**: 検証手順をチェックリストで記載
+- **Related**: 関連 issue を `Closes #` / `Refs #` で参照
+
+### General
+
+- All PRs must reference related issues when applicable
 - Test Plan must include verification steps
+- Summary section must not be empty
 
 ## Language
 
