@@ -41,10 +41,7 @@ describe('KanbanColumn', () => {
   });
 
   it('renders task count', () => {
-    const tasks = [
-      createMockTask({ id: 'task-1' }),
-      createMockTask({ id: 'task-2' }),
-    ];
+    const tasks = [createMockTask({ id: 'task-1' }), createMockTask({ id: 'task-2' })];
     render(<KanbanColumn status={TaskStatus.todo} tasks={tasks} />);
 
     expect(screen.getByText('2')).toBeInTheDocument();

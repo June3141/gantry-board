@@ -34,9 +34,7 @@ const createQueryClient = () =>
 
 const renderWithProviders = (ui: React.ReactElement) => {
   const queryClient = createQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
 
 describe('KanbanBoard', () => {
