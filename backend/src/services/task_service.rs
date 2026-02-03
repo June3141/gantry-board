@@ -65,8 +65,7 @@ pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResul
     .bind(now)
     .bind(now)
     .execute(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     Ok(Task {
         id,
@@ -93,8 +92,7 @@ pub async fn get_task(pool: &SqlitePool, id: Uuid) -> AppResult<Task> {
     )
     .bind(id.to_string())
     .fetch_optional(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     row.map(|r| r.try_into())
         .transpose()
@@ -113,8 +111,7 @@ pub async fn list_tasks(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<Ta
     )
     .bind(project_id.to_string())
     .fetch_all(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     rows.into_iter()
         .map(|r| r.try_into())
@@ -151,8 +148,7 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
     .bind(now)
     .bind(id.to_string())
     .execute(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     Ok(Task {
         id,
@@ -178,8 +174,7 @@ pub async fn delete_task(pool: &SqlitePool, id: Uuid) -> AppResult<()> {
     )
     .bind(id.to_string())
     .execute(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound(format!("task {} not found", id)));
@@ -193,21 +188,7 @@ mod tests {
     use super::*;
     use crate::models::project::CreateProjectRequest;
     use crate::services::project_service;
-    use sqlx::sqlite::SqlitePoolOptions;
-
-    async fn setup_test_db() -> SqlitePool {
-        let pool = SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
-            .await
-            .expect("Failed to create test database");
-
-        sqlx::migrate!("./migrations")
-            .run(&pool)
-            .await
-            .expect("Failed to run migrations");
-
-        pool
-    }
+    use crate::test_helpers::setup_test_db;
 
     async fn create_test_project(pool: &SqlitePool) -> Uuid {
         let req = CreateProjectRequest {

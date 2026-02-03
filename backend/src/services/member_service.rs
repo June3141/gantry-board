@@ -45,8 +45,7 @@ pub async fn add_member(
     .bind(&req.role)
     .bind(now)
     .execute(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     Ok(ProjectMember {
         project_id,
@@ -71,8 +70,7 @@ pub async fn get_member(
     .bind(project_id.to_string())
     .bind(user_id.to_string())
     .fetch_optional(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     row.map(|r| r.try_into())
         .transpose()
@@ -96,8 +94,7 @@ pub async fn list_members(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<
     )
     .bind(project_id.to_string())
     .fetch_all(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     rows.into_iter()
         .map(|r| r.try_into())
@@ -124,8 +121,7 @@ pub async fn update_member_role(
     .bind(project_id.to_string())
     .bind(user_id.to_string())
     .execute(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     Ok(ProjectMember {
         project_id,
@@ -145,8 +141,7 @@ pub async fn remove_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) -
     .bind(project_id.to_string())
     .bind(user_id.to_string())
     .execute(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound(format!(
@@ -163,21 +158,7 @@ mod tests {
     use super::*;
     use crate::models::project::CreateProjectRequest;
     use crate::services::project_service;
-    use sqlx::sqlite::SqlitePoolOptions;
-
-    async fn setup_test_db() -> SqlitePool {
-        let pool = SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
-            .await
-            .expect("Failed to create test database");
-
-        sqlx::migrate!("./migrations")
-            .run(&pool)
-            .await
-            .expect("Failed to run migrations");
-
-        pool
-    }
+    use crate::test_helpers::setup_test_db;
 
     async fn create_test_project(pool: &SqlitePool) -> Uuid {
         let req = CreateProjectRequest {
