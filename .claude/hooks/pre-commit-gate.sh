@@ -26,7 +26,13 @@ if [[ -n "$COMMIT_MSG" ]]; then
   SUBJECT=$(echo "$COMMIT_MSG" | head -1 | sed 's/^[[:space:]]*//')
 
   # Validate gitmoji + scope format
-  GITMOJI_PATTERN='^(✨|🐛|📝|✅|♻️|🔧|🎨|⚡️|🔥|💥|🚀|🚧|🔒|⬆️|🗃️|🎉) [a-z]+: .+$'
+  GITMOJI_FILE=".claude/hooks/gitmoji-pattern.txt"
+  if [[ -f "$GITMOJI_FILE" ]]; then
+    EMOJIS=$(cat "$GITMOJI_FILE")
+  else
+    EMOJIS='✨|🐛|📝|✅|♻️|🔧|🎨|⚡️|🔥|💥|🚀|🚧|🔒|⬆️|🗃️|🎉'
+  fi
+  GITMOJI_PATTERN="^($EMOJIS) [a-z]+: .+$"
   if ! echo "$SUBJECT" | grep -qP "$GITMOJI_PATTERN"; then
     echo '{"decision":"block","reason":"Commit message must match gitmoji + scope format: e.g. ✨ backend: add health check endpoint"}'
     exit 2

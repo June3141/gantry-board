@@ -102,6 +102,11 @@ tasks:
     dir: "{{.FRONTEND_DIR}}"
     cmd: npm run dev
 
+  # ── Gitmoji ───────────────────────────────────
+  gitmoji:sync:
+    desc: Sync gitmoji pattern from upstream
+    cmd: .claude/hooks/sync-gitmoji-pattern.sh
+
   # ── API (OpenAPI / orval) ─────────────────────
   api:export:
     desc: Export OpenAPI spec from Rust tests

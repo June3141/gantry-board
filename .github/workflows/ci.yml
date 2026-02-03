@@ -15,12 +15,20 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Validate PR title format
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          # gitmoji + scope: subject
-          pattern='^(✨|🐛|📝|✅|♻️|🔧|🎨|⚡️|🔥|💥|🚀|🚧|🔒|⬆️|🗃️|🎉) [a-z]+: .+$'
+          # Load gitmoji pattern from shared file
+          GITMOJI_FILE=".claude/hooks/gitmoji-pattern.txt"
+          if [[ -f "$GITMOJI_FILE" ]]; then
+            EMOJIS=$(cat "$GITMOJI_FILE")
+          else
+            echo "::error::$GITMOJI_FILE not found. Run 'task gitmoji:sync' to generate."
+            exit 1
+          fi
+          pattern="^($EMOJIS) [a-z]+: .+$"
           if ! echo "$PR_TITLE" | grep -qP "$pattern"; then
             echo "::error::PR title must match gitmoji + scope format."
             echo "  Expected: <emoji> <scope>: <subject>"
