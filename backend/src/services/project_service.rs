@@ -175,7 +175,9 @@ mod tests {
             description: Some("A test project".to_string()),
         };
 
-        let project = create_project(&pool, &req).await.expect("Failed to create project");
+        let project = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
 
         assert_eq!(project.name, "Test Project");
         assert_eq!(project.description, Some("A test project".to_string()));
@@ -189,9 +191,13 @@ mod tests {
             name: "Test Project".to_string(),
             description: None,
         };
-        let created = create_project(&pool, &req).await.expect("Failed to create project");
+        let created = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
 
-        let found = get_project(&pool, created.id).await.expect("Failed to get project");
+        let found = get_project(&pool, created.id)
+            .await
+            .expect("Failed to get project");
 
         assert_eq!(found.id, created.id);
         assert_eq!(found.name, "Test Project");
@@ -227,8 +233,12 @@ mod tests {
             name: "Project 2".to_string(),
             description: None,
         };
-        create_project(&pool, &req1).await.expect("Failed to create project 1");
-        create_project(&pool, &req2).await.expect("Failed to create project 2");
+        create_project(&pool, &req1)
+            .await
+            .expect("Failed to create project 1");
+        create_project(&pool, &req2)
+            .await
+            .expect("Failed to create project 2");
 
         let projects = list_projects(&pool).await.expect("Failed to list projects");
 
@@ -242,14 +252,17 @@ mod tests {
             name: "Original Name".to_string(),
             description: None,
         };
-        let created = create_project(&pool, &req).await.expect("Failed to create project");
+        let created = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
 
         let update_req = UpdateProjectRequest {
             name: Some("Updated Name".to_string()),
             description: None,
         };
-        let updated =
-            update_project(&pool, created.id, &update_req).await.expect("Failed to update project");
+        let updated = update_project(&pool, created.id, &update_req)
+            .await
+            .expect("Failed to update project");
 
         assert_eq!(updated.name, "Updated Name");
     }
@@ -261,14 +274,17 @@ mod tests {
             name: "Test Project".to_string(),
             description: Some("Original description".to_string()),
         };
-        let created = create_project(&pool, &req).await.expect("Failed to create project");
+        let created = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
 
         let update_req = UpdateProjectRequest {
             name: None,
             description: Some("Updated description".to_string()),
         };
-        let updated =
-            update_project(&pool, created.id, &update_req).await.expect("Failed to update project");
+        let updated = update_project(&pool, created.id, &update_req)
+            .await
+            .expect("Failed to update project");
 
         assert_eq!(updated.description, Some("Updated description".to_string()));
     }
@@ -280,9 +296,13 @@ mod tests {
             name: "To Be Deleted".to_string(),
             description: None,
         };
-        let created = create_project(&pool, &req).await.expect("Failed to create project");
+        let created = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
 
-        delete_project(&pool, created.id).await.expect("Failed to delete project");
+        delete_project(&pool, created.id)
+            .await
+            .expect("Failed to delete project");
 
         let result = get_project(&pool, created.id).await;
         assert!(matches!(result, Err(AppError::NotFound(_))));

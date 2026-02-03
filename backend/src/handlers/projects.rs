@@ -35,7 +35,8 @@ pub async fn create_project(
     State(state): State<AppState>,
     Json(body): Json<CreateProjectRequest>,
 ) -> AppResult<(StatusCode, Json<Project>)> {
-    body.validate().map_err(|e| AppError::Validation(e.to_string()))?;
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
     let project = project_service::create_project(&state.pool, &body).await?;
     Ok((StatusCode::CREATED, Json(project)))
 }
@@ -74,7 +75,8 @@ pub async fn update_project(
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateProjectRequest>,
 ) -> AppResult<Json<Project>> {
-    body.validate().map_err(|e| AppError::Validation(e.to_string()))?;
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
     let project = project_service::update_project(&state.pool, id, &body).await?;
     Ok(Json(project))
 }
