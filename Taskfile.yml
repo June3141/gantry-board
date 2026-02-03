@@ -1,0 +1,127 @@
+version: "3"
+
+vars:
+  FRONTEND_DIR: frontend
+  BACKEND_DIR: backend
+
+tasks:
+  # ── 全体 ──────────────────────────────────────
+  check:
+    desc: Run all checks (fmt, lint, build, test)
+    cmds:
+      - task: fmt:check
+      - task: lint
+      - task: build
+      - task: test
+
+  fmt:
+    desc: Format all code
+    cmds:
+      - task: backend:fmt
+      - task: frontend:fmt
+
+  fmt:check:
+    desc: Check formatting without modifying files
+    cmds:
+      - task: backend:fmt:check
+      - task: frontend:fmt:check
+
+  lint:
+    desc: Lint all code
+    cmds:
+      - task: backend:lint
+      - task: frontend:lint
+
+  build:
+    desc: Build all
+    cmds:
+      - task: backend:build
+      - task: frontend:build
+
+  test:
+    desc: Run all tests
+    cmds:
+      - task: backend:test
+      - task: frontend:test
+
+  # ── Backend (Rust) ────────────────────────────
+  backend:fmt:
+    desc: Format Rust code
+    cmd: cargo fmt
+
+  backend:fmt:check:
+    desc: Check Rust formatting
+    cmd: cargo fmt --check
+
+  backend:lint:
+    desc: Run clippy
+    cmd: cargo clippy --all-targets -- -D warnings
+
+  backend:build:
+    desc: Build Rust backend
+    cmd: cargo build
+
+  backend:test:
+    desc: Run Rust tests
+    cmd: cargo test
+
+  backend:run:
+    desc: Run backend server
+    cmd: cargo run
+    env:
+      RUST_LOG: info
+
+  # ── Frontend (React/TypeScript) ───────────────
+  frontend:fmt:
+    desc: Format frontend code with Prettier
+    dir: "{{.FRONTEND_DIR}}"
+    cmd: npx prettier --write 'src/**/*.{ts,tsx,css}'
+
+  frontend:fmt:check:
+    desc: Check frontend formatting
+    dir: "{{.FRONTEND_DIR}}"
+    cmd: npx prettier --check 'src/**/*.{ts,tsx,css}'
+
+  frontend:lint:
+    desc: Lint frontend code
+    dir: "{{.FRONTEND_DIR}}"
+    cmd: npx eslint .
+
+  frontend:build:
+    desc: Build frontend
+    dir: "{{.FRONTEND_DIR}}"
+    cmd: npm run build
+
+  frontend:test:
+    desc: Run frontend tests
+    dir: "{{.FRONTEND_DIR}}"
+    cmd: npx vitest run
+
+  frontend:dev:
+    desc: Start Vite dev server
+    dir: "{{.FRONTEND_DIR}}"
+    cmd: npm run dev
+
+  # ── Gitmoji ───────────────────────────────────
+  gitmoji:sync:
+    desc: Sync gitmoji pattern from upstream
+    cmd: .claude/hooks/sync-gitmoji-pattern.sh
+
+  # ── API (OpenAPI / orval) ─────────────────────
+  api:export:
+    desc: Export OpenAPI spec from Rust tests
+    cmd: cargo test --test export_openapi -- --nocapture
+    generates:
+      - openapi.json
+
+  api:generate:
+    desc: Generate TypeScript client from OpenAPI spec
+    dir: "{{.FRONTEND_DIR}}"
+    deps: [api:export]
+    cmd: npx orval
+
+  api:diff:
+    desc: Check if generated API client is up to date
+    dir: "{{.FRONTEND_DIR}}"
+    deps: [api:generate]
+    cmd: git diff --exit-code src/api/generated/

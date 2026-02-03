@@ -10,6 +10,38 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  pr-title:
+    name: PR title lint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PR title format
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # Load gitmoji pattern from shared file
+          GITMOJI_FILE=".claude/hooks/gitmoji-pattern.txt"
+          if [[ -f "$GITMOJI_FILE" ]]; then
+            EMOJIS=$(cat "$GITMOJI_FILE")
+          else
+            echo "::error::$GITMOJI_FILE not found. Run 'task gitmoji:sync' to generate."
+            exit 1
+          fi
+          TYPES='feat|fix|docs|test|refactor|chore|style|perf'
+          pattern="^($TYPES): ($EMOJIS) .+$"
+          if ! echo "$PR_TITLE" | grep -qP "$pattern"; then
+            echo "::error::PR title must match type: emoji subject format."
+            echo "  Expected: <type>: <emoji> <subject>"
+            echo "  Example:  feat: ✨ add health check endpoint"
+            echo "  Got:      $PR_TITLE"
+            exit 1
+          fi
+          if [ ${#PR_TITLE} -gt 70 ]; then
+            echo "::error::PR title must be 70 characters or less (got ${#PR_TITLE})."
+            exit 1
+          fi
+
   rust:
     name: Rust (build, test, clippy)
     runs-on: ubuntu-latest
@@ -24,16 +56,32 @@ jobs:
       - run: cargo build
       - run: cargo test
 
-  frontend:
-    name: Frontend (lint, test, build)
+  api:
+    name: API (openapi export, orval diff)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
+    needs: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cargo test --test export_openapi -- --nocapture
+      - run: cd frontend && npm ci
+      - run: cd frontend && npx orval
+      - run: cd frontend && git diff --exit-code src/api/generated/
+        name: Check generated API client is up to date
+
+  frontend:
+    name: Frontend (lint, format, test, build)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm ci
-      - run: npm run build
+      - run: cd frontend && npm ci
+      - run: cd frontend && npx eslint .
+      - run: cd frontend && npx prettier --check 'src/**/*.{ts,tsx,css}'
+      - run: cd frontend && npm run build
