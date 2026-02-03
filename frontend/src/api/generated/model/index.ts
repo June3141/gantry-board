@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './addMemberRequest';
 export * from './createProjectRequest';
 export * from './createProjectRequestDescription';
 export * from './createTaskRequest';
@@ -14,14 +15,17 @@ export * from './createTaskRequestDescription';
 export * from './createTaskRequestParentId';
 export * from './createTaskRequestPriority';
 export * from './createTaskRequestStatus';
+export * from './memberRole';
 export * from './project';
 export * from './projectDescription';
+export * from './projectMember';
 export * from './task';
 export * from './taskAssignedTo';
 export * from './taskDescription';
 export * from './taskParentId';
 export * from './taskPriority';
 export * from './taskStatus';
+export * from './updateMemberRequest';
 export * from './updateProjectRequest';
 export * from './updateProjectRequestDescription';
 export * from './updateProjectRequestName';

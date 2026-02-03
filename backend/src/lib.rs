@@ -37,7 +37,28 @@ pub fn app(state: AppState) -> Router {
         .route("/projects", post(handlers::projects::create_project))
         .route("/projects/{id}", get(handlers::projects::get_project))
         .route("/projects/{id}", patch(handlers::projects::update_project))
-        .route("/projects/{id}", delete(handlers::projects::delete_project));
+        .route("/projects/{id}", delete(handlers::projects::delete_project))
+        // Project members
+        .route(
+            "/projects/{project_id}/members",
+            get(handlers::project_members::list_members),
+        )
+        .route(
+            "/projects/{project_id}/members",
+            post(handlers::project_members::add_member),
+        )
+        .route(
+            "/projects/{project_id}/members/{user_id}",
+            get(handlers::project_members::get_member),
+        )
+        .route(
+            "/projects/{project_id}/members/{user_id}",
+            patch(handlers::project_members::update_member),
+        )
+        .route(
+            "/projects/{project_id}/members/{user_id}",
+            delete(handlers::project_members::remove_member),
+        );
 
     Router::new()
         .route("/health", get(handlers::health::health_check))
