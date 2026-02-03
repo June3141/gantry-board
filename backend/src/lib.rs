@@ -5,6 +5,8 @@ pub mod handlers;
 pub mod models;
 pub mod openapi;
 pub mod services;
+#[cfg(test)]
+pub mod test_helpers;
 pub mod ws;
 
 use std::sync::Arc;

@@ -45,8 +45,7 @@ pub async fn create_project(pool: &SqlitePool, req: &CreateProjectRequest) -> Ap
     .bind(now)
     .bind(now)
     .execute(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     Ok(Project {
         id,
@@ -67,8 +66,7 @@ pub async fn get_project(pool: &SqlitePool, id: Uuid) -> AppResult<Project> {
     )
     .bind(id.to_string())
     .fetch_optional(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     row.map(|r| r.try_into())
         .transpose()
@@ -85,8 +83,7 @@ pub async fn list_projects(pool: &SqlitePool) -> AppResult<Vec<Project>> {
         "#,
     )
     .fetch_all(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     rows.into_iter()
         .map(|r| r.try_into())
@@ -120,8 +117,7 @@ pub async fn update_project(
     .bind(now)
     .bind(id.to_string())
     .execute(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     Ok(Project {
         id,
@@ -141,8 +137,7 @@ pub async fn delete_project(pool: &SqlitePool, id: Uuid) -> AppResult<()> {
     )
     .bind(id.to_string())
     .execute(pool)
-    .await
-    .map_err(|e| AppError::Internal(e.into()))?;
+    .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound(format!("project {} not found", id)));
@@ -154,21 +149,7 @@ pub async fn delete_project(pool: &SqlitePool, id: Uuid) -> AppResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::sqlite::SqlitePoolOptions;
-
-    async fn setup_test_db() -> SqlitePool {
-        let pool = SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
-            .await
-            .expect("Failed to create test database");
-
-        sqlx::migrate!("./migrations")
-            .run(&pool)
-            .await
-            .expect("Failed to run migrations");
-
-        pool
-    }
+    use crate::test_helpers::setup_test_db;
 
     #[tokio::test]
     async fn test_create_project_saves_to_db_and_returns() {
