@@ -4,9 +4,7 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
-use crate::models::task::{
-    CreateTaskRequest, Task, TaskPriority, TaskStatus, UpdateTaskRequest,
-};
+use crate::models::task::{CreateTaskRequest, Task, TaskPriority, TaskStatus, UpdateTaskRequest};
 
 #[derive(FromRow)]
 struct TaskRow {
@@ -236,7 +234,9 @@ mod tests {
             parent_id: None,
             assigned_to: None,
         };
-        let task = create_task(&pool, &req).await.expect("Failed to create task");
+        let task = create_task(&pool, &req)
+            .await
+            .expect("Failed to create task");
 
         assert_eq!(task.title, "Test Task");
         assert_eq!(task.description, Some("A test task".to_string()));
@@ -259,7 +259,9 @@ mod tests {
             parent_id: None,
             assigned_to: None,
         };
-        let task = create_task(&pool, &req).await.expect("Failed to create task");
+        let task = create_task(&pool, &req)
+            .await
+            .expect("Failed to create task");
 
         assert!(matches!(task.status, TaskStatus::InProgress));
         assert!(matches!(task.priority, TaskPriority::Urgent));
@@ -279,9 +281,13 @@ mod tests {
             parent_id: None,
             assigned_to: None,
         };
-        let created = create_task(&pool, &req).await.expect("Failed to create task");
+        let created = create_task(&pool, &req)
+            .await
+            .expect("Failed to create task");
 
-        let task = get_task(&pool, created.id).await.expect("Failed to get task");
+        let task = get_task(&pool, created.id)
+            .await
+            .expect("Failed to get task");
 
         assert_eq!(task.id, created.id);
         assert_eq!(task.title, "Get Me");

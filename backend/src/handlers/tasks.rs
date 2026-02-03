@@ -1,22 +1,38 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
 use axum::Json;
+use garde::Validate;
+use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 use crate::models::task::{CreateTaskRequest, Task, UpdateTaskRequest};
+use crate::services::{project_service, task_service};
 use crate::AppState;
+
+#[derive(Debug, Deserialize)]
+pub struct ListTasksQuery {
+    pub project_id: Uuid,
+}
 
 #[utoipa::path(
     get,
     path = "/api/tasks",
+    params(("project_id" = Uuid, Query, description = "Filter by project ID")),
     responses(
-        (status = 200, description = "List all tasks", body = Vec<Task>)
+        (status = 200, description = "List tasks for project", body = Vec<Task>),
+        (status = 404, description = "Project not found")
     ),
     tag = "tasks"
 )]
-pub async fn list_tasks(State(_state): State<AppState>) -> AppResult<Json<Vec<Task>>> {
-    // Phase 1 で実装
-    Ok(Json(vec![]))
+pub async fn list_tasks(
+    State(state): State<AppState>,
+    Query(query): Query<ListTasksQuery>,
+) -> AppResult<Json<Vec<Task>>> {
+    // Verify project exists
+    project_service::get_project(&state.pool, query.project_id).await?;
+    let tasks = task_service::list_tasks(&state.pool, query.project_id).await?;
+    Ok(Json(tasks))
 }
 
 #[utoipa::path(
@@ -24,18 +40,22 @@ pub async fn list_tasks(State(_state): State<AppState>) -> AppResult<Json<Vec<Ta
     path = "/api/tasks",
     request_body = CreateTaskRequest,
     responses(
-        (status = 201, description = "Task created", body = Task)
+        (status = 201, description = "Task created", body = Task),
+        (status = 400, description = "Validation error"),
+        (status = 404, description = "Project not found")
     ),
     tag = "tasks"
 )]
 pub async fn create_task(
-    State(_state): State<AppState>,
-    Json(_body): Json<CreateTaskRequest>,
-) -> AppResult<(axum::http::StatusCode, Json<Task>)> {
-    // Phase 1 で実装
-    Err(crate::error::AppError::Internal(anyhow::anyhow!(
-        "not implemented"
-    )))
+    State(state): State<AppState>,
+    Json(body): Json<CreateTaskRequest>,
+) -> AppResult<(StatusCode, Json<Task>)> {
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+    // Verify project exists
+    project_service::get_project(&state.pool, body.project_id).await?;
+    let task = task_service::create_task(&state.pool, &body).await?;
+    Ok((StatusCode::CREATED, Json(task)))
 }
 
 #[utoipa::path(
@@ -49,11 +69,11 @@ pub async fn create_task(
     tag = "tasks"
 )]
 pub async fn get_task(
-    State(_state): State<AppState>,
-    Path(_id): Path<Uuid>,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
 ) -> AppResult<Json<Task>> {
-    // Phase 1 で実装
-    Err(crate::error::AppError::NotFound("task not found".into()))
+    let task = task_service::get_task(&state.pool, id).await?;
+    Ok(Json(task))
 }
 
 #[utoipa::path(
@@ -63,17 +83,20 @@ pub async fn get_task(
     request_body = UpdateTaskRequest,
     responses(
         (status = 200, description = "Task updated", body = Task),
+        (status = 400, description = "Validation error"),
         (status = 404, description = "Task not found")
     ),
     tag = "tasks"
 )]
 pub async fn update_task(
-    State(_state): State<AppState>,
-    Path(_id): Path<Uuid>,
-    Json(_body): Json<UpdateTaskRequest>,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<UpdateTaskRequest>,
 ) -> AppResult<Json<Task>> {
-    // Phase 1 で実装
-    Err(crate::error::AppError::NotFound("task not found".into()))
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+    let task = task_service::update_task(&state.pool, id, &body).await?;
+    Ok(Json(task))
 }
 
 #[utoipa::path(
@@ -87,9 +110,9 @@ pub async fn update_task(
     tag = "tasks"
 )]
 pub async fn delete_task(
-    State(_state): State<AppState>,
-    Path(_id): Path<Uuid>,
-) -> AppResult<axum::http::StatusCode> {
-    // Phase 1 で実装
-    Err(crate::error::AppError::NotFound("task not found".into()))
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> AppResult<StatusCode> {
+    task_service::delete_task(&state.pool, id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
