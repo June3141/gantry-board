@@ -72,7 +72,7 @@ docs/       — プロジェクトドキュメント
 ## コミット規約
 
 - コミットメッセージは英語
-- gitmoji + scope 形式: `✨ backend: add health check endpoint`
+- `type: emoji subject` 形式: `feat: ✨ add health check endpoint`
 - 1 コミット = 1 関心事、最大 10 ファイル / 300 行 (テスト・自動生成除く)
 - TDD: テストコミット (✅) と実装コミット (✨/🐛) を分離
 - 詳細は `.claude/skills/commit-rules/SKILL.md` を参照

@@ -32,9 +32,10 @@ if [[ -n "$COMMIT_MSG" ]]; then
   else
     EMOJIS='✨|🐛|📝|✅|♻️|🔧|🎨|⚡️|🔥|💥|🚀|🚧|🔒|⬆️|🗃️|🎉'
   fi
-  GITMOJI_PATTERN="^($EMOJIS) [a-z]+: .+$"
+  TYPES='feat|fix|docs|test|refactor|chore|style|perf'
+  GITMOJI_PATTERN="^($TYPES): ($EMOJIS) .+$"
   if ! echo "$SUBJECT" | grep -qP "$GITMOJI_PATTERN"; then
-    echo '{"decision":"block","reason":"Commit message must match gitmoji + scope format: e.g. ✨ backend: add health check endpoint"}'
+    echo '{"decision":"block","reason":"Commit message must match type: emoji subject format: e.g. feat: ✨ add health check endpoint"}'
     exit 2
   fi
 

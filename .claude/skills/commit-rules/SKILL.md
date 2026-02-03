@@ -9,14 +9,30 @@ user-invocable: false
 ## Commit Message Format
 
 ```
-<emoji> <scope>: <subject>
+<type>: <emoji> <subject>
 
 <body>
 
 <footer>
 ```
 
+### Type (required)
+
+| Type | When to use |
+|------|-------------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `test` | Add or update tests |
+| `refactor` | Refactor (no behavior change) |
+| `chore` | Build, CI, or config changes |
+| `style` | Code formatting only (clippy, fmt, prettier) |
+| `perf` | Performance improvement |
+
 ### Emoji (required) — gitmoji
+
+Place after the colon. Full list is generated from upstream and stored in `.claude/hooks/gitmoji-pattern.txt`.
+Commonly used:
 
 | Emoji | Meaning |
 |-------|---------|
@@ -26,7 +42,7 @@ user-invocable: false
 | ✅ | Add or update tests |
 | ♻️ | Refactor (no behavior change) |
 | 🔧 | Build, CI, or config changes |
-| 🎨 | Code formatting only (clippy, fmt, prettier) |
+| 🎨 | Code formatting only |
 | ⚡️ | Performance improvement |
 | 🔥 | Remove code or files |
 | 💥 | Breaking change |
@@ -35,10 +51,7 @@ user-invocable: false
 | 🔒 | Security fix |
 | ⬆️ | Upgrade dependencies |
 | 🗃️ | Database migration |
-
-### Scope (recommended)
-
-`backend`, `frontend`, `db`, `agent`, `git`, `docker`, `ci`
+| 🎉 | Initial commit |
 
 ### Subject (required)
 
@@ -59,14 +72,14 @@ user-invocable: false
 ### Examples
 
 ```
-✨ backend: add health check endpoint
+feat: ✨ add health check endpoint
 
 The /health endpoint returns "ok" for basic liveness probing.
 This will be used by docker-compose health checks.
 ```
 
 ```
-✅ backend: add task creation tests
+test: ✅ add task creation tests
 
 Write failing tests first per TDD workflow.
 Tests cover create, read, update operations.
@@ -96,9 +109,9 @@ Refs #12
 Always separate test commits from implementation commits:
 
 ```
-✅ backend: add task creation tests        ← tests only (expected to fail)
-✨ backend: implement task creation         ← implementation (tests pass)
-♻️ backend: extract task validation logic   ← refactor (tests still pass)
+test: ✅ add task creation tests             ← tests only (expected to fail)
+feat: ✨ implement task creation              ← implementation (tests pass)
+refactor: ♻️ extract task validation logic   ← refactor (tests still pass)
 ```
 
 - TDD test commits MUST be made before the implementation commit
@@ -109,18 +122,18 @@ Always separate test commits from implementation commits:
 
 ### PR Title Format
 
-PR タイトルはコミットメッセージと同じ gitmoji + scope 形式を使う（squash merge 時にそのままコミットメッセージになるため）:
+PR タイトルはコミットメッセージと同じ `type: emoji subject` 形式を使う（squash merge 時にそのままコミットメッセージになるため）:
 
 ```
-<emoji> <scope>: <subject>
+<type>: <emoji> <subject>
 ```
 
 - Max 70 characters
-- Same emoji/scope rules as commit messages
+- Same type/emoji rules as commit messages
 - Examples:
-  - `✨ backend: add task CRUD endpoints`
-  - `🐛 frontend: fix board drag-and-drop race condition`
-  - `🔧 ci: add PR title validation`
+  - `feat: ✨ add task CRUD endpoints`
+  - `fix: 🐛 resolve board drag-and-drop race condition`
+  - `chore: 🔧 add PR title validation`
 
 ### PR Body
 

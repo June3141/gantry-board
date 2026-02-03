@@ -28,11 +28,12 @@ jobs:
             echo "::error::$GITMOJI_FILE not found. Run 'task gitmoji:sync' to generate."
             exit 1
           fi
-          pattern="^($EMOJIS) [a-z]+: .+$"
+          TYPES='feat|fix|docs|test|refactor|chore|style|perf'
+          pattern="^($TYPES): ($EMOJIS) .+$"
           if ! echo "$PR_TITLE" | grep -qP "$pattern"; then
-            echo "::error::PR title must match gitmoji + scope format."
-            echo "  Expected: <emoji> <scope>: <subject>"
-            echo "  Example:  ✨ backend: add health check endpoint"
+            echo "::error::PR title must match type: emoji subject format."
+            echo "  Expected: <type>: <emoji> <subject>"
+            echo "  Example:  feat: ✨ add health check endpoint"
             echo "  Got:      $PR_TITLE"
             exit 1
           fi
