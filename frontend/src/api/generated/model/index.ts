@@ -15,6 +15,7 @@ export * from './createTaskRequestDescription';
 export * from './createTaskRequestParentId';
 export * from './createTaskRequestPriority';
 export * from './createTaskRequestStatus';
+export * from './listTasksParams';
 export * from './memberRole';
 export * from './project';
 export * from './projectDescription';
