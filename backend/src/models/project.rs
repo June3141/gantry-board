@@ -8,9 +8,25 @@ pub struct Project {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
-    pub owner_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, sqlx::Type)]
+#[sqlx(type_name = "TEXT", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum MemberRole {
+    Owner,
+    Admin,
+    Member,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, sqlx::FromRow)]
+pub struct ProjectMember {
+    pub project_id: Uuid,
+    pub user_id: Uuid,
+    pub role: MemberRole,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, garde::Validate)]
