@@ -161,8 +161,8 @@ pub async fn remove_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::project_service;
     use crate::models::project::CreateProjectRequest;
+    use crate::services::project_service;
     use sqlx::sqlite::SqlitePoolOptions;
 
     async fn setup_test_db() -> SqlitePool {
@@ -279,15 +279,27 @@ mod tests {
         let user1 = Uuid::new_v4();
         let user2 = Uuid::new_v4();
 
-        add_member(&pool, project_id, &AddMemberRequest {
-            user_id: user1,
-            role: MemberRole::Owner,
-        }).await.expect("Failed to add member 1");
+        add_member(
+            &pool,
+            project_id,
+            &AddMemberRequest {
+                user_id: user1,
+                role: MemberRole::Owner,
+            },
+        )
+        .await
+        .expect("Failed to add member 1");
 
-        add_member(&pool, project_id, &AddMemberRequest {
-            user_id: user2,
-            role: MemberRole::Member,
-        }).await.expect("Failed to add member 2");
+        add_member(
+            &pool,
+            project_id,
+            &AddMemberRequest {
+                user_id: user2,
+                role: MemberRole::Member,
+            },
+        )
+        .await
+        .expect("Failed to add member 2");
 
         let members = list_members(&pool, project_id)
             .await
@@ -302,14 +314,27 @@ mod tests {
         let project_id = create_test_project(&pool).await;
         let user_id = Uuid::new_v4();
 
-        add_member(&pool, project_id, &AddMemberRequest {
-            user_id,
-            role: MemberRole::Member,
-        }).await.expect("Failed to add member");
+        add_member(
+            &pool,
+            project_id,
+            &AddMemberRequest {
+                user_id,
+                role: MemberRole::Member,
+            },
+        )
+        .await
+        .expect("Failed to add member");
 
-        let updated = update_member_role(&pool, project_id, user_id, &UpdateMemberRequest {
-            role: MemberRole::Admin,
-        }).await.expect("Failed to update role");
+        let updated = update_member_role(
+            &pool,
+            project_id,
+            user_id,
+            &UpdateMemberRequest {
+                role: MemberRole::Admin,
+            },
+        )
+        .await
+        .expect("Failed to update role");
 
         assert!(matches!(updated.role, MemberRole::Admin));
     }
@@ -320,10 +345,16 @@ mod tests {
         let project_id = create_test_project(&pool).await;
         let user_id = Uuid::new_v4();
 
-        add_member(&pool, project_id, &AddMemberRequest {
-            user_id,
-            role: MemberRole::Member,
-        }).await.expect("Failed to add member");
+        add_member(
+            &pool,
+            project_id,
+            &AddMemberRequest {
+                user_id,
+                role: MemberRole::Member,
+            },
+        )
+        .await
+        .expect("Failed to add member");
 
         remove_member(&pool, project_id, user_id)
             .await
