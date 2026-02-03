@@ -1,12 +1,11 @@
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
-use garde::Validate;
 use uuid::Uuid;
 
-use crate::error::{AppError, AppResult};
+use crate::error::AppResult;
 use crate::models::project::{AddMemberRequest, ProjectMember, UpdateMemberRequest};
-use crate::services::member_service;
+use crate::services::{member_service, project_service};
 use crate::AppState;
 
 #[utoipa::path(
@@ -23,6 +22,8 @@ pub async fn list_members(
     State(state): State<AppState>,
     Path(project_id): Path<Uuid>,
 ) -> AppResult<Json<Vec<ProjectMember>>> {
+    // Verify project exists before listing members
+    project_service::get_project(&state.pool, project_id).await?;
     let members = member_service::list_members(&state.pool, project_id).await?;
     Ok(Json(members))
 }
@@ -43,8 +44,8 @@ pub async fn add_member(
     Path(project_id): Path<Uuid>,
     Json(body): Json<AddMemberRequest>,
 ) -> AppResult<(StatusCode, Json<ProjectMember>)> {
-    body.validate()
-        .map_err(|e| AppError::Validation(e.to_string()))?;
+    // Verify project exists before adding member
+    project_service::get_project(&state.pool, project_id).await?;
     let member = member_service::add_member(&state.pool, project_id, &body).await?;
     Ok((StatusCode::CREATED, Json(member)))
 }
@@ -89,8 +90,6 @@ pub async fn update_member(
     Path((project_id, user_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<UpdateMemberRequest>,
 ) -> AppResult<Json<ProjectMember>> {
-    body.validate()
-        .map_err(|e| AppError::Validation(e.to_string()))?;
     let member =
         member_service::update_member_role(&state.pool, project_id, user_id, &body).await?;
     Ok(Json(member))

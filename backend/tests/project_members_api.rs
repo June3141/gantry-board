@@ -213,3 +213,32 @@ async fn test_list_members_returns_all_members() {
     let members: Vec<serde_json::Value> = response.json();
     assert_eq!(members.len(), 2);
 }
+
+#[tokio::test]
+async fn test_list_members_returns_not_found_for_nonexistent_project() {
+    let server = create_test_server().await;
+    let nonexistent_project_id = Uuid::new_v4();
+
+    let response = server
+        .get(&format!("/api/projects/{}/members", nonexistent_project_id))
+        .await;
+
+    response.assert_status(StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn test_add_member_returns_not_found_for_nonexistent_project() {
+    let server = create_test_server().await;
+    let nonexistent_project_id = Uuid::new_v4();
+    let user_id = Uuid::new_v4();
+
+    let response = server
+        .post(&format!("/api/projects/{}/members", nonexistent_project_id))
+        .json(&json!({
+            "user_id": user_id.to_string(),
+            "role": "member"
+        }))
+        .await;
+
+    response.assert_status(StatusCode::NOT_FOUND);
+}
