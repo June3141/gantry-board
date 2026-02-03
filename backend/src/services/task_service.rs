@@ -65,8 +65,7 @@ pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResul
     .bind(now)
     .bind(now)
     .execute(pool)
-    .await
-    ?;
+    .await?;
 
     Ok(Task {
         id,
@@ -93,8 +92,7 @@ pub async fn get_task(pool: &SqlitePool, id: Uuid) -> AppResult<Task> {
     )
     .bind(id.to_string())
     .fetch_optional(pool)
-    .await
-    ?;
+    .await?;
 
     row.map(|r| r.try_into())
         .transpose()
@@ -113,8 +111,7 @@ pub async fn list_tasks(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<Ta
     )
     .bind(project_id.to_string())
     .fetch_all(pool)
-    .await
-    ?;
+    .await?;
 
     rows.into_iter()
         .map(|r| r.try_into())
@@ -151,8 +148,7 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
     .bind(now)
     .bind(id.to_string())
     .execute(pool)
-    .await
-    ?;
+    .await?;
 
     Ok(Task {
         id,

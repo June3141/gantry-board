@@ -12,6 +12,13 @@ pub enum AppError {
     #[error("conflict: {0}")]
     Conflict(String),
 
+    /// Wrapper for all `sqlx::Error` values.
+    ///
+    /// We intentionally treat all SQLx errors the same at the HTTP boundary,
+    /// returning `500 Internal Server Error`, except for constraint violations
+    /// (unique/foreign key) which are detected and converted to `Conflict`.
+    /// Higher layers using `fetch_optional` are responsible for translating
+    /// "row not found" conditions into `AppError::NotFound`.
     #[error("database error: {0}")]
     Database(#[from] sqlx::Error),
 
@@ -31,6 +38,10 @@ impl IntoResponse for AppError {
                 let err_str = err.to_string();
                 if err_str.contains("UNIQUE constraint failed") {
                     return AppError::Conflict("resource already exists".to_string())
+                        .into_response();
+                }
+                if err_str.contains("FOREIGN KEY constraint failed") {
+                    return AppError::Conflict("referenced resource does not exist".to_string())
                         .into_response();
                 }
                 (
