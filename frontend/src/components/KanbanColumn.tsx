@@ -1,3 +1,4 @@
+import { useDroppable } from '@dnd-kit/core';
 import type { Task } from '../api/generated/model';
 import { TaskStatus } from '../api/generated/model';
 import { TaskCard } from './TaskCard';
@@ -5,6 +6,7 @@ import { TaskCard } from './TaskCard';
 interface KanbanColumnProps {
   status: TaskStatus;
   tasks: Task[];
+  activeTaskId?: string | null;
 }
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -15,16 +17,24 @@ const statusLabels: Record<TaskStatus, string> = {
   [TaskStatus.done]: 'Done',
 };
 
-export function KanbanColumn({ status, tasks }: KanbanColumnProps) {
+export function KanbanColumn({ status, tasks, activeTaskId }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+  });
+
   return (
-    <div className="flex min-h-[500px] w-72 flex-shrink-0 flex-col rounded-lg bg-gray-100">
+    <div
+      className={`flex min-h-[500px] w-72 flex-shrink-0 flex-col rounded-lg ${
+        isOver ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-gray-100'
+      }`}
+    >
       <div className="flex items-center justify-between p-3">
         <h2 className="text-sm font-semibold text-gray-700">{statusLabels[status]}</h2>
         <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
           {tasks.length}
         </span>
       </div>
-      <div className="flex-1 space-y-2 overflow-y-auto p-2">
+      <div ref={setNodeRef} className="flex-1 space-y-2 overflow-y-auto p-2">
         {tasks.length === 0 ? (
           <div
             data-testid="column-empty"
@@ -33,7 +43,9 @@ export function KanbanColumn({ status, tasks }: KanbanColumnProps) {
             No tasks
           </div>
         ) : (
-          tasks.map((task) => <TaskCard key={task.id} task={task} />)
+          tasks.map((task) => (
+            <TaskCard key={task.id} task={task} isDragging={activeTaskId === task.id} />
+          ))
         )}
       </div>
     </div>
