@@ -47,3 +47,17 @@ pub struct UpdateProjectRequest {
     #[garde(length(max = 2000))]
     pub description: Option<String>,
 }
+
+#[derive(Debug, Deserialize, ToSchema, garde::Validate)]
+pub struct AddMemberRequest {
+    #[garde(skip)]
+    pub user_id: Uuid,
+    #[garde(skip)]
+    pub role: MemberRole,
+}
+
+#[derive(Debug, Deserialize, ToSchema, garde::Validate)]
+pub struct UpdateMemberRequest {
+    #[garde(skip)]
+    pub role: MemberRole,
+}
