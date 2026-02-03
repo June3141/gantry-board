@@ -1,40 +1,161 @@
+use chrono::{DateTime, Utc};
+use sqlx::prelude::FromRow;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::project::{AddMemberRequest, MemberRole, ProjectMember, UpdateMemberRequest};
 
+#[derive(FromRow)]
+struct MemberRow {
+    project_id: String,
+    user_id: String,
+    role: MemberRole,
+    created_at: DateTime<Utc>,
+}
+
+impl TryFrom<MemberRow> for ProjectMember {
+    type Error = uuid::Error;
+
+    fn try_from(row: MemberRow) -> Result<Self, Self::Error> {
+        Ok(ProjectMember {
+            project_id: row.project_id.parse()?,
+            user_id: row.user_id.parse()?,
+            role: row.role,
+            created_at: row.created_at,
+        })
+    }
+}
+
 pub async fn add_member(
-    _pool: &SqlitePool,
-    _project_id: Uuid,
-    _req: &AddMemberRequest,
+    pool: &SqlitePool,
+    project_id: Uuid,
+    req: &AddMemberRequest,
 ) -> AppResult<ProjectMember> {
-    Err(AppError::Internal(anyhow::anyhow!("not implemented")))
+    let now = Utc::now();
+
+    sqlx::query(
+        r#"
+        INSERT INTO project_members (project_id, user_id, role, created_at)
+        VALUES ($1, $2, $3, $4)
+        "#,
+    )
+    .bind(project_id.to_string())
+    .bind(req.user_id.to_string())
+    .bind(&req.role)
+    .bind(now)
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::Internal(e.into()))?;
+
+    Ok(ProjectMember {
+        project_id,
+        user_id: req.user_id,
+        role: req.role.clone(),
+        created_at: now,
+    })
 }
 
 pub async fn get_member(
-    _pool: &SqlitePool,
-    _project_id: Uuid,
-    _user_id: Uuid,
+    pool: &SqlitePool,
+    project_id: Uuid,
+    user_id: Uuid,
 ) -> AppResult<ProjectMember> {
-    Err(AppError::Internal(anyhow::anyhow!("not implemented")))
+    let row = sqlx::query_as::<_, MemberRow>(
+        r#"
+        SELECT project_id, user_id, role, created_at
+        FROM project_members
+        WHERE project_id = $1 AND user_id = $2
+        "#,
+    )
+    .bind(project_id.to_string())
+    .bind(user_id.to_string())
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Internal(e.into()))?;
+
+    row.map(|r| r.try_into())
+        .transpose()
+        .map_err(|e: uuid::Error| AppError::Internal(e.into()))?
+        .ok_or_else(|| {
+            AppError::NotFound(format!(
+                "member {} not found in project {}",
+                user_id, project_id
+            ))
+        })
 }
 
-pub async fn list_members(_pool: &SqlitePool, _project_id: Uuid) -> AppResult<Vec<ProjectMember>> {
-    Err(AppError::Internal(anyhow::anyhow!("not implemented")))
+pub async fn list_members(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<ProjectMember>> {
+    let rows = sqlx::query_as::<_, MemberRow>(
+        r#"
+        SELECT project_id, user_id, role, created_at
+        FROM project_members
+        WHERE project_id = $1
+        ORDER BY created_at ASC
+        "#,
+    )
+    .bind(project_id.to_string())
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Internal(e.into()))?;
+
+    rows.into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.into()))
 }
 
 pub async fn update_member_role(
-    _pool: &SqlitePool,
-    _project_id: Uuid,
-    _user_id: Uuid,
-    _req: &UpdateMemberRequest,
+    pool: &SqlitePool,
+    project_id: Uuid,
+    user_id: Uuid,
+    req: &UpdateMemberRequest,
 ) -> AppResult<ProjectMember> {
-    Err(AppError::Internal(anyhow::anyhow!("not implemented")))
+    let existing = get_member(pool, project_id, user_id).await?;
+
+    sqlx::query(
+        r#"
+        UPDATE project_members
+        SET role = $1
+        WHERE project_id = $2 AND user_id = $3
+        "#,
+    )
+    .bind(&req.role)
+    .bind(project_id.to_string())
+    .bind(user_id.to_string())
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::Internal(e.into()))?;
+
+    Ok(ProjectMember {
+        project_id,
+        user_id,
+        role: req.role.clone(),
+        created_at: existing.created_at,
+    })
 }
 
-pub async fn remove_member(_pool: &SqlitePool, _project_id: Uuid, _user_id: Uuid) -> AppResult<()> {
-    Err(AppError::Internal(anyhow::anyhow!("not implemented")))
+pub async fn remove_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) -> AppResult<()> {
+    let result = sqlx::query(
+        r#"
+        DELETE FROM project_members
+        WHERE project_id = $1 AND user_id = $2
+        "#,
+    )
+    .bind(project_id.to_string())
+    .bind(user_id.to_string())
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::Internal(e.into()))?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!(
+            "member {} not found in project {}",
+            user_id, project_id
+        )));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
