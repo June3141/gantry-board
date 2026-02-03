@@ -31,4 +31,4 @@ chrono = { workspace = true }
 futures-util = { workspace = true }
 
 [dev-dependencies]
-axum-test = "16"
+axum-test = "18"

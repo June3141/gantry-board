@@ -71,6 +71,35 @@ tasks:
     env:
       RUST_LOG: info
 
+  # ── Database (sqlx) ──────────────────────────────
+  db:create:
+    desc: Create SQLite database
+    dir: "{{.BACKEND_DIR}}"
+    cmd: sqlx database create
+
+  db:migrate:
+    desc: Run database migrations
+    dir: "{{.BACKEND_DIR}}"
+    cmd: sqlx migrate run
+
+  db:migrate:add:
+    desc: Create a new migration (usage: task db:migrate:add -- <name>)
+    dir: "{{.BACKEND_DIR}}"
+    cmd: sqlx migrate add {{.CLI_ARGS}}
+
+  db:migrate:info:
+    desc: Show migration status
+    dir: "{{.BACKEND_DIR}}"
+    cmd: sqlx migrate info
+
+  db:reset:
+    desc: Drop and recreate database
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - sqlx database drop -y
+      - sqlx database create
+      - sqlx migrate run
+
   # ── Frontend (React/TypeScript) ───────────────
   frontend:fmt:
     desc: Format frontend code with Prettier

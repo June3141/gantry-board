@@ -1,9 +1,12 @@
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
 use axum::Json;
+use garde::Validate;
 use uuid::Uuid;
 
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 use crate::models::project::{CreateProjectRequest, Project, UpdateProjectRequest};
+use crate::services::project_service;
 use crate::AppState;
 
 #[utoipa::path(
@@ -14,9 +17,9 @@ use crate::AppState;
     ),
     tag = "projects"
 )]
-pub async fn list_projects(State(_state): State<AppState>) -> AppResult<Json<Vec<Project>>> {
-    // Phase 1 で実装
-    Ok(Json(vec![]))
+pub async fn list_projects(State(state): State<AppState>) -> AppResult<Json<Vec<Project>>> {
+    let projects = project_service::list_projects(&state.pool).await?;
+    Ok(Json(projects))
 }
 
 #[utoipa::path(
@@ -29,13 +32,13 @@ pub async fn list_projects(State(_state): State<AppState>) -> AppResult<Json<Vec
     tag = "projects"
 )]
 pub async fn create_project(
-    State(_state): State<AppState>,
-    Json(_body): Json<CreateProjectRequest>,
-) -> AppResult<(axum::http::StatusCode, Json<Project>)> {
-    // Phase 1 で実装
-    Err(crate::error::AppError::Internal(anyhow::anyhow!(
-        "not implemented"
-    )))
+    State(state): State<AppState>,
+    Json(body): Json<CreateProjectRequest>,
+) -> AppResult<(StatusCode, Json<Project>)> {
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+    let project = project_service::create_project(&state.pool, &body).await?;
+    Ok((StatusCode::CREATED, Json(project)))
 }
 
 #[utoipa::path(
@@ -49,11 +52,11 @@ pub async fn create_project(
     tag = "projects"
 )]
 pub async fn get_project(
-    State(_state): State<AppState>,
-    Path(_id): Path<Uuid>,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
 ) -> AppResult<Json<Project>> {
-    // Phase 1 で実装
-    Err(crate::error::AppError::NotFound("project not found".into()))
+    let project = project_service::get_project(&state.pool, id).await?;
+    Ok(Json(project))
 }
 
 #[utoipa::path(
@@ -68,12 +71,14 @@ pub async fn get_project(
     tag = "projects"
 )]
 pub async fn update_project(
-    State(_state): State<AppState>,
-    Path(_id): Path<Uuid>,
-    Json(_body): Json<UpdateProjectRequest>,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<UpdateProjectRequest>,
 ) -> AppResult<Json<Project>> {
-    // Phase 1 で実装
-    Err(crate::error::AppError::NotFound("project not found".into()))
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+    let project = project_service::update_project(&state.pool, id, &body).await?;
+    Ok(Json(project))
 }
 
 #[utoipa::path(
@@ -87,9 +92,9 @@ pub async fn update_project(
     tag = "projects"
 )]
 pub async fn delete_project(
-    State(_state): State<AppState>,
-    Path(_id): Path<Uuid>,
-) -> AppResult<axum::http::StatusCode> {
-    // Phase 1 で実装
-    Err(crate::error::AppError::NotFound("project not found".into()))
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> AppResult<StatusCode> {
+    project_service::delete_project(&state.pool, id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
