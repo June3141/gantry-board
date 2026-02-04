@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 env:
   CARGO_TERM_COLOR: always
@@ -70,6 +70,7 @@ jobs:
       - run: cargo test --test export_openapi -- --nocapture
       - run: cd frontend && npm ci
       - run: cd frontend && npx orval
+      - run: cd frontend && npx prettier --write 'src/api/generated/**/*.ts'
       - run: cd frontend && git diff --exit-code src/api/generated/
         name: Check generated API client is up to date
 
@@ -84,4 +85,5 @@ jobs:
       - run: cd frontend && npm ci
       - run: cd frontend && npx eslint .
       - run: cd frontend && npx prettier --check 'src/**/*.{ts,tsx,css}'
+      - run: cd frontend && npx vitest run
       - run: cd frontend && npm run build
