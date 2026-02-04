@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Task } from './task';
-import type { WsMessageOneOfType } from './wsMessageOneOfType';
+import type { SseEventOneOfThreeType } from './sseEventOneOfThreeType';
 
-export type WsMessageOneOf = {
+export type SseEventOneOfThree = {
   task: Task;
-  type: WsMessageOneOfType;
+  type: SseEventOneOfThreeType;
 };

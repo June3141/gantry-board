@@ -8,7 +8,6 @@ pub mod services;
 pub mod sse;
 #[cfg(test)]
 pub mod test_helpers;
-pub mod ws;
 
 use std::sync::Arc;
 
@@ -21,12 +20,10 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::sse::hub::SseHub;
-use crate::ws::hub::Hub;
 
 #[derive(Clone)]
 pub struct AppState {
     pub pool: SqlitePool,
-    pub ws_hub: Arc<Hub>,
     pub sse_hub: Arc<SseHub>,
     pub config: Arc<config::Config>,
 }
@@ -69,7 +66,6 @@ pub fn app(state: AppState) -> Router {
 
     Router::new()
         .route("/health", get(handlers::health::health_check))
-        .route("/ws", get(ws::handler::ws_handler))
         .nest("/api", api_routes)
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),

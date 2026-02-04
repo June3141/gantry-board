@@ -36,7 +36,6 @@ mod tests {
     use crate::config::Config;
     use crate::sse::event::SseEvent;
     use crate::sse::hub::SseHub;
-    use crate::ws::hub::Hub;
     use sqlx::sqlite::SqlitePoolOptions;
     use std::sync::Arc;
 
@@ -53,7 +52,6 @@ mod tests {
 
         AppState {
             pool,
-            ws_hub: Arc::new(Hub::default()),
             sse_hub: Arc::new(SseHub::default()),
             config: Arc::new(Config::default()),
         }
