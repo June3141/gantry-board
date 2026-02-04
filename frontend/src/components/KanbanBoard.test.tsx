@@ -1,0 +1,116 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { KanbanBoard } from './KanbanBoard';
+import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
+import type { Task } from '../api/generated/model';
+import { TaskStatus, TaskPriority } from '../api/generated/model';
+
+vi.mock('../api/generated/endpoints/tasks/tasks', () => ({
+  useListTasks: vi.fn(),
+  useUpdateTask: vi.fn(),
+}));
+
+const createMockTask = (overrides: Partial<Task> = {}): Task => ({
+  id: 'task-1',
+  project_id: 'project-1',
+  title: 'Test Task',
+  status: TaskStatus.todo,
+  priority: TaskPriority.medium,
+  position: 0,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+});
+
+const createQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+const renderWithProviders = (ui: React.ReactElement) => {
+  const queryClient = createQueryClient();
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+};
+
+describe('KanbanBoard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders all status columns', () => {
+    vi.mocked(tasksApi.useListTasks).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof tasksApi.useListTasks>);
+    vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+      mutate: vi.fn(),
+    } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+    renderWithProviders(<KanbanBoard projectId="project-1" />);
+
+    expect(screen.getByText('Backlog')).toBeInTheDocument();
+    expect(screen.getByText('To Do')).toBeInTheDocument();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
+    expect(screen.getByText('In Review')).toBeInTheDocument();
+    expect(screen.getByText('Done')).toBeInTheDocument();
+  });
+
+  it('renders loading state', () => {
+    vi.mocked(tasksApi.useListTasks).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as ReturnType<typeof tasksApi.useListTasks>);
+    vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+      mutate: vi.fn(),
+    } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+    renderWithProviders(<KanbanBoard projectId="project-1" />);
+
+    expect(screen.getByTestId('kanban-loading')).toBeInTheDocument();
+  });
+
+  it('distributes tasks to correct columns', () => {
+    const tasks = [
+      createMockTask({ id: 'task-1', title: 'Backlog Task', status: TaskStatus.backlog }),
+      createMockTask({ id: 'task-2', title: 'Todo Task', status: TaskStatus.todo }),
+      createMockTask({ id: 'task-3', title: 'In Progress Task', status: TaskStatus.in_progress }),
+    ];
+
+    vi.mocked(tasksApi.useListTasks).mockReturnValue({
+      data: tasks,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof tasksApi.useListTasks>);
+    vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+      mutate: vi.fn(),
+    } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+    renderWithProviders(<KanbanBoard projectId="project-1" />);
+
+    expect(screen.getByText('Backlog Task')).toBeInTheDocument();
+    expect(screen.getByText('Todo Task')).toBeInTheDocument();
+    expect(screen.getByText('In Progress Task')).toBeInTheDocument();
+  });
+
+  it('renders error state', () => {
+    vi.mocked(tasksApi.useListTasks).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Failed to fetch'),
+    } as unknown as ReturnType<typeof tasksApi.useListTasks>);
+    vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+      mutate: vi.fn(),
+    } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+    renderWithProviders(<KanbanBoard projectId="project-1" />);
+
+    expect(screen.getByTestId('kanban-error')).toBeInTheDocument();
+  });
+});
