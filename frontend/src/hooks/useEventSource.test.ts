@@ -1,7 +1,8 @@
 import { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useEventSource, SseEvent } from './useEventSource';
+import { connectEventSource } from './useEventSource';
+import type { SseEvent } from './useEventSource';
 
 // Mock EventSource
 class MockEventSource {
@@ -20,7 +21,7 @@ class MockEventSource {
     this.readyState = 2;
   }
 
-  simulateMessage(type: string, data: unknown) {
+  simulateMessage(_type: string, data: unknown) {
     if (this.onmessage) {
       this.onmessage(new MessageEvent('message', { data: JSON.stringify(data) }));
     }
@@ -43,7 +44,7 @@ class MockEventSource {
   }
 }
 
-describe('useEventSource', () => {
+describe('connectEventSource', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -62,7 +63,7 @@ describe('useEventSource', () => {
   });
 
   it('connects to the SSE endpoint', () => {
-    const cleanup = useEventSource(queryClient);
+    const cleanup = connectEventSource(queryClient);
 
     expect(MockEventSource.instances.length).toBe(1);
     expect(MockEventSource.instances[0].url).toContain('/api/events');
@@ -71,7 +72,7 @@ describe('useEventSource', () => {
   });
 
   it('closes connection on cleanup', () => {
-    const cleanup = useEventSource(queryClient);
+    const cleanup = connectEventSource(queryClient);
     const eventSource = MockEventSource.instances[0];
 
     cleanup();
@@ -81,7 +82,7 @@ describe('useEventSource', () => {
 
   it('invalidates task queries on task_created event', () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
-    const cleanup = useEventSource(queryClient);
+    const cleanup = connectEventSource(queryClient);
     const eventSource = MockEventSource.instances[0];
 
     const taskEvent: SseEvent = {
@@ -109,7 +110,7 @@ describe('useEventSource', () => {
 
   it('invalidates task queries on task_updated event', () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
-    const cleanup = useEventSource(queryClient);
+    const cleanup = connectEventSource(queryClient);
     const eventSource = MockEventSource.instances[0];
 
     const taskEvent: SseEvent = {
@@ -137,7 +138,7 @@ describe('useEventSource', () => {
 
   it('invalidates task queries on task_deleted event', () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
-    const cleanup = useEventSource(queryClient);
+    const cleanup = connectEventSource(queryClient);
     const eventSource = MockEventSource.instances[0];
 
     const deleteEvent: SseEvent = {

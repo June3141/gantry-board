@@ -9,7 +9,7 @@ export type SseEvent =
   | { type: 'TaskUpdated'; task: Task }
   | { type: 'TaskDeleted'; task_id: string };
 
-export function useEventSource(queryClient: QueryClient): () => void {
+export function connectEventSource(queryClient: QueryClient): () => void {
   const eventSource = new EventSource(`${API_BASE_URL}/api/events`);
 
   const handleTaskEvent = () => {

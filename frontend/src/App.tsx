@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { useListProjects } from './api/generated/endpoints/projects/projects';
 import { KanbanBoard } from './components/KanbanBoard';
+import { connectEventSource } from './hooks/useEventSource';
 
 function App() {
+  const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const { data: projects, isLoading: projectsLoading } = useListProjects();
+
+  // Connect to SSE for real-time updates
+  useEffect(() => {
+    const cleanup = connectEventSource(queryClient);
+    return cleanup;
+  }, [queryClient]);
 
   return (
     <div className="min-h-screen bg-gray-100">
