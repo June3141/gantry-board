@@ -9,11 +9,12 @@ function App() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const { data: projects, isLoading: projectsLoading } = useListProjects();
 
-  // Connect to SSE for real-time updates
+  // Connect to SSE for real-time updates (queryClient is stable from provider)
   useEffect(() => {
     const cleanup = connectEventSource(queryClient);
     return cleanup;
-  }, [queryClient]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100">

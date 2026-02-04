@@ -103,6 +103,7 @@ describe('connectEventSource', () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['/api/tasks'],
+      exact: false,
     });
 
     cleanup();
@@ -131,6 +132,7 @@ describe('connectEventSource', () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['/api/tasks'],
+      exact: false,
     });
 
     cleanup();
@@ -150,6 +152,7 @@ describe('connectEventSource', () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['/api/tasks'],
+      exact: false,
     });
 
     cleanup();

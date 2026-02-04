@@ -13,41 +13,35 @@ export function connectEventSource(queryClient: QueryClient): () => void {
   const eventSource = new EventSource(`${API_BASE_URL}/api/events`);
 
   const handleTaskEvent = () => {
+    // Invalidate all task queries (including variants with project_id filter)
     queryClient.invalidateQueries({
       queryKey: ['/api/tasks'],
+      exact: false,
     });
   };
 
-  eventSource.addEventListener('task_created', (event: MessageEvent) => {
-    // Parse and handle task_created event
+  const handleSseMessage = (event: MessageEvent) => {
     try {
-      JSON.parse(event.data) as SseEvent;
-      handleTaskEvent();
+      // Validate JSON structure; parsed value used for type checking
+      const parsed = JSON.parse(event.data) as SseEvent;
+      if (parsed.type) {
+        handleTaskEvent();
+      }
     } catch {
       console.error('Failed to parse SSE event:', event.data);
     }
-  });
+  };
 
-  eventSource.addEventListener('task_updated', (event: MessageEvent) => {
-    try {
-      JSON.parse(event.data) as SseEvent;
-      handleTaskEvent();
-    } catch {
-      console.error('Failed to parse SSE event:', event.data);
-    }
-  });
+  eventSource.addEventListener('task_created', handleSseMessage);
+  eventSource.addEventListener('task_updated', handleSseMessage);
+  eventSource.addEventListener('task_deleted', handleSseMessage);
 
-  eventSource.addEventListener('task_deleted', (event: MessageEvent) => {
-    try {
-      JSON.parse(event.data) as SseEvent;
-      handleTaskEvent();
-    } catch {
-      console.error('Failed to parse SSE event:', event.data);
-    }
-  });
-
-  eventSource.onerror = () => {
-    console.error('SSE connection error');
+  eventSource.onerror = (event: Event) => {
+    const source = event.currentTarget as EventSource | null;
+    console.error('SSE connection error', {
+      type: event.type,
+      readyState: source?.readyState,
+    });
   };
 
   return () => {
