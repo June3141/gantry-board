@@ -5,6 +5,7 @@ pub mod handlers;
 pub mod models;
 pub mod openapi;
 pub mod services;
+pub mod sse;
 #[cfg(test)]
 pub mod test_helpers;
 pub mod ws;
@@ -19,12 +20,14 @@ use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+use crate::sse::hub::SseHub;
 use crate::ws::hub::Hub;
 
 #[derive(Clone)]
 pub struct AppState {
     pub pool: SqlitePool,
     pub ws_hub: Arc<Hub>,
+    pub sse_hub: Arc<SseHub>,
     pub config: Arc<config::Config>,
 }
 
@@ -60,7 +63,9 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/projects/{project_id}/members/{user_id}",
             delete(handlers::project_members::remove_member),
-        );
+        )
+        // SSE for real-time updates
+        .route("/events", get(sse::handler::sse_handler));
 
     Router::new()
         .route("/health", get(handlers::health::health_check))
