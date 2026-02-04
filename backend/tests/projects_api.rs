@@ -3,7 +3,6 @@ use std::sync::Arc;
 use axum_test::TestServer;
 use gantry_board::config::Config;
 use gantry_board::sse::hub::SseHub;
-use gantry_board::ws::hub::Hub;
 use gantry_board::AppState;
 use serde_json::json;
 use sqlx::sqlite::SqlitePoolOptions;
@@ -26,7 +25,6 @@ async fn create_test_server() -> TestServer {
 
     let state = AppState {
         pool,
-        ws_hub: Arc::new(Hub::default()),
         sse_hub: Arc::new(SseHub::default()),
         config: Arc::new(config),
     };

@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type WsMessageOneOfThreeType =
-  (typeof WsMessageOneOfThreeType)[keyof typeof WsMessageOneOfThreeType];
+export type SseEventOneOfFiveType =
+  (typeof SseEventOneOfFiveType)[keyof typeof SseEventOneOfFiveType];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const WsMessageOneOfThreeType = {
-  TaskUpdated: 'TaskUpdated',
+export const SseEventOneOfFiveType = {
+  TaskDeleted: 'TaskDeleted',
 } as const;

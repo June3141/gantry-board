@@ -2,7 +2,7 @@ use utoipa::OpenApi;
 
 use crate::handlers;
 use crate::models;
-use crate::ws;
+use crate::sse;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -38,7 +38,7 @@ use crate::ws;
         models::project::AddMemberRequest,
         models::project::UpdateMemberRequest,
         models::user::User,
-        ws::message::WsMessage,
+        sse::event::SseEvent,
     )),
     tags(
         (name = "health", description = "Health check"),

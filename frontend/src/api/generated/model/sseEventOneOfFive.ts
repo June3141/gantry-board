@@ -5,9 +5,9 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import type { WsMessageOneOfFiveType } from './wsMessageOneOfFiveType';
+import type { SseEventOneOfFiveType } from './sseEventOneOfFiveType';
 
-export type WsMessageOneOfFive = {
+export type SseEventOneOfFive = {
   task_id: string;
-  type: WsMessageOneOfFiveType;
+  type: SseEventOneOfFiveType;
 };

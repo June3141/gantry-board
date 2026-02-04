@@ -3,7 +3,6 @@ use std::sync::Arc;
 use gantry_board::config::Config;
 use gantry_board::db;
 use gantry_board::sse::hub::SseHub;
-use gantry_board::ws::hub::Hub;
 use gantry_board::AppState;
 use tracing_subscriber::EnvFilter;
 
@@ -18,7 +17,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let state = AppState {
         pool,
-        ws_hub: Arc::new(Hub::default()),
         sse_hub: Arc::new(SseHub::default()),
         config: Arc::new(config.clone()),
     };
