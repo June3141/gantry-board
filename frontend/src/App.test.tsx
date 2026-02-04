@@ -4,6 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import * as projectsApi from './api/generated/endpoints/projects/projects';
 
+// Mock EventSource for SSE
+class MockEventSource {
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  close() {}
+  addEventListener() {}
+}
+vi.stubGlobal('EventSource', MockEventSource);
+
 vi.mock('./api/generated/endpoints/projects/projects', () => ({
   useListProjects: vi.fn(),
 }));

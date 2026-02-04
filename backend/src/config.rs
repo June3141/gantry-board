@@ -29,3 +29,12 @@ impl Config {
             .extract()?)
     }
 }
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            bind_addr: default_bind_addr(),
+            database_url: default_database_url(),
+        }
+    }
+}

@@ -29,6 +29,7 @@ tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 futures-util = { workspace = true }
+tokio-stream = { workspace = true }
 
 [dev-dependencies]
 axum-test = "18"
