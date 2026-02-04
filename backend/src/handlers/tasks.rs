@@ -8,6 +8,7 @@ use uuid::Uuid;
 use crate::error::{AppError, AppResult};
 use crate::models::task::{CreateTaskRequest, Task, UpdateTaskRequest};
 use crate::services::{project_service, task_service};
+use crate::sse::event::SseEvent;
 use crate::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -55,6 +56,9 @@ pub async fn create_task(
     // Verify project exists
     project_service::get_project(&state.pool, body.project_id).await?;
     let task = task_service::create_task(&state.pool, &body).await?;
+    state
+        .sse_hub
+        .broadcast(SseEvent::task_created(task.clone()));
     Ok((StatusCode::CREATED, Json(task)))
 }
 
@@ -96,6 +100,9 @@ pub async fn update_task(
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
     let task = task_service::update_task(&state.pool, id, &body).await?;
+    state
+        .sse_hub
+        .broadcast(SseEvent::task_updated(task.clone()));
     Ok(Json(task))
 }
 
@@ -114,5 +121,6 @@ pub async fn delete_task(
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
     task_service::delete_task(&state.pool, id).await?;
+    state.sse_hub.broadcast(SseEvent::task_deleted(id));
     Ok(StatusCode::NO_CONTENT)
 }
