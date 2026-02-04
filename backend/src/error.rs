@@ -12,6 +12,15 @@ pub enum AppError {
     #[error("conflict: {0}")]
     Conflict(String),
 
+    #[error("unauthorized")]
+    Unauthorized,
+
+    #[error("invalid credentials")]
+    InvalidCredentials,
+
+    #[error("internal error: {0}")]
+    Internal(String),
+
     /// Wrapper for all `sqlx::Error` values.
     ///
     /// We intentionally treat all SQLx errors the same at the HTTP boundary,
@@ -23,7 +32,7 @@ pub enum AppError {
     Database(#[from] sqlx::Error),
 
     #[error(transparent)]
-    Internal(#[from] anyhow::Error),
+    Anyhow(#[from] anyhow::Error),
 }
 
 impl IntoResponse for AppError {
@@ -32,6 +41,17 @@ impl IntoResponse for AppError {
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg.clone()),
             AppError::Validation(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized".to_string()),
+            AppError::InvalidCredentials => {
+                (StatusCode::UNAUTHORIZED, "invalid credentials".to_string())
+            }
+            AppError::Internal(msg) => {
+                tracing::error!(msg, "internal server error");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal server error".to_string(),
+                )
+            }
             AppError::Database(err) => {
                 tracing::error!(%err, "database error");
                 // Check for constraint violations
@@ -49,7 +69,7 @@ impl IntoResponse for AppError {
                     "database error".to_string(),
                 )
             }
-            AppError::Internal(err) => {
+            AppError::Anyhow(err) => {
                 tracing::error!(%err, "internal server error");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,

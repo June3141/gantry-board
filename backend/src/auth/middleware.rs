@@ -1,0 +1,142 @@
+use axum::extract::FromRequestParts;
+use axum::http::request::Parts;
+use axum_extra::extract::CookieJar;
+use uuid::Uuid;
+
+use crate::error::AppError;
+use crate::services::session_service;
+use crate::AppState;
+
+pub const SESSION_COOKIE_NAME: &str = "gantry_session";
+
+/// Authenticated user extracted from session cookie
+#[derive(Debug, Clone)]
+pub struct AuthUser {
+    pub user_id: Uuid,
+    pub session_id: Uuid,
+}
+
+impl FromRequestParts<AppState> for AuthUser {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        // Check if auth is disabled (development mode)
+        if state.config.auth_disabled {
+            // Return a dummy user for development
+            return Ok(AuthUser {
+                user_id: Uuid::nil(),
+                session_id: Uuid::nil(),
+            });
+        }
+
+        // Extract cookies
+        let cookies = CookieJar::from_request_parts(parts, state)
+            .await
+            .map_err(|_| AppError::Unauthorized)?;
+
+        // Get session cookie
+        let session_cookie = cookies
+            .get(SESSION_COOKIE_NAME)
+            .ok_or(AppError::Unauthorized)?;
+
+        // Parse session ID
+        let session_id: Uuid = session_cookie
+            .value()
+            .parse()
+            .map_err(|_| AppError::Unauthorized)?;
+
+        // Validate session
+        let session = session_service::validate_session(&state.pool, session_id).await?;
+
+        // Parse user_id from session
+        let user_id: Uuid = session
+            .user_id
+            .parse()
+            .map_err(|_| AppError::Internal("invalid user_id in session".to_string()))?;
+
+        Ok(AuthUser {
+            user_id,
+            session_id,
+        })
+    }
+}
+
+/// Optional authentication - returns None if not authenticated
+#[derive(Debug, Clone)]
+pub struct MaybeAuthUser(pub Option<AuthUser>);
+
+impl FromRequestParts<AppState> for MaybeAuthUser {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        match AuthUser::from_request_parts(parts, state).await {
+            Ok(user) => Ok(MaybeAuthUser(Some(user))),
+            Err(_) => Ok(MaybeAuthUser(None)),
+        }
+    }
+}
+
+/// Create a session cookie value
+pub fn create_session_cookie(session_id: Uuid, secure: bool) -> String {
+    let mut cookie = format!("{}={}", SESSION_COOKIE_NAME, session_id);
+
+    // Add cookie attributes
+    cookie.push_str("; Path=/");
+    cookie.push_str("; HttpOnly");
+    cookie.push_str("; SameSite=Lax");
+
+    if secure {
+        cookie.push_str("; Secure");
+    }
+
+    // Max age of 1 week
+    cookie.push_str("; Max-Age=604800");
+
+    cookie
+}
+
+/// Create an expired session cookie (for logout)
+pub fn delete_session_cookie() -> String {
+    format!(
+        "{}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
+        SESSION_COOKIE_NAME
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_session_cookie_without_secure() {
+        let session_id = Uuid::new_v4();
+        let cookie = create_session_cookie(session_id, false);
+
+        assert!(cookie.contains(&session_id.to_string()));
+        assert!(cookie.contains("HttpOnly"));
+        assert!(cookie.contains("SameSite=Lax"));
+        assert!(!cookie.contains("Secure"));
+    }
+
+    #[test]
+    fn test_create_session_cookie_with_secure() {
+        let session_id = Uuid::new_v4();
+        let cookie = create_session_cookie(session_id, true);
+
+        assert!(cookie.contains("Secure"));
+    }
+
+    #[test]
+    fn test_delete_session_cookie() {
+        let cookie = delete_session_cookie();
+
+        assert!(cookie.contains("Max-Age=0"));
+        assert!(cookie.contains(SESSION_COOKIE_NAME));
+    }
+}

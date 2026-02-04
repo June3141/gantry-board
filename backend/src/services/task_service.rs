@@ -96,7 +96,7 @@ pub async fn get_task(pool: &SqlitePool, id: Uuid) -> AppResult<Task> {
 
     row.map(|r| r.try_into())
         .transpose()
-        .map_err(|e: uuid::Error| AppError::Internal(e.into()))?
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?
         .ok_or_else(|| AppError::NotFound(format!("task {} not found", id)))
 }
 
@@ -116,7 +116,7 @@ pub async fn list_tasks(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<Ta
     rows.into_iter()
         .map(|r| r.try_into())
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.into()))
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
