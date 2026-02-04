@@ -21,6 +21,8 @@ async fn create_test_server() -> TestServer {
     let config = Config {
         bind_addr: "127.0.0.1:0".to_string(),
         database_url: "sqlite::memory:".to_string(),
+        auth_disabled: true, // Disable auth for API tests
+        ..Default::default()
     };
 
     let state = AppState {

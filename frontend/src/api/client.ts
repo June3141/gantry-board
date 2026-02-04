@@ -20,6 +20,7 @@ export const customInstance = async <T>({
 
   const response = await fetch(fullUrl, {
     method,
+    credentials: 'include', // Include cookies for session auth
     headers: {
       'Content-Type': 'application/json',
       ...headers,
@@ -30,6 +31,18 @@ export const customInstance = async <T>({
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
+
+    // Handle 401 Unauthorized - redirect to login
+    if (response.status === 401) {
+      // Only redirect if not already on auth pages
+      if (
+        !window.location.pathname.startsWith('/login') &&
+        !window.location.pathname.startsWith('/register')
+      ) {
+        window.location.href = '/login';
+      }
+    }
+
     throw new Error(error.error ?? 'Request failed');
   }
 
