@@ -1,5 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
-import { DndContext, DragOverlay } from '@dnd-kit/core';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -28,6 +35,8 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const queryClient = useQueryClient();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const { data: tasks, isLoading, error } = useListTasks({ project_id: projectId });
+
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
   const updateTaskMutation = useUpdateTask({
     mutation: {
@@ -132,7 +141,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   }
 
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 overflow-x-auto p-4">
         {COLUMN_ORDER.map((status) => (
           <KanbanColumn
