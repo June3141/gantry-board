@@ -26,7 +26,7 @@ user-invocable: false
 | `test` | Add or update tests |
 | `refactor` | Refactor (no behavior change) |
 | `chore` | Build, CI, or config changes |
-| `style` | Code formatting only (clippy, fmt, prettier) |
+| `style` | Code formatting only (clippy, fmt, biome) |
 | `perf` | Performance improvement |
 
 ### Emoji (required) — gitmoji

@@ -30,6 +30,6 @@ description: Taskfile commands for code quality checks and formatting
 
 Quality is enforced automatically via 3 layers of Claude Code hooks:
 
-- **L1 (PostToolUse)**: Auto-formats files after every Write/Edit (`cargo fmt` / `prettier --write`)
+- **L1 (PostToolUse)**: Auto-formats files after every Write/Edit (`cargo fmt` / `biome format --write`)
 - **L2 (Stop)**: Runs lint on modified layers when Claude completes a response
 - **L3 (PreToolUse)**: Blocks `git commit` unless commit message format, commit size, and `task check` all pass
