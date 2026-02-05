@@ -74,6 +74,22 @@ async fn create_project(server: &TestServer, cookie: &str, name: &str) -> String
     body["id"].as_str().unwrap().to_string()
 }
 
+/// Add a member to a project with the given role
+async fn add_member(
+    server: &TestServer,
+    cookie: &str,
+    project_id: &str,
+    user_id: &str,
+    role: &str,
+) {
+    let response = server
+        .post(&format!("/api/projects/{}/members", project_id))
+        .add_header(header::COOKIE, cookie)
+        .json(&json!({ "user_id": user_id, "role": role }))
+        .await;
+    response.assert_status(StatusCode::CREATED);
+}
+
 // =============================================================
 // Phase 2: create_project auto-adds creator as Owner
 // =============================================================
@@ -113,4 +129,142 @@ async fn test_create_project_creator_can_access_project() {
 
     let body: serde_json::Value = response.json();
     assert_eq!(body["name"], "My Project");
+}
+
+// =============================================================
+// Phase 3: Project endpoint authorization
+// =============================================================
+
+#[tokio::test]
+async fn test_list_projects_only_returns_member_projects() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    create_project(&server, &cookie_a, "A's Project 1").await;
+    create_project(&server, &cookie_a, "A's Project 2").await;
+    create_project(&server, &cookie_b, "B's Project").await;
+
+    // User A should see only their 2 projects
+    let response = server
+        .get("/api/projects")
+        .add_header(header::COOKIE, &cookie_a)
+        .await;
+    response.assert_status_ok();
+    let projects: Vec<serde_json::Value> = response.json();
+    assert_eq!(projects.len(), 2);
+
+    // User B should see only their 1 project
+    let response = server
+        .get("/api/projects")
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status_ok();
+    let projects: Vec<serde_json::Value> = response.json();
+    assert_eq!(projects.len(), 1);
+}
+
+#[tokio::test]
+async fn test_get_project_forbidden_for_non_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "A's Project").await;
+
+    // User B cannot access A's project
+    let response = server
+        .get(&format!("/api/projects/{}", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_get_project_allowed_for_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Shared Project").await;
+
+    // Add User B as member
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member");
+
+    // User B can now access the project
+    let response = server
+        .get(&format!("/api/projects/{}", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status_ok();
+}
+
+#[tokio::test]
+async fn test_update_project_forbidden_for_member_role() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member");
+
+    // Member cannot update project
+    let response = server
+        .patch(&format!("/api/projects/{}", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({ "name": "Hacked Name" }))
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_update_project_allowed_for_admin() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "admin");
+
+    // Admin can update project
+    let response = server
+        .patch(&format!("/api/projects/{}", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({ "name": "Updated by Admin" }))
+        .await;
+    response.assert_status_ok();
+    let body: serde_json::Value = response.json();
+    assert_eq!(body["name"], "Updated by Admin");
+}
+
+#[tokio::test]
+async fn test_delete_project_forbidden_for_admin() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "admin");
+
+    // Admin cannot delete project
+    let response = server
+        .delete(&format!("/api/projects/{}", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_delete_project_allowed_for_owner() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+
+    // Owner can delete project
+    let response = server
+        .delete(&format!("/api/projects/{}", project_id))
+        .add_header(header::COOKIE, &cookie_a)
+        .await;
+    response.assert_status(StatusCode::NO_CONTENT);
 }
