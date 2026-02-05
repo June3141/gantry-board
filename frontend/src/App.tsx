@@ -5,10 +5,13 @@ import { useLogout, useMe } from './api/generated/endpoints/auth/auth';
 import { useListProjects } from './api/generated/endpoints/projects/projects';
 import { KanbanBoard } from './components/KanbanBoard';
 import { LoginPage } from './components/LoginPage';
+import { ProjectCreateDialog } from './components/ProjectCreateDialog';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { RegisterPage } from './components/RegisterPage';
+import { TaskCreateDialog } from './components/TaskCreateDialog';
 import { connectEventSource } from './hooks/useEventSource';
 import { useAuthStore } from './stores/authStore';
+import { useUiStore } from './stores/uiStore';
 
 function KanbanApp() {
   const queryClient = useQueryClient();
@@ -17,6 +20,7 @@ function KanbanApp() {
   const user = useAuthStore((state) => state.user);
   const logout = useLogout();
   const setUser = useAuthStore((state) => state.setUser);
+  const openProjectModal = useUiStore((s) => s.openProjectModal);
 
   // Connect to SSE for real-time updates (queryClient is stable from provider)
   useEffect(() => {
@@ -58,6 +62,12 @@ function KanbanApp() {
                 </option>
               ))}
             </select>
+            <button
+              onClick={openProjectModal}
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
+            >
+              New Project
+            </button>
 
             <div className="flex items-center gap-2 border-l pl-4">
               <span className="text-sm text-gray-600">{user?.name ?? user?.email}</span>
@@ -81,6 +91,8 @@ function KanbanApp() {
           </div>
         )}
       </main>
+      <ProjectCreateDialog />
+      {selectedProjectId && <TaskCreateDialog projectId={selectedProjectId} />}
     </div>
   );
 }
