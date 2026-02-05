@@ -183,7 +183,7 @@ export const getGetProjectQueryKey = (id?: string) => {
 
 export const getGetProjectQueryOptions = <
   TData = Awaited<ReturnType<typeof getProject>>,
-  TError = void,
+  TError = void | void,
 >(
   id: string,
   options?: {
@@ -205,9 +205,9 @@ export const getGetProjectQueryOptions = <
 };
 
 export type GetProjectQueryResult = NonNullable<Awaited<ReturnType<typeof getProject>>>;
-export type GetProjectQueryError = void;
+export type GetProjectQueryError = void | void;
 
-export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = void>(
+export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = void | void>(
   id: string,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>> &
@@ -222,7 +222,7 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = void>(
+export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = void | void>(
   id: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>> &
@@ -237,7 +237,7 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = void>(
+export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = void | void>(
   id: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
@@ -245,7 +245,7 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = void>(
+export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = void | void>(
   id: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
@@ -267,7 +267,10 @@ export const deleteProject = (id: string) => {
   return customInstance<void>({ url: `/api/projects/${id}`, method: 'DELETE' });
 };
 
-export const getDeleteProjectMutationOptions = <TError = void, TContext = unknown>(options?: {
+export const getDeleteProjectMutationOptions = <
+  TError = void | void,
+  TContext = unknown,
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteProject>>,
     TError,
@@ -300,9 +303,9 @@ export const getDeleteProjectMutationOptions = <TError = void, TContext = unknow
 
 export type DeleteProjectMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProject>>>;
 
-export type DeleteProjectMutationError = void;
+export type DeleteProjectMutationError = void | void;
 
-export const useDeleteProject = <TError = void, TContext = unknown>(
+export const useDeleteProject = <TError = void | void, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProject>>,
@@ -331,7 +334,10 @@ export const updateProject = (id: string, updateProjectRequest: UpdateProjectReq
   });
 };
 
-export const getUpdateProjectMutationOptions = <TError = void, TContext = unknown>(options?: {
+export const getUpdateProjectMutationOptions = <
+  TError = void | void,
+  TContext = unknown,
+>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateProject>>,
     TError,
@@ -365,9 +371,9 @@ export const getUpdateProjectMutationOptions = <TError = void, TContext = unknow
 
 export type UpdateProjectMutationResult = NonNullable<Awaited<ReturnType<typeof updateProject>>>;
 export type UpdateProjectMutationBody = UpdateProjectRequest;
-export type UpdateProjectMutationError = void;
+export type UpdateProjectMutationError = void | void;
 
-export const useUpdateProject = <TError = void, TContext = unknown>(
+export const useUpdateProject = <TError = void | void, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateProject>>,

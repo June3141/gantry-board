@@ -38,7 +38,7 @@ export const getListMembersQueryKey = (projectId?: string) => {
 
 export const getListMembersQueryOptions = <
   TData = Awaited<ReturnType<typeof listMembers>>,
-  TError = void,
+  TError = void | void,
 >(
   projectId: string,
   options?: {
@@ -60,9 +60,12 @@ export const getListMembersQueryOptions = <
 };
 
 export type ListMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listMembers>>>;
-export type ListMembersQueryError = void;
+export type ListMembersQueryError = void | void;
 
-export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, TError = void>(
+export function useListMembers<
+  TData = Awaited<ReturnType<typeof listMembers>>,
+  TError = void | void,
+>(
   projectId: string,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>> &
@@ -77,7 +80,10 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, TError = void>(
+export function useListMembers<
+  TData = Awaited<ReturnType<typeof listMembers>>,
+  TError = void | void,
+>(
   projectId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>> &
@@ -92,7 +98,10 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, TError = void>(
+export function useListMembers<
+  TData = Awaited<ReturnType<typeof listMembers>>,
+  TError = void | void,
+>(
   projectId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>>;
@@ -100,7 +109,10 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, TError = void>(
+export function useListMembers<
+  TData = Awaited<ReturnType<typeof listMembers>>,
+  TError = void | void,
+>(
   projectId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>>;
@@ -132,7 +144,7 @@ export const addMember = (
   });
 };
 
-export const getAddMemberMutationOptions = <TError = void, TContext = unknown>(options?: {
+export const getAddMemberMutationOptions = <TError = void | void, TContext = unknown>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof addMember>>,
     TError,
@@ -166,9 +178,9 @@ export const getAddMemberMutationOptions = <TError = void, TContext = unknown>(o
 
 export type AddMemberMutationResult = NonNullable<Awaited<ReturnType<typeof addMember>>>;
 export type AddMemberMutationBody = AddMemberRequest;
-export type AddMemberMutationError = void;
+export type AddMemberMutationError = void | void;
 
-export const useAddMember = <TError = void, TContext = unknown>(
+export const useAddMember = <TError = void | void, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof addMember>>,
@@ -202,7 +214,7 @@ export const getGetMemberQueryKey = (projectId?: string, userId?: string) => {
 
 export const getGetMemberQueryOptions = <
   TData = Awaited<ReturnType<typeof getMember>>,
-  TError = void,
+  TError = void | void,
 >(
   projectId: string,
   userId: string,
@@ -228,9 +240,9 @@ export const getGetMemberQueryOptions = <
 };
 
 export type GetMemberQueryResult = NonNullable<Awaited<ReturnType<typeof getMember>>>;
-export type GetMemberQueryError = void;
+export type GetMemberQueryError = void | void;
 
-export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TError = void>(
+export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TError = void | void>(
   projectId: string,
   userId: string,
   options: {
@@ -246,7 +258,7 @@ export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TErr
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TError = void>(
+export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TError = void | void>(
   projectId: string,
   userId: string,
   options?: {
@@ -262,7 +274,7 @@ export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TErr
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TError = void>(
+export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TError = void | void>(
   projectId: string,
   userId: string,
   options?: {
@@ -271,7 +283,7 @@ export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TErr
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TError = void>(
+export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TError = void | void>(
   projectId: string,
   userId: string,
   options?: {
@@ -297,7 +309,7 @@ export const removeMember = (projectId: string, userId: string) => {
   });
 };
 
-export const getRemoveMemberMutationOptions = <TError = void, TContext = unknown>(options?: {
+export const getRemoveMemberMutationOptions = <TError = void | void, TContext = unknown>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof removeMember>>,
     TError,
@@ -331,9 +343,9 @@ export const getRemoveMemberMutationOptions = <TError = void, TContext = unknown
 
 export type RemoveMemberMutationResult = NonNullable<Awaited<ReturnType<typeof removeMember>>>;
 
-export type RemoveMemberMutationError = void;
+export type RemoveMemberMutationError = void | void;
 
-export const useRemoveMember = <TError = void, TContext = unknown>(
+export const useRemoveMember = <TError = void | void, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof removeMember>>,
@@ -366,7 +378,7 @@ export const updateMember = (
   });
 };
 
-export const getUpdateMemberMutationOptions = <TError = void, TContext = unknown>(options?: {
+export const getUpdateMemberMutationOptions = <TError = void | void, TContext = unknown>(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateMember>>,
     TError,
@@ -400,9 +412,9 @@ export const getUpdateMemberMutationOptions = <TError = void, TContext = unknown
 
 export type UpdateMemberMutationResult = NonNullable<Awaited<ReturnType<typeof updateMember>>>;
 export type UpdateMemberMutationBody = UpdateMemberRequest;
-export type UpdateMemberMutationError = void;
+export type UpdateMemberMutationError = void | void;
 
-export const useUpdateMember = <TError = void, TContext = unknown>(
+export const useUpdateMember = <TError = void | void, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateMember>>,
