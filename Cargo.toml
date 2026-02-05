@@ -28,7 +28,7 @@ utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 
 # Validation
-garde = { version = "0.22", features = ["derive"] }
+garde = { version = "0.22", features = ["derive", "email"] }
 
 # Error Handling
 thiserror = "2"
@@ -47,3 +47,8 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 futures-util = "0.3"
 tokio-stream = { version = "0.1", features = ["sync"] }
+
+# Authentication
+argon2 = "0.5"
+rand = "0.8"
+axum-extra = { version = "0.10", features = ["cookie"] }

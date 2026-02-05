@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod config;
 pub mod db;
 pub mod error;
@@ -30,11 +31,18 @@ pub struct AppState {
 
 pub fn app(state: AppState) -> Router {
     let api_routes = Router::new()
+        // Auth endpoints
+        .route("/auth/register", post(handlers::auth::register))
+        .route("/auth/login", post(handlers::auth::login))
+        .route("/auth/logout", post(handlers::auth::logout))
+        .route("/auth/me", get(handlers::auth::me))
+        // Task endpoints
         .route("/tasks", get(handlers::tasks::list_tasks))
         .route("/tasks", post(handlers::tasks::create_task))
         .route("/tasks/{id}", get(handlers::tasks::get_task))
         .route("/tasks/{id}", patch(handlers::tasks::update_task))
         .route("/tasks/{id}", delete(handlers::tasks::delete_task))
+        // Project endpoints
         .route("/projects", get(handlers::projects::list_projects))
         .route("/projects", post(handlers::projects::create_project))
         .route("/projects/{id}", get(handlers::projects::get_project))

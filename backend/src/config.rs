@@ -9,6 +9,18 @@ pub struct Config {
 
     #[serde(default = "default_database_url")]
     pub database_url: String,
+
+    /// Session duration in hours (default: 168 = 1 week)
+    #[serde(default = "default_session_duration_hours")]
+    pub session_duration_hours: u64,
+
+    /// Disable authentication (for development only)
+    #[serde(default)]
+    pub auth_disabled: bool,
+
+    /// Use secure cookies (HTTPS only) - should be true in production
+    #[serde(default)]
+    pub cookie_secure: bool,
 }
 
 fn default_bind_addr() -> String {
@@ -17,6 +29,10 @@ fn default_bind_addr() -> String {
 
 fn default_database_url() -> String {
     "sqlite:gantry_board.db?mode=rwc".to_string()
+}
+
+fn default_session_duration_hours() -> u64 {
+    168 // 1 week
 }
 
 impl Config {
@@ -35,6 +51,9 @@ impl Default for Config {
         Self {
             bind_addr: default_bind_addr(),
             database_url: default_database_url(),
+            session_duration_hours: default_session_duration_hours(),
+            auth_disabled: false,
+            cookie_secure: false,
         }
     }
 }

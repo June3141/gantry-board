@@ -20,6 +20,7 @@ export const customInstance = async <T>({
 
   const response = await fetch(fullUrl, {
     method,
+    credentials: 'include', // Include cookies for session auth
     headers: {
       'Content-Type': 'application/json',
       ...headers,
@@ -30,6 +31,26 @@ export const customInstance = async <T>({
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
+
+    // Handle 401 Unauthorized - redirect to login with loop prevention
+    if (response.status === 401) {
+      const isAuthPage =
+        window.location.pathname.startsWith('/login') ||
+        window.location.pathname.startsWith('/register');
+
+      if (!isAuthPage) {
+        const REDIRECT_KEY = 'auth_redirect_ts';
+        const COOLDOWN_MS = 5000;
+        const now = Date.now();
+        const lastRedirect = Number(sessionStorage.getItem(REDIRECT_KEY) ?? '0');
+
+        if (now - lastRedirect > COOLDOWN_MS) {
+          sessionStorage.setItem(REDIRECT_KEY, String(now));
+          window.location.href = '/login';
+        }
+      }
+    }
+
     throw new Error(error.error ?? 'Request failed');
   }
 

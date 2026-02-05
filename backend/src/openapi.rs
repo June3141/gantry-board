@@ -8,6 +8,10 @@ use crate::sse;
 #[openapi(
     paths(
         handlers::health::health_check,
+        handlers::auth::register,
+        handlers::auth::login,
+        handlers::auth::logout,
+        handlers::auth::me,
         handlers::tasks::list_tasks,
         handlers::tasks::create_task,
         handlers::tasks::get_task,
@@ -38,10 +42,14 @@ use crate::sse;
         models::project::AddMemberRequest,
         models::project::UpdateMemberRequest,
         models::user::User,
+        models::user::RegisterRequest,
+        models::user::LoginRequest,
+        models::user::AuthResponse,
         sse::event::SseEvent,
     )),
     tags(
         (name = "health", description = "Health check"),
+        (name = "auth", description = "Authentication"),
         (name = "tasks", description = "Task management"),
         (name = "projects", description = "Project management"),
         (name = "project-members", description = "Project member management"),

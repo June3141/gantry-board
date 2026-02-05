@@ -70,7 +70,7 @@ pub async fn get_project(pool: &SqlitePool, id: Uuid) -> AppResult<Project> {
 
     row.map(|r| r.try_into())
         .transpose()
-        .map_err(|e: uuid::Error| AppError::Internal(e.into()))?
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?
         .ok_or_else(|| AppError::NotFound(format!("project {} not found", id)))
 }
 
@@ -88,7 +88,7 @@ pub async fn list_projects(pool: &SqlitePool) -> AppResult<Vec<Project>> {
     rows.into_iter()
         .map(|r| r.try_into())
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.into()))
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
 pub async fn update_project(

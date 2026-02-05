@@ -4,6 +4,7 @@ use axum::Json;
 use garde::Validate;
 use uuid::Uuid;
 
+use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::project::{CreateProjectRequest, Project, UpdateProjectRequest};
 use crate::services::project_service;
@@ -17,7 +18,10 @@ use crate::AppState;
     ),
     tag = "projects"
 )]
-pub async fn list_projects(State(state): State<AppState>) -> AppResult<Json<Vec<Project>>> {
+pub async fn list_projects(
+    State(state): State<AppState>,
+    _auth: AuthUser,
+) -> AppResult<Json<Vec<Project>>> {
     let projects = project_service::list_projects(&state.pool).await?;
     Ok(Json(projects))
 }
@@ -33,6 +37,7 @@ pub async fn list_projects(State(state): State<AppState>) -> AppResult<Json<Vec<
 )]
 pub async fn create_project(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Json(body): Json<CreateProjectRequest>,
 ) -> AppResult<(StatusCode, Json<Project>)> {
     body.validate()
@@ -53,6 +58,7 @@ pub async fn create_project(
 )]
 pub async fn get_project(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<Project>> {
     let project = project_service::get_project(&state.pool, id).await?;
@@ -72,6 +78,7 @@ pub async fn get_project(
 )]
 pub async fn update_project(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateProjectRequest>,
 ) -> AppResult<Json<Project>> {
@@ -93,6 +100,7 @@ pub async fn update_project(
 )]
 pub async fn delete_project(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
     project_service::delete_project(&state.pool, id).await?;
