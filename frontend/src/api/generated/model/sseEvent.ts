@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SseEventOneOf } from './sseEventOneOf';
-import type { SseEventOneOfFive } from './sseEventOneOfFive';
 import type { SseEventOneOfThree } from './sseEventOneOfThree';
+import type { SseEventOneOfFive } from './sseEventOneOfFive';
 
 /**
  * Server-Sent Event for real-time updates

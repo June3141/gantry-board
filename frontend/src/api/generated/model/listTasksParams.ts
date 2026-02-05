@@ -7,8 +7,8 @@
  */
 
 export type ListTasksParams = {
-  /**
-   * Filter by project ID
-   */
-  project_id: string;
+/**
+ * Filter by project ID
+ */
+project_id: string;
 };

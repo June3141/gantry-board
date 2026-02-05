@@ -5,9 +5,8 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-
-import type { SseEventOneOfThreeType } from './sseEventOneOfThreeType';
 import type { Task } from './task';
+import type { SseEventOneOfThreeType } from './sseEventOneOfThreeType';
 
 export type SseEventOneOfThree = {
   task: Task;
