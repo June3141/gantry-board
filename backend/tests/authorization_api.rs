@@ -406,3 +406,141 @@ async fn test_delete_task_forbidden_for_non_member() {
         .await;
     response.assert_status(StatusCode::FORBIDDEN);
 }
+
+// =============================================================
+// Phase 5: Member management authorization
+// =============================================================
+
+#[tokio::test]
+async fn test_list_members_forbidden_for_non_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+
+    let response = server
+        .get(&format!("/api/projects/{}/members", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_list_members_allowed_for_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
+
+    let response = server
+        .get(&format!("/api/projects/{}/members", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status_ok();
+}
+
+#[tokio::test]
+async fn test_add_member_forbidden_for_member_role() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+    let (user_c_id, _cookie_c) = register_user(&server, "c@example.com", "User C").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
+
+    // Member cannot add other members
+    let response = server
+        .post(&format!("/api/projects/{}/members", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({ "user_id": user_c_id, "role": "member" }))
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_add_member_allowed_for_admin() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+    let (user_c_id, _cookie_c) = register_user(&server, "c@example.com", "User C").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "admin").await;
+
+    // Admin can add members
+    let response = server
+        .post(&format!("/api/projects/{}/members", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({ "user_id": user_c_id, "role": "member" }))
+        .await;
+    response.assert_status(StatusCode::CREATED);
+}
+
+#[tokio::test]
+async fn test_update_member_forbidden_for_member_role() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+    let (user_c_id, _cookie_c) = register_user(&server, "c@example.com", "User C").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
+    add_member(&server, &cookie_a, &project_id, &user_c_id, "member").await;
+
+    // Member cannot update roles
+    let response = server
+        .patch(&format!(
+            "/api/projects/{}/members/{}",
+            project_id, user_c_id
+        ))
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({ "role": "admin" }))
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_remove_member_forbidden_for_member_role() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+    let (user_c_id, _cookie_c) = register_user(&server, "c@example.com", "User C").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
+    add_member(&server, &cookie_a, &project_id, &user_c_id, "member").await;
+
+    // Member cannot remove other members
+    let response = server
+        .delete(&format!(
+            "/api/projects/{}/members/{}",
+            project_id, user_c_id
+        ))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_remove_member_allowed_for_owner() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, _cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
+
+    // Owner can remove members
+    let response = server
+        .delete(&format!(
+            "/api/projects/{}/members/{}",
+            project_id, user_b_id
+        ))
+        .add_header(header::COOKIE, &cookie_a)
+        .await;
+    response.assert_status(StatusCode::NO_CONTENT);
+}
