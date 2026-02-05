@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useCreateTask } from '../api/generated/endpoints/tasks/tasks';
 import { useUiStore } from '../stores/uiStore';
@@ -10,24 +10,26 @@ interface TaskCreateDialogProps {
 export function TaskCreateDialog({ projectId }: TaskCreateDialogProps) {
   const isOpen = useUiStore((s) => s.isTaskModalOpen);
   const defaultStatus = useUiStore((s) => s.defaultStatus);
+
+  if (!isOpen) return null;
+
+  return <TaskCreateForm projectId={projectId} defaultStatus={defaultStatus} />;
+}
+
+function TaskCreateForm({
+  projectId,
+  defaultStatus,
+}: {
+  projectId: string;
+  defaultStatus: TaskStatus | null;
+}) {
   const closeTaskModal = useUiStore((s) => s.closeTaskModal);
   const createTask = useCreateTask();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<TaskStatus>(TaskStatus.backlog);
+  const [status, setStatus] = useState<TaskStatus>(defaultStatus ?? TaskStatus.backlog);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.medium);
-
-  useEffect(() => {
-    if (isOpen) {
-      setTitle('');
-      setDescription('');
-      setStatus(defaultStatus ?? TaskStatus.backlog);
-      setPriority(TaskPriority.medium);
-    }
-  }, [isOpen, defaultStatus]);
-
-  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

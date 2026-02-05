@@ -1,23 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useCreateProject } from '../api/generated/endpoints/projects/projects';
 import { useUiStore } from '../stores/uiStore';
 
 export function ProjectCreateDialog() {
   const isOpen = useUiStore((s) => s.isProjectModalOpen);
+
+  if (!isOpen) return null;
+
+  return <ProjectCreateForm />;
+}
+
+function ProjectCreateForm() {
   const closeProjectModal = useUiStore((s) => s.closeProjectModal);
   const createProject = useCreateProject();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      setName('');
-      setDescription('');
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
