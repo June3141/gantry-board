@@ -544,3 +544,85 @@ async fn test_remove_member_allowed_for_owner() {
         .await;
     response.assert_status(StatusCode::NO_CONTENT);
 }
+
+// =============================================================
+// Phase 6: Owner protection rules
+// =============================================================
+
+#[tokio::test]
+async fn test_cannot_remove_last_owner() {
+    let server = create_test_server().await;
+    let (user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+
+    // Try to remove the only owner
+    let response = server
+        .delete(&format!(
+            "/api/projects/{}/members/{}",
+            project_id, user_a_id
+        ))
+        .add_header(header::COOKIE, &cookie_a)
+        .await;
+    response.assert_status(StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_can_remove_owner_if_another_owner_exists() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, _cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "owner").await;
+
+    // Can remove one owner since another exists
+    let response = server
+        .delete(&format!(
+            "/api/projects/{}/members/{}",
+            project_id, user_b_id
+        ))
+        .add_header(header::COOKIE, &cookie_a)
+        .await;
+    response.assert_status(StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn test_cannot_downgrade_last_owner_role() {
+    let server = create_test_server().await;
+    let (user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+
+    // Try to change the only owner to admin
+    let response = server
+        .patch(&format!(
+            "/api/projects/{}/members/{}",
+            project_id, user_a_id
+        ))
+        .add_header(header::COOKIE, &cookie_a)
+        .json(&json!({ "role": "admin" }))
+        .await;
+    response.assert_status(StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_can_downgrade_owner_if_another_owner_exists() {
+    let server = create_test_server().await;
+    let (user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, _cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "owner").await;
+
+    // Can downgrade an owner since another exists
+    let response = server
+        .patch(&format!(
+            "/api/projects/{}/members/{}",
+            project_id, user_a_id
+        ))
+        .add_header(header::COOKIE, &cookie_a)
+        .json(&json!({ "role": "admin" }))
+        .await;
+    response.assert_status_ok();
+}
