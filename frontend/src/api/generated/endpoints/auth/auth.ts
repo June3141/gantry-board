@@ -5,7 +5,7 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import { useMutation, useQuery } from '@tanstack/react-query';
+
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -20,10 +20,9 @@ import type {
   UseQueryOptions,
   UseQueryResult,
 } from '@tanstack/react-query';
-
-import type { AuthResponse, LoginRequest, RegisterRequest, User } from '../../model';
-
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
+import type { AuthResponse, LoginRequest, RegisterRequest, User } from '../../model';
 
 export const login = (loginRequest: LoginRequest, signal?: AbortSignal) => {
   return customInstance<AuthResponse>({

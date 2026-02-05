@@ -23,7 +23,6 @@
   },
   "linter": {
     "enabled": true,
-    "includes": ["**", "!src/api/generated/**"],
     "rules": {
       "recommended": true,
       "correctness": {
@@ -35,9 +34,6 @@
         "useKeyWithClickEvents": "off"
       }
     }
-  },
-  "assist": {
-    "includes": ["**", "!src/api/generated/**"]
   },
   "css": {
     "formatter": { "enabled": true },

@@ -147,7 +147,9 @@ tasks:
     desc: Generate TypeScript client from OpenAPI spec
     dir: "{{.FRONTEND_DIR}}"
     deps: [api:export]
-    cmd: npx orval
+    cmds:
+      - npx orval
+      - npx biome check --write src/api/generated/
 
   api:diff:
     desc: Check if generated API client is up to date

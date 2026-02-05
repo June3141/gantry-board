@@ -70,7 +70,7 @@ jobs:
       - run: cargo test --test export_openapi -- --nocapture
       - run: cd frontend && npm ci
       - run: cd frontend && npx orval
-      - run: cd frontend && npx biome format --write src/api/generated/
+      - run: cd frontend && npx biome check --write src/api/generated/
       - run: cd frontend && git diff --exit-code src/api/generated/
         name: Check generated API client is up to date
 
