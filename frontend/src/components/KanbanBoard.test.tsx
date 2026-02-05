@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { KanbanBoard } from './KanbanBoard';
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
 import type { Task } from '../api/generated/model';
-import { TaskStatus, TaskPriority } from '../api/generated/model';
+import { TaskPriority, TaskStatus } from '../api/generated/model';
+import { KanbanBoard } from './KanbanBoard';
 
 vi.mock('../api/generated/endpoints/tasks/tasks', () => ({
   useListTasks: vi.fn(),

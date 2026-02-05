@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useCreateTask } from '../api/generated/endpoints/tasks/tasks';
+import { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
 
 interface TaskCreateDialogProps {

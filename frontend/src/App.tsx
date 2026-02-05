@@ -22,11 +22,11 @@ function KanbanApp() {
   const setUser = useAuthStore((state) => state.setUser);
   const openProjectModal = useUiStore((s) => s.openProjectModal);
 
-  // Connect to SSE for real-time updates (queryClient is stable from provider)
+  // Connect to SSE for real-time updates
+  // biome-ignore lint/correctness/useExhaustiveDependencies: queryClient is stable from provider
   useEffect(() => {
     const cleanup = connectEventSource(queryClient);
     return cleanup;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = async () => {
@@ -63,6 +63,7 @@ function KanbanApp() {
               ))}
             </select>
             <button
+              type="button"
               onClick={openProjectModal}
               className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
             >
@@ -72,6 +73,7 @@ function KanbanApp() {
             <div className="flex items-center gap-2 border-l pl-4">
               <span className="text-sm text-gray-600">{user?.name ?? user?.email}</span>
               <button
+                type="button"
                 onClick={handleLogout}
                 disabled={logout.isPending}
                 className="rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"

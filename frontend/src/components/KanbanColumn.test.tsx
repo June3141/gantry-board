@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { KanbanColumn } from './KanbanColumn';
+import { describe, expect, it, vi } from 'vitest';
 import type { Task } from '../api/generated/model';
-import { TaskStatus, TaskPriority } from '../api/generated/model';
+import { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
+import { KanbanColumn } from './KanbanColumn';
 
 const createMockTask = (overrides: Partial<Task> = {}): Task => ({
   id: 'task-1',

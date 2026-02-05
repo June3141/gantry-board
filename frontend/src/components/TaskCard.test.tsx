@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TaskCard } from './TaskCard';
+import { describe, expect, it } from 'vitest';
 import type { Task } from '../api/generated/model';
-import { TaskStatus, TaskPriority } from '../api/generated/model';
+import { TaskPriority, TaskStatus } from '../api/generated/model';
+import { TaskCard } from './TaskCard';
 
 const createMockTask = (overrides: Partial<Task> = {}): Task => ({
   id: 'task-1',

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
   DndContext,
   DragOverlay,
@@ -7,12 +7,12 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
 import {
+  getListTasksQueryKey,
   useListTasks,
   useUpdateTask,
-  getListTasksQueryKey,
 } from '../api/generated/endpoints/tasks/tasks';
 import type { Task } from '../api/generated/model';
 import { TaskStatus } from '../api/generated/model';
