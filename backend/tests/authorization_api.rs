@@ -189,7 +189,7 @@ async fn test_get_project_allowed_for_member() {
     let project_id = create_project(&server, &cookie_a, "Shared Project").await;
 
     // Add User B as member
-    add_member(&server, &cookie_a, &project_id, &user_b_id, "member");
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
 
     // User B can now access the project
     let response = server
@@ -206,7 +206,7 @@ async fn test_update_project_forbidden_for_member_role() {
     let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
 
     let project_id = create_project(&server, &cookie_a, "Project").await;
-    add_member(&server, &cookie_a, &project_id, &user_b_id, "member");
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
 
     // Member cannot update project
     let response = server
@@ -224,7 +224,7 @@ async fn test_update_project_allowed_for_admin() {
     let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
 
     let project_id = create_project(&server, &cookie_a, "Project").await;
-    add_member(&server, &cookie_a, &project_id, &user_b_id, "admin");
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "admin").await;
 
     // Admin can update project
     let response = server
@@ -244,7 +244,7 @@ async fn test_delete_project_forbidden_for_admin() {
     let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
 
     let project_id = create_project(&server, &cookie_a, "Project").await;
-    add_member(&server, &cookie_a, &project_id, &user_b_id, "admin");
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "admin").await;
 
     // Admin cannot delete project
     let response = server

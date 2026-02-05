@@ -91,6 +91,26 @@ pub async fn list_projects(pool: &SqlitePool) -> AppResult<Vec<Project>> {
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
+pub async fn list_projects_for_user(pool: &SqlitePool, user_id: Uuid) -> AppResult<Vec<Project>> {
+    let rows = sqlx::query_as::<_, ProjectRow>(
+        r#"
+        SELECT p.id, p.name, p.description, p.created_at, p.updated_at
+        FROM projects p
+        INNER JOIN project_members pm ON p.id = pm.project_id
+        WHERE pm.user_id = $1
+        ORDER BY p.created_at DESC
+        "#,
+    )
+    .bind(user_id.to_string())
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+}
+
 pub async fn update_project(
     pool: &SqlitePool,
     id: Uuid,
