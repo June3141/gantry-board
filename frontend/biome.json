@@ -35,5 +35,17 @@
   "css": {
     "formatter": { "enabled": true },
     "linter": { "enabled": true }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src/api/generated/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConfusingVoidType": "off"
+          }
+        }
+      }
+    }
+  ]
 }
