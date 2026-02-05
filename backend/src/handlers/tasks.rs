@@ -23,6 +23,7 @@ pub struct ListTasksQuery {
     params(("project_id" = Uuid, Query, description = "Filter by project ID")),
     responses(
         (status = 200, description = "List tasks for project", body = Vec<Task>),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "Project not found")
     ),
     tag = "tasks"
@@ -46,6 +47,7 @@ pub async fn list_tasks(
     responses(
         (status = 201, description = "Task created", body = Task),
         (status = 400, description = "Validation error"),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "Project not found")
     ),
     tag = "tasks"
@@ -73,6 +75,7 @@ pub async fn create_task(
     params(("id" = Uuid, Path, description = "Task ID")),
     responses(
         (status = 200, description = "Task found", body = Task),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "Task not found")
     ),
     tag = "tasks"
@@ -96,6 +99,7 @@ pub async fn get_task(
     responses(
         (status = 200, description = "Task updated", body = Task),
         (status = 400, description = "Validation error"),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "Task not found")
     ),
     tag = "tasks"
@@ -124,6 +128,7 @@ pub async fn update_task(
     params(("id" = Uuid, Path, description = "Task ID")),
     responses(
         (status = 204, description = "Task deleted"),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "Task not found")
     ),
     tag = "tasks"

@@ -15,6 +15,7 @@ use crate::AppState;
     params(("project_id" = Uuid, Path, description = "Project ID")),
     responses(
         (status = 200, description = "List project members", body = Vec<ProjectMember>),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "Project not found")
     ),
     tag = "project-members"
@@ -37,6 +38,7 @@ pub async fn list_members(
     request_body = AddMemberRequest,
     responses(
         (status = 201, description = "Member added", body = ProjectMember),
+        (status = 403, description = "Forbidden - requires Admin or Owner"),
         (status = 404, description = "Project not found")
     ),
     tag = "project-members"
@@ -62,6 +64,7 @@ pub async fn add_member(
     ),
     responses(
         (status = 200, description = "Member found", body = ProjectMember),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "Member not found")
     ),
     tag = "project-members"
@@ -86,6 +89,7 @@ pub async fn get_member(
     request_body = UpdateMemberRequest,
     responses(
         (status = 200, description = "Member role updated", body = ProjectMember),
+        (status = 403, description = "Forbidden - requires Admin or Owner"),
         (status = 404, description = "Member not found")
     ),
     tag = "project-members"
@@ -124,6 +128,7 @@ pub async fn update_member(
     ),
     responses(
         (status = 204, description = "Member removed"),
+        (status = 403, description = "Forbidden - requires Admin or Owner"),
         (status = 404, description = "Member not found")
     ),
     tag = "project-members"

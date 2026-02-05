@@ -72,6 +72,7 @@ pub async fn create_project(
     params(("id" = Uuid, Path, description = "Project ID")),
     responses(
         (status = 200, description = "Project found", body = Project),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "Project not found")
     ),
     tag = "projects"
@@ -93,6 +94,7 @@ pub async fn get_project(
     request_body = UpdateProjectRequest,
     responses(
         (status = 200, description = "Project updated", body = Project),
+        (status = 403, description = "Forbidden - requires Admin or Owner"),
         (status = 404, description = "Project not found")
     ),
     tag = "projects"
@@ -116,6 +118,7 @@ pub async fn update_project(
     params(("id" = Uuid, Path, description = "Project ID")),
     responses(
         (status = 204, description = "Project deleted"),
+        (status = 403, description = "Forbidden - requires Owner"),
         (status = 404, description = "Project not found")
     ),
     tag = "projects"
