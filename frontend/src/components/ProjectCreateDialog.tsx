@@ -50,12 +50,11 @@ function ProjectCreateForm() {
       aria-modal="true"
       aria-labelledby="project-create-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={closeProjectModal}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeProjectModal();
+      }}
     >
-      <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
         <h2 id="project-create-title" className="mb-4 text-lg font-semibold">
           Create Project
         </h2>
