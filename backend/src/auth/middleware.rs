@@ -83,7 +83,11 @@ impl FromRequestParts<AppState> for MaybeAuthUser {
 }
 
 /// Create a session cookie value with Max-Age derived from session duration
-pub fn create_session_cookie(session_id: Uuid, secure: bool, session_duration_hours: u64) -> String {
+pub fn create_session_cookie(
+    session_id: Uuid,
+    secure: bool,
+    session_duration_hours: u64,
+) -> String {
     let max_age_seconds = session_duration_hours * 3600;
     let mut cookie = format!("{}={}", SESSION_COOKIE_NAME, session_id);
 
