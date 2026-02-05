@@ -5,6 +5,7 @@ use garde::Validate;
 use serde::Deserialize;
 use uuid::Uuid;
 
+use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::task::{CreateTaskRequest, Task, UpdateTaskRequest};
 use crate::services::{project_service, task_service};
@@ -28,6 +29,7 @@ pub struct ListTasksQuery {
 )]
 pub async fn list_tasks(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Query(query): Query<ListTasksQuery>,
 ) -> AppResult<Json<Vec<Task>>> {
     // Verify project exists
@@ -49,6 +51,7 @@ pub async fn list_tasks(
 )]
 pub async fn create_task(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Json(body): Json<CreateTaskRequest>,
 ) -> AppResult<(StatusCode, Json<Task>)> {
     body.validate()
@@ -74,6 +77,7 @@ pub async fn create_task(
 )]
 pub async fn get_task(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<Task>> {
     let task = task_service::get_task(&state.pool, id).await?;
@@ -94,6 +98,7 @@ pub async fn get_task(
 )]
 pub async fn update_task(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateTaskRequest>,
 ) -> AppResult<Json<Task>> {
@@ -118,6 +123,7 @@ pub async fn update_task(
 )]
 pub async fn delete_task(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
     task_service::delete_task(&state.pool, id).await?;

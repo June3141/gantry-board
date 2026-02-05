@@ -32,14 +32,22 @@ export const customInstance = async <T>({
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
 
-    // Handle 401 Unauthorized - redirect to login
+    // Handle 401 Unauthorized - redirect to login with loop prevention
     if (response.status === 401) {
-      // Only redirect if not already on auth pages
-      if (
-        !window.location.pathname.startsWith('/login') &&
-        !window.location.pathname.startsWith('/register')
-      ) {
-        window.location.href = '/login';
+      const isAuthPage =
+        window.location.pathname.startsWith('/login') ||
+        window.location.pathname.startsWith('/register');
+
+      if (!isAuthPage) {
+        const REDIRECT_KEY = 'auth_redirect_ts';
+        const COOLDOWN_MS = 5000;
+        const now = Date.now();
+        const lastRedirect = Number(sessionStorage.getItem(REDIRECT_KEY) ?? '0');
+
+        if (now - lastRedirect > COOLDOWN_MS) {
+          sessionStorage.setItem(REDIRECT_KEY, String(now));
+          window.location.href = '/login';
+        }
       }
     }
 

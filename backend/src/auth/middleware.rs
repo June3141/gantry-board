@@ -82,11 +82,11 @@ impl FromRequestParts<AppState> for MaybeAuthUser {
     }
 }
 
-/// Create a session cookie value
-pub fn create_session_cookie(session_id: Uuid, secure: bool) -> String {
+/// Create a session cookie value with Max-Age derived from session duration
+pub fn create_session_cookie(session_id: Uuid, secure: bool, session_duration_hours: u64) -> String {
+    let max_age_seconds = session_duration_hours * 3600;
     let mut cookie = format!("{}={}", SESSION_COOKIE_NAME, session_id);
 
-    // Add cookie attributes
     cookie.push_str("; Path=/");
     cookie.push_str("; HttpOnly");
     cookie.push_str("; SameSite=Lax");
@@ -95,8 +95,7 @@ pub fn create_session_cookie(session_id: Uuid, secure: bool) -> String {
         cookie.push_str("; Secure");
     }
 
-    // Max age of 1 week
-    cookie.push_str("; Max-Age=604800");
+    cookie.push_str(&format!("; Max-Age={}", max_age_seconds));
 
     cookie
 }
@@ -116,20 +115,33 @@ mod tests {
     #[test]
     fn test_create_session_cookie_without_secure() {
         let session_id = Uuid::new_v4();
-        let cookie = create_session_cookie(session_id, false);
+        let cookie = create_session_cookie(session_id, false, 168);
 
         assert!(cookie.contains(&session_id.to_string()));
         assert!(cookie.contains("HttpOnly"));
         assert!(cookie.contains("SameSite=Lax"));
         assert!(!cookie.contains("Secure"));
+        assert!(cookie.contains("Max-Age=604800")); // 168h * 3600
     }
 
     #[test]
     fn test_create_session_cookie_with_secure() {
         let session_id = Uuid::new_v4();
-        let cookie = create_session_cookie(session_id, true);
+        let cookie = create_session_cookie(session_id, true, 168);
 
         assert!(cookie.contains("Secure"));
+    }
+
+    #[test]
+    fn test_create_session_cookie_max_age_matches_duration() {
+        let session_id = Uuid::new_v4();
+        // 24 hours = 86400 seconds
+        let cookie = create_session_cookie(session_id, false, 24);
+        assert!(cookie.contains("Max-Age=86400"));
+
+        // 1 hour = 3600 seconds
+        let cookie = create_session_cookie(session_id, false, 1);
+        assert!(cookie.contains("Max-Age=3600"));
     }
 
     #[test]

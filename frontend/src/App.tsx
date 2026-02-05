@@ -104,12 +104,15 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isAuthenticated) {
-      if (isError) {
+      if (isLoading) {
+        // Keep loading while /me query is in-flight
+        setLoading(true);
+      } else if (isError) {
         // Session expired or invalid
         setUser(null);
       } else if (user) {
         setUser(user);
-      } else if (!isLoading) {
+      } else {
         setLoading(false);
       }
     } else {

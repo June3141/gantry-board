@@ -3,6 +3,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use uuid::Uuid;
 
+use crate::auth::middleware::AuthUser;
 use crate::error::AppResult;
 use crate::models::project::{AddMemberRequest, ProjectMember, UpdateMemberRequest};
 use crate::services::{member_service, project_service};
@@ -20,6 +21,7 @@ use crate::AppState;
 )]
 pub async fn list_members(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(project_id): Path<Uuid>,
 ) -> AppResult<Json<Vec<ProjectMember>>> {
     // Verify project exists before listing members
@@ -41,6 +43,7 @@ pub async fn list_members(
 )]
 pub async fn add_member(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(project_id): Path<Uuid>,
     Json(body): Json<AddMemberRequest>,
 ) -> AppResult<(StatusCode, Json<ProjectMember>)> {
@@ -65,6 +68,7 @@ pub async fn add_member(
 )]
 pub async fn get_member(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path((project_id, user_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<Json<ProjectMember>> {
     let member = member_service::get_member(&state.pool, project_id, user_id).await?;
@@ -87,6 +91,7 @@ pub async fn get_member(
 )]
 pub async fn update_member(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path((project_id, user_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<UpdateMemberRequest>,
 ) -> AppResult<Json<ProjectMember>> {
@@ -110,6 +115,7 @@ pub async fn update_member(
 )]
 pub async fn remove_member(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path((project_id, user_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<StatusCode> {
     member_service::remove_member(&state.pool, project_id, user_id).await?;

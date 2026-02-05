@@ -22,8 +22,8 @@ export function LoginPage() {
       });
       setUser(response.user);
       navigate('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+    } catch {
+      setError('Invalid email or password. Please try again.');
     }
   };
 

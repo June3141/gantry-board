@@ -40,7 +40,11 @@ pub async fn register(
         .parse()
         .map_err(|_| AppError::Internal("failed to parse session id".to_string()))?;
 
-    let cookie = create_session_cookie(session_id, state.config.cookie_secure);
+    let cookie = create_session_cookie(
+        session_id,
+        state.config.cookie_secure,
+        state.config.session_duration_hours,
+    );
 
     let response = AuthResponse { user };
 
@@ -80,7 +84,11 @@ pub async fn login(
         .parse()
         .map_err(|_| AppError::Internal("failed to parse session id".to_string()))?;
 
-    let cookie = create_session_cookie(session_id, state.config.cookie_secure);
+    let cookie = create_session_cookie(
+        session_id,
+        state.config.cookie_secure,
+        state.config.session_duration_hours,
+    );
 
     let response = AuthResponse { user };
 

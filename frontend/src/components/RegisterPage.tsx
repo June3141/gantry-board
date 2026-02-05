@@ -28,8 +28,8 @@ export function RegisterPage() {
       });
       setUser(response.user);
       navigate('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+    } catch {
+      setError('Registration failed. The email may already be in use.');
     }
   };
 
