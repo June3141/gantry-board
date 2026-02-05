@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCreateProject } from '../api/generated/endpoints/projects/projects';
 import { useUiStore } from '../stores/uiStore';
 
@@ -16,24 +16,52 @@ function ProjectCreateForm() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeProjectModal();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [closeProjectModal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    setError(null);
 
-    await createProject.mutateAsync({
-      data: {
-        name: name.trim(),
-        description: description.trim() || undefined,
-      },
-    });
-    closeProjectModal();
+    try {
+      await createProject.mutateAsync({
+        data: {
+          name: name.trim(),
+          description: description.trim() || undefined,
+        },
+      });
+      closeProjectModal();
+    } catch {
+      setError('Failed to create project. Please try again.');
+    }
   };
 
   return (
-    <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold">Create Project</h2>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="project-create-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={closeProjectModal}
+    >
+      <div
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="project-create-title" className="mb-4 text-lg font-semibold">
+          Create Project
+        </h2>
+        {error && (
+          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="project-name" className="block text-sm font-medium text-gray-700">

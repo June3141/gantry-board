@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useCreateTask } from '../api/generated/endpoints/tasks/tasks';
 import { useUiStore } from '../stores/uiStore';
@@ -30,27 +30,55 @@ function TaskCreateForm({
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>(defaultStatus ?? TaskStatus.backlog);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.medium);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeTaskModal();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [closeTaskModal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    setError(null);
 
-    await createTask.mutateAsync({
-      data: {
-        project_id: projectId,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        status,
-        priority,
-      },
-    });
-    closeTaskModal();
+    try {
+      await createTask.mutateAsync({
+        data: {
+          project_id: projectId,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          status,
+          priority,
+        },
+      });
+      closeTaskModal();
+    } catch {
+      setError('Failed to create task. Please try again.');
+    }
   };
 
   return (
-    <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold">Create Task</h2>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="task-create-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={closeTaskModal}
+    >
+      <div
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="task-create-title" className="mb-4 text-lg font-semibold">
+          Create Task
+        </h2>
+        {error && (
+          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="task-title" className="block text-sm font-medium text-gray-700">
