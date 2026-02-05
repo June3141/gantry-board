@@ -6,8 +6,10 @@ use uuid::Uuid;
 
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
-use crate::models::project::{CreateProjectRequest, Project, UpdateProjectRequest};
-use crate::services::project_service;
+use crate::models::project::{
+    AddMemberRequest, CreateProjectRequest, MemberRole, Project, UpdateProjectRequest,
+};
+use crate::services::{member_service, project_service};
 use crate::AppState;
 
 #[utoipa::path(
@@ -37,12 +39,26 @@ pub async fn list_projects(
 )]
 pub async fn create_project(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Json(body): Json<CreateProjectRequest>,
 ) -> AppResult<(StatusCode, Json<Project>)> {
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
     let project = project_service::create_project(&state.pool, &body).await?;
+
+    // Auto-add creator as owner (skip in auth_disabled mode)
+    if !auth.user_id.is_nil() {
+        member_service::add_member(
+            &state.pool,
+            project.id,
+            &AddMemberRequest {
+                user_id: auth.user_id,
+                role: MemberRole::Owner,
+            },
+        )
+        .await?;
+    }
+
     Ok((StatusCode::CREATED, Json(project)))
 }
 
