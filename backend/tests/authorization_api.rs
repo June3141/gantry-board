@@ -268,3 +268,141 @@ async fn test_delete_project_allowed_for_owner() {
         .await;
     response.assert_status(StatusCode::NO_CONTENT);
 }
+
+// =============================================================
+// Phase 4: Task endpoint authorization
+// =============================================================
+
+/// Create a task in a project and return its ID
+async fn create_task(server: &TestServer, cookie: &str, project_id: &str, title: &str) -> String {
+    let response = server
+        .post("/api/tasks")
+        .add_header(header::COOKIE, cookie)
+        .json(&json!({
+            "project_id": project_id,
+            "title": title
+        }))
+        .await;
+    response.assert_status(StatusCode::CREATED);
+    let body: serde_json::Value = response.json();
+    body["id"].as_str().unwrap().to_string()
+}
+
+#[tokio::test]
+async fn test_list_tasks_forbidden_for_non_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+
+    let response = server
+        .get(&format!("/api/tasks?project_id={}", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_list_tasks_allowed_for_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
+
+    let response = server
+        .get(&format!("/api/tasks?project_id={}", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status_ok();
+}
+
+#[tokio::test]
+async fn test_create_task_forbidden_for_non_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+
+    let response = server
+        .post("/api/tasks")
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({
+            "project_id": project_id,
+            "title": "Unauthorized Task"
+        }))
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_create_task_allowed_for_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
+
+    let response = server
+        .post("/api/tasks")
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({
+            "project_id": project_id,
+            "title": "Member Task"
+        }))
+        .await;
+    response.assert_status(StatusCode::CREATED);
+}
+
+#[tokio::test]
+async fn test_get_task_forbidden_for_non_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    let task_id = create_task(&server, &cookie_a, &project_id, "Task").await;
+
+    let response = server
+        .get(&format!("/api/tasks/{}", task_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_update_task_forbidden_for_non_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    let task_id = create_task(&server, &cookie_a, &project_id, "Task").await;
+
+    let response = server
+        .patch(&format!("/api/tasks/{}", task_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({ "title": "Hacked" }))
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_delete_task_forbidden_for_non_member() {
+    let server = create_test_server().await;
+    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
+    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+
+    let project_id = create_project(&server, &cookie_a, "Project").await;
+    let task_id = create_task(&server, &cookie_a, &project_id, "Task").await;
+
+    let response = server
+        .delete(&format!("/api/tasks/{}", task_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await;
+    response.assert_status(StatusCode::FORBIDDEN);
+}
