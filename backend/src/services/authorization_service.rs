@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 use crate::models::project::MemberRole;
 
 /// Check if user is a member of the project (any role).
@@ -12,7 +12,32 @@ pub async fn require_project_member(
     user_id: Uuid,
     project_id: Uuid,
 ) -> AppResult<MemberRole> {
-    todo!()
+    if user_id.is_nil() {
+        return Ok(MemberRole::Owner);
+    }
+
+    let row = sqlx::query_scalar::<_, String>(
+        r#"
+        SELECT role FROM project_members
+        WHERE project_id = $1 AND user_id = $2
+        "#,
+    )
+    .bind(project_id.to_string())
+    .bind(user_id.to_string())
+    .fetch_optional(pool)
+    .await?;
+
+    match row {
+        Some(role_str) => {
+            let role: MemberRole = serde_json::from_value(serde_json::Value::String(role_str))
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+            Ok(role)
+        }
+        None => Err(AppError::Forbidden(format!(
+            "user {} is not a member of project {}",
+            user_id, project_id
+        ))),
+    }
 }
 
 /// Check if user has Owner or Admin role in the project.
@@ -22,7 +47,13 @@ pub async fn require_project_admin(
     user_id: Uuid,
     project_id: Uuid,
 ) -> AppResult<MemberRole> {
-    todo!()
+    let role = require_project_member(pool, user_id, project_id).await?;
+    match role {
+        MemberRole::Owner | MemberRole::Admin => Ok(role),
+        MemberRole::Member => Err(AppError::Forbidden(
+            "insufficient permissions: admin or owner role required".to_string(),
+        )),
+    }
 }
 
 /// Check if user is Owner of the project.
@@ -32,23 +63,53 @@ pub async fn require_project_owner(
     user_id: Uuid,
     project_id: Uuid,
 ) -> AppResult<()> {
-    todo!()
+    let role = require_project_member(pool, user_id, project_id).await?;
+    match role {
+        MemberRole::Owner => Ok(()),
+        _ => Err(AppError::Forbidden(
+            "insufficient permissions: owner role required".to_string(),
+        )),
+    }
 }
 
 /// List project IDs the user is a member of.
 pub async fn list_user_project_ids(pool: &SqlitePool, user_id: Uuid) -> AppResult<Vec<Uuid>> {
-    todo!()
+    let rows = sqlx::query_scalar::<_, String>(
+        r#"
+        SELECT project_id FROM project_members
+        WHERE user_id = $1
+        "#,
+    )
+    .bind(user_id.to_string())
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|s| {
+            s.parse()
+                .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+        })
+        .collect()
 }
 
 /// Count owners in a project.
 pub async fn count_owners(pool: &SqlitePool, project_id: Uuid) -> AppResult<i64> {
-    todo!()
+    let count = sqlx::query_scalar::<_, i32>(
+        r#"
+        SELECT COUNT(*) FROM project_members
+        WHERE project_id = $1 AND role = 'owner'
+        "#,
+    )
+    .bind(project_id.to_string())
+    .fetch_one(pool)
+    .await?;
+
+    Ok(count as i64)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::AppError;
     use crate::models::project::AddMemberRequest;
     use crate::services::{member_service, project_service};
     use crate::test_helpers::setup_test_db;
