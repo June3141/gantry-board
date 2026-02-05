@@ -1,8 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { connectEventSource } from './useEventSource';
 import type { SseEvent } from './useEventSource';
+import { connectEventSource } from './useEventSource';
 
 // Mock EventSource
 class MockEventSource {

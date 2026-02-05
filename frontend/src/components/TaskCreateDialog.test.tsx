@@ -1,9 +1,9 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TaskStatus } from '../api/generated/model';
 import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
+import { TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
 import { TaskCreateDialog } from './TaskCreateDialog';
 

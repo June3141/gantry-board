@@ -36,7 +36,7 @@ if $HAS_FE; then
     ERRORS+="Frontend format check failed. "
   fi
   if ! task frontend:lint 2>&1; then
-    ERRORS+="Frontend lint (eslint) failed. "
+    ERRORS+="Frontend lint (biome) failed. "
   fi
 fi
 

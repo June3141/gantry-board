@@ -70,7 +70,7 @@ jobs:
       - run: cargo test --test export_openapi -- --nocapture
       - run: cd frontend && npm ci
       - run: cd frontend && npx orval
-      - run: cd frontend && npx prettier --write 'src/api/generated/**/*.ts'
+      - run: cd frontend && npx biome check --write src/api/generated/
       - run: cd frontend && git diff --exit-code src/api/generated/
         name: Check generated API client is up to date
 
@@ -83,7 +83,6 @@ jobs:
         with:
           node-version: "22"
       - run: cd frontend && npm ci
-      - run: cd frontend && npx eslint .
-      - run: cd frontend && npx prettier --check 'src/**/*.{ts,tsx,css}'
+      - run: cd frontend && npx biome check src/
       - run: cd frontend && npx vitest run
       - run: cd frontend && npm run build

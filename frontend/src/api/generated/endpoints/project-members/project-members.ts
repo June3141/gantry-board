@@ -5,7 +5,7 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import { useMutation, useQuery } from '@tanstack/react-query';
+
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -20,10 +20,9 @@ import type {
   UseQueryOptions,
   UseQueryResult,
 } from '@tanstack/react-query';
-
-import type { AddMemberRequest, ProjectMember, UpdateMemberRequest } from '../../model';
-
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
+import type { AddMemberRequest, ProjectMember, UpdateMemberRequest } from '../../model';
 
 export const listMembers = (projectId: string, signal?: AbortSignal) => {
   return customInstance<ProjectMember[]>({

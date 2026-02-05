@@ -30,7 +30,7 @@ case "$FILE_PATH" in
         REL_PATH="${REL_PATH#frontend/}"
       fi
       cd frontend
-      npx prettier --write "$REL_PATH" --log-level silent 2>/dev/null || true
+      npx biome format --write "$REL_PATH" --log-level=off 2>/dev/null || true
     fi
     ;;
 esac

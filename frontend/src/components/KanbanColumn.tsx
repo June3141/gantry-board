@@ -52,6 +52,7 @@ export function KanbanColumn({ status, tasks, activeTaskId }: KanbanColumnProps)
       </div>
       <div className="p-2">
         <button
+          type="button"
           onClick={() => openTaskModal(status)}
           className="w-full rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700"
         >

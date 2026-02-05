@@ -102,19 +102,19 @@ tasks:
 
   # ── Frontend (React/TypeScript) ───────────────
   frontend:fmt:
-    desc: Format frontend code with Prettier
+    desc: Format frontend code with Biome
     dir: "{{.FRONTEND_DIR}}"
-    cmd: npx prettier --write 'src/**/*.{ts,tsx,css}'
+    cmd: npx biome format --write src/
 
   frontend:fmt:check:
     desc: Check frontend formatting
     dir: "{{.FRONTEND_DIR}}"
-    cmd: npx prettier --check 'src/**/*.{ts,tsx,css}'
+    cmd: npx biome format src/
 
   frontend:lint:
     desc: Lint frontend code
     dir: "{{.FRONTEND_DIR}}"
-    cmd: npx eslint .
+    cmd: npx biome lint src/
 
   frontend:build:
     desc: Build frontend
@@ -147,7 +147,9 @@ tasks:
     desc: Generate TypeScript client from OpenAPI spec
     dir: "{{.FRONTEND_DIR}}"
     deps: [api:export]
-    cmd: npx orval
+    cmds:
+      - npx orval
+      - npx biome check --write src/api/generated/
 
   api:diff:
     desc: Check if generated API client is up to date

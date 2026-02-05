@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from './App';
+import * as authApi from './api/generated/endpoints/auth/auth';
 import * as projectsApi from './api/generated/endpoints/projects/projects';
 import * as tasksApi from './api/generated/endpoints/tasks/tasks';
-import * as authApi from './api/generated/endpoints/auth/auth';
 import { useAuthStore } from './stores/authStore';
 import { useUiStore } from './stores/uiStore';
 

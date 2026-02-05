@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "format": "prettier --write 'src/**/*.{ts,tsx,css}'",
-    "format:check": "prettier --check 'src/**/*.{ts,tsx,css}'",
+    "lint": "biome lint src/",
+    "format": "biome format --write src/",
+    "format:check": "biome format src/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
@@ -27,7 +27,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
+    "@biomejs/biome": "2.3.14",
     "@tailwindcss/vite": "^4.1.0",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.3.0",
@@ -37,17 +37,10 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/ui": "^3.1.0",
-    "eslint": "^9.39.1",
-    "eslint-config-prettier": "^10.1.0",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
     "jsdom": "^26.1.0",
     "orval": "^7.13.2",
-    "prettier": "^3.5.0",
     "tailwindcss": "^4.1.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
     "vitest": "^3.1.0"
   }

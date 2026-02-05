@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useCreateTask } from '../api/generated/endpoints/tasks/tasks';
+import { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
 
 interface TaskCreateDialogProps {
@@ -67,12 +67,11 @@ function TaskCreateForm({
       aria-modal="true"
       aria-labelledby="task-create-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={closeTaskModal}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeTaskModal();
+      }}
     >
-      <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
         <h2 id="task-create-title" className="mb-4 text-lg font-semibold">
           Create Task
         </h2>
