@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type SseEventOneOfFiveType = typeof SseEventOneOfFiveType[keyof typeof SseEventOneOfFiveType];
-
+export type SseEventOneOfFiveType =
+  (typeof SseEventOneOfFiveType)[keyof typeof SseEventOneOfFiveType];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SseEventOneOfFiveType = {

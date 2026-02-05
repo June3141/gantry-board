@@ -105,8 +105,7 @@ pub async fn update_member(
     // Prevent downgrading the last owner
     let target = member_service::get_member(&state.pool, project_id, user_id).await?;
     if matches!(target.role, MemberRole::Owner) && !matches!(body.role, MemberRole::Owner) {
-        let owner_count =
-            authorization_service::count_owners(&state.pool, project_id).await?;
+        let owner_count = authorization_service::count_owners(&state.pool, project_id).await?;
         if owner_count <= 1 {
             return Err(AppError::Validation(
                 "cannot downgrade the last owner".to_string(),
@@ -143,8 +142,7 @@ pub async fn remove_member(
     // Prevent removing the last owner
     let target = member_service::get_member(&state.pool, project_id, user_id).await?;
     if matches!(target.role, MemberRole::Owner) {
-        let owner_count =
-            authorization_service::count_owners(&state.pool, project_id).await?;
+        let owner_count = authorization_service::count_owners(&state.pool, project_id).await?;
         if owner_count <= 1 {
             return Err(AppError::Validation(
                 "cannot remove the last owner".to_string(),
