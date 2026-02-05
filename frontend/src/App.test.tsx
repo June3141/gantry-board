@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from './App';
 import * as projectsApi from './api/generated/endpoints/projects/projects';
+import * as tasksApi from './api/generated/endpoints/tasks/tasks';
 import * as authApi from './api/generated/endpoints/auth/auth';
 import { useAuthStore } from './stores/authStore';
+import { useUiStore } from './stores/uiStore';
 
 // Mock EventSource for SSE
 class MockEventSource {
@@ -18,11 +21,13 @@ vi.stubGlobal('EventSource', MockEventSource);
 
 vi.mock('./api/generated/endpoints/projects/projects', () => ({
   useListProjects: vi.fn(),
+  useCreateProject: vi.fn(),
 }));
 
 vi.mock('./api/generated/endpoints/tasks/tasks', () => ({
   useListTasks: vi.fn(),
   useUpdateTask: vi.fn(),
+  useCreateTask: vi.fn(),
   getListTasksQueryKey: vi.fn(() => ['/api/tasks']),
 }));
 
@@ -82,6 +87,22 @@ describe('App', () => {
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof authApi.useRegister>);
+    // Mock useCreateProject
+    vi.mocked(projectsApi.useCreateProject).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof projectsApi.useCreateProject>);
+    // Mock useCreateTask
+    vi.mocked(tasksApi.useCreateTask).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof tasksApi.useCreateTask>);
+    // Reset ui store
+    useUiStore.setState({
+      isTaskModalOpen: false,
+      defaultStatus: null,
+      isProjectModalOpen: false,
+    });
   });
 
   describe('when not authenticated', () => {
@@ -172,6 +193,30 @@ describe('App', () => {
 
       expect(screen.getByText('Test User')).toBeInTheDocument();
       expect(screen.getByText('Logout')).toBeInTheDocument();
+    });
+
+    it('renders new project button', () => {
+      vi.mocked(projectsApi.useListProjects).mockReturnValue({
+        data: [],
+        isLoading: false,
+      } as ReturnType<typeof projectsApi.useListProjects>);
+
+      renderWithProviders(<AppRoutes />);
+
+      expect(screen.getByRole('button', { name: /new project/i })).toBeInTheDocument();
+    });
+
+    it('opens project modal on new project button click', async () => {
+      const user = userEvent.setup();
+      vi.mocked(projectsApi.useListProjects).mockReturnValue({
+        data: [],
+        isLoading: false,
+      } as ReturnType<typeof projectsApi.useListProjects>);
+
+      renderWithProviders(<AppRoutes />);
+      await user.click(screen.getByRole('button', { name: /new project/i }));
+
+      expect(useUiStore.getState().isProjectModalOpen).toBe(true);
     });
   });
 });

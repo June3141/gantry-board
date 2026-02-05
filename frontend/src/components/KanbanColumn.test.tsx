@@ -1,8 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { KanbanColumn } from './KanbanColumn';
 import type { Task } from '../api/generated/model';
 import { TaskStatus, TaskPriority } from '../api/generated/model';
+import { useUiStore } from '../stores/uiStore';
 
 const createMockTask = (overrides: Partial<Task> = {}): Task => ({
   id: 'task-1',
@@ -68,5 +70,22 @@ describe('KanbanColumn', () => {
     render(<KanbanColumn status={TaskStatus.todo} tasks={[]} />);
 
     expect(screen.getByTestId('column-empty')).toBeInTheDocument();
+  });
+
+  it('renders add task button', () => {
+    render(<KanbanColumn status={TaskStatus.todo} tasks={[]} />);
+
+    expect(screen.getByRole('button', { name: /add task/i })).toBeInTheDocument();
+  });
+
+  it('opens task modal with column status on add task click', async () => {
+    const user = userEvent.setup();
+    const openTaskModal = vi.fn();
+    useUiStore.setState({ openTaskModal });
+
+    render(<KanbanColumn status={TaskStatus.in_progress} tasks={[]} />);
+    await user.click(screen.getByRole('button', { name: /add task/i }));
+
+    expect(openTaskModal).toHaveBeenCalledWith(TaskStatus.in_progress);
   });
 });

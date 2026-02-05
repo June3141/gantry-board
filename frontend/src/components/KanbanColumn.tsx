@@ -1,6 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import type { Task } from '../api/generated/model';
 import { TaskStatus } from '../api/generated/model';
+import { useUiStore } from '../stores/uiStore';
 import { TaskCard } from './TaskCard';
 
 interface KanbanColumnProps {
@@ -18,6 +19,7 @@ const statusLabels: Record<TaskStatus, string> = {
 };
 
 export function KanbanColumn({ status, tasks, activeTaskId }: KanbanColumnProps) {
+  const openTaskModal = useUiStore((s) => s.openTaskModal);
   const { setNodeRef, isOver } = useDroppable({
     id: status,
   });
@@ -47,6 +49,14 @@ export function KanbanColumn({ status, tasks, activeTaskId }: KanbanColumnProps)
             <TaskCard key={task.id} task={task} isDragging={activeTaskId === task.id} />
           ))
         )}
+      </div>
+      <div className="p-2">
+        <button
+          onClick={() => openTaskModal(status)}
+          className="w-full rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+        >
+          + Add Task
+        </button>
       </div>
     </div>
   );
