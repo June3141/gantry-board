@@ -24,7 +24,7 @@
       "# Configure mold linker",
       "if command -v mold > /dev/null 2>&1; then export RUSTFLAGS=\"-C link-arg=-fuse-ld=mold\"; fi",
       "# Install cargo tools (first time only)",
-      "if ! command -v sqlx > /dev/null 2>&1; then echo 'Installing sqlx-cli (first time only)...'; cargo install sqlx-cli --no-default-features --features sqlite; fi",
+      "if ! command -v sqlx > /dev/null 2>&1; then echo 'Installing sqlx-cli (first time only)...'; cargo install sqlx-cli --no-default-features --features sqlite --locked; fi",
       "if ! command -v cargo-watch > /dev/null 2>&1; then echo 'Installing cargo-watch (first time only)...'; cargo install cargo-watch --locked; fi",
       "# Frontend dependencies",
       "if [ ! -d frontend/node_modules ]; then echo 'Installing frontend dependencies...'; (cd frontend && npm ci); fi",
