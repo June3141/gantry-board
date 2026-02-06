@@ -27,6 +27,9 @@ Thumbs.db
 # Claude Code
 .claude/settings.local.json
 
+# Devbox
+.devbox/
+
 # claude-mem auto-generated CLAUDE.md (subdirectories only; root CLAUDE.md is tracked)
 **/CLAUDE.md
 !CLAUDE.md

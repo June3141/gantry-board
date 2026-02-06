@@ -1,0 +1,25 @@
+version: "0.5"
+
+processes:
+  backend:
+    command: cargo watch -w backend/src -x "run -p gantry-board"
+    environment:
+      - "RUST_LOG=info"
+      - "BIND_ADDR=0.0.0.0:3000"
+      - "DATABASE_URL=sqlite:backend/data/gantry_board.db?mode=rwc"
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: 3000
+        path: /health
+      initial_delay_seconds: 10
+      period_seconds: 5
+
+  frontend:
+    command: npm run dev
+    working_dir: frontend
+    environment:
+      - "VITE_API_URL=http://localhost:3000"
+    depends_on:
+      backend:
+        condition: process_healthy

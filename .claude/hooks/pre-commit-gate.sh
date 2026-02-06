@@ -2,6 +2,11 @@
 # L3: Commit gate — validate message format, commit size, and run full checks
 set -euo pipefail
 
+# Load nix if available (needed for devbox)
+if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
+  . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+fi
+
 cd "$(git rev-parse --show-toplevel)"
 
 INPUT=$(cat)
@@ -66,7 +71,12 @@ if [[ -n "$SIZE_WARN" ]]; then
 fi
 
 # --- 3. Full quality check ---
-if ! task check 2>&1; then
+if command -v devbox > /dev/null 2>&1 && [[ -f devbox.json ]]; then
+  CHECK_CMD="devbox run -- task check"
+else
+  CHECK_CMD="task check"
+fi
+if ! $CHECK_CMD 2>&1; then
   echo '{"decision":"block","reason":"Quality checks failed. Run `task check` to see details."}'
   exit 2
 fi
