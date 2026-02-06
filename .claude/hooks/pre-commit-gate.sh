@@ -52,10 +52,11 @@ if [[ -n "$COMMIT_MSG" ]]; then
 fi
 
 # --- 2. Commit size validation ---
-STAGED_FILES=$(git diff --cached --name-only 2>/dev/null | grep -v -E '(api/generated/|\.test\.|_test\.rs|tests/)' | wc -l | tr -d ' ')
-STAGED_LINES=$(git diff --cached --stat 2>/dev/null | tail -1 | grep -oP '\d+(?= insertion)' || echo "0")
-STAGED_DELETIONS=$(git diff --cached --stat 2>/dev/null | tail -1 | grep -oP '\d+(?= deletion)' || echo "0")
-TOTAL_LINES=$((STAGED_LINES + STAGED_DELETIONS))
+# Exclude auto-generated files (tests, generated code, lock files) from size checks
+EXCLUDE_PATTERN='(api/generated/|\.test\.|_test\.rs|tests/|\.lock$)'
+STAGED_FILES=$(git diff --cached --name-only 2>/dev/null | grep -v -E "$EXCLUDE_PATTERN" | wc -l | tr -d ' ')
+# Count lines only for non-excluded files using numstat
+TOTAL_LINES=$(git diff --cached --numstat 2>/dev/null | grep -v -E "$EXCLUDE_PATTERN" | awk '{s+=$1+$2} END {print s+0}')
 
 SIZE_WARN=""
 if [[ "$STAGED_FILES" -gt 10 ]]; then
