@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useGetTask, useUpdateTask } from '../api/generated/endpoints/tasks/tasks';
+import { useDeleteTask, useGetTask, useUpdateTask } from '../api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
 
@@ -17,8 +17,11 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
   const { data: task, isLoading } = useGetTask(taskId);
   const updateTask = useUpdateTask();
 
+  const deleteTask = useDeleteTask();
+
   const [editingField, setEditingField] = useState<'title' | 'description' | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -53,6 +56,11 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
       });
     }
     setEditingField(null);
+  };
+
+  const handleDelete = async () => {
+    await deleteTask.mutateAsync({ id: taskId });
+    closeTaskDetail();
   };
 
   const handleSelectChange = async (field: 'status' | 'priority', value: string) => {
@@ -159,6 +167,38 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   <option value="urgent">Urgent</option>
                 </select>
               </div>
+            </div>
+
+            <div className="border-t pt-4">
+              {showDeleteConfirm ? (
+                <div className="flex items-center justify-between rounded-md bg-red-50 p-3">
+                  <p className="text-sm text-red-700">Are you sure you want to delete this task?</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      className="rounded-md bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         )}

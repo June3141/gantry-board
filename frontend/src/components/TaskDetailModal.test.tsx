@@ -263,4 +263,58 @@ describe('TaskDetailModal', () => {
       });
     });
   });
+
+  describe('delete', () => {
+    it('shows delete button', () => {
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+      expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+    });
+
+    it('shows confirmation dialog when delete is clicked', async () => {
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.click(screen.getByRole('button', { name: /delete/i }));
+
+      expect(screen.getByText(/are you sure/i)).toBeInTheDocument();
+    });
+
+    it('cancels deletion when cancel is clicked in confirmation', async () => {
+      const mockDeleteMutateAsync = vi.fn().mockResolvedValue({});
+      vi.mocked(tasksApi.useDeleteTask).mockReturnValue({
+        mutateAsync: mockDeleteMutateAsync,
+        isPending: false,
+      } as unknown as ReturnType<typeof tasksApi.useDeleteTask>);
+
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.click(screen.getByRole('button', { name: /delete/i }));
+      await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+      expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
+      expect(screen.queryByText(/are you sure/i)).not.toBeInTheDocument();
+    });
+
+    it('deletes task and closes modal on confirm', async () => {
+      const mockDeleteMutateAsync = vi.fn().mockResolvedValue({});
+      vi.mocked(tasksApi.useDeleteTask).mockReturnValue({
+        mutateAsync: mockDeleteMutateAsync,
+        isPending: false,
+      } as unknown as ReturnType<typeof tasksApi.useDeleteTask>);
+
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.click(screen.getByRole('button', { name: /delete/i }));
+      await user.click(screen.getByRole('button', { name: /confirm/i }));
+
+      expect(mockDeleteMutateAsync).toHaveBeenCalledWith({ id: 'task-1' });
+      expect(useUiStore.getState().isTaskDetailOpen).toBe(false);
+    });
+  });
 });
