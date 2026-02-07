@@ -9,6 +9,7 @@ import { ProjectCreateDialog } from './components/ProjectCreateDialog';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { RegisterPage } from './components/RegisterPage';
 import { TaskCreateDialog } from './components/TaskCreateDialog';
+import { TaskDetailModal } from './components/TaskDetailModal';
 import { connectEventSource } from './hooks/useEventSource';
 import { useAuthStore } from './stores/authStore';
 import { useUiStore } from './stores/uiStore';
@@ -95,6 +96,7 @@ function KanbanApp() {
       </main>
       <ProjectCreateDialog />
       {selectedProjectId && <TaskCreateDialog projectId={selectedProjectId} />}
+      <TaskDetailModal />
     </div>
   );
 }
