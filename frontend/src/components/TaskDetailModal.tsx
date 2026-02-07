@@ -14,14 +14,14 @@ export function TaskDetailModal() {
 
 function TaskDetailContent({ taskId }: { taskId: string }) {
   const closeTaskDetail = useUiStore((s) => s.closeTaskDetail);
-  const { data: task, isLoading } = useGetTask(taskId);
+  const { data: task, isLoading, isError } = useGetTask(taskId);
   const updateTask = useUpdateTask();
-
   const deleteTask = useDeleteTask();
 
   const [editingField, setEditingField] = useState<'title' | 'description' | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,44 +49,65 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
       return;
     }
     const currentValue = field === 'title' ? task?.title : task?.description;
-    if (trimmed !== (currentValue ?? '')) {
-      await updateTask.mutateAsync({
-        id: taskId,
-        data: { [field]: trimmed },
-      });
+    try {
+      if (trimmed !== (currentValue ?? '')) {
+        await updateTask.mutateAsync({
+          id: taskId,
+          data: { [field]: trimmed },
+        });
+      }
+    } catch {
+      setError(`Failed to update ${field}. Please try again.`);
+    } finally {
+      setEditingField(null);
     }
-    setEditingField(null);
   };
 
   const handleDelete = async () => {
-    await deleteTask.mutateAsync({ id: taskId });
-    closeTaskDetail();
+    try {
+      await deleteTask.mutateAsync({ id: taskId });
+      closeTaskDetail();
+    } catch {
+      setError('Failed to delete task. Please try again.');
+    }
   };
 
-  const handleSelectChange = async (field: 'status' | 'priority', value: string) => {
-    await updateTask.mutateAsync({
-      id: taskId,
-      data: { [field]: value },
-    });
+  const handleSelectChange = async (
+    field: 'status' | 'priority',
+    value: TaskStatus | TaskPriority,
+  ) => {
+    try {
+      await updateTask.mutateAsync({
+        id: taskId,
+        data: { [field]: value },
+      });
+    } catch {
+      setError(`Failed to update ${field}. Please try again.`);
+    }
   };
 
   return (
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby="task-detail-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeTaskDetail();
       }}
     >
       <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-        {isLoading || !task ? (
+        {isLoading ? (
           <p className="text-sm text-gray-500">Loading...</p>
+        ) : isError || !task ? (
+          <p className="text-sm text-red-500">Failed to load task.</p>
         ) : (
           <div className="space-y-4">
+            {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
             <div className="flex items-start justify-between">
               {editingField === 'title' ? (
                 <input
+                  id="task-detail-modal-title"
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
@@ -95,12 +116,14 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   autoFocus
                 />
               ) : (
-                <h2
-                  className="cursor-pointer text-lg font-semibold text-gray-900 hover:bg-gray-100 rounded px-1"
+                <button
+                  id="task-detail-modal-title"
+                  type="button"
+                  className="cursor-pointer rounded px-1 text-left text-lg font-semibold text-gray-900 hover:bg-gray-100"
                   onClick={() => startEditing('title', task.title)}
                 >
                   {task.title}
-                </h2>
+                </button>
               )}
               <button
                 type="button"
@@ -124,18 +147,22 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   autoFocus
                 />
               ) : (
-                <p
-                  className="mt-1 cursor-pointer text-sm text-gray-600 hover:bg-gray-100 rounded px-1"
+                <button
+                  type="button"
+                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-600 hover:bg-gray-100"
                   onClick={() => startEditing('description', task.description ?? '')}
                 >
                   {task.description || 'No description'}
-                </p>
+                </button>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="task-detail-status" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="task-detail-status"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Status
                 </label>
                 <select
@@ -152,7 +179,10 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                 </select>
               </div>
               <div>
-                <label htmlFor="task-detail-priority" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="task-detail-priority"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Priority
                 </label>
                 <select

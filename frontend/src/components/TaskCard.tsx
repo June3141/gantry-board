@@ -47,13 +47,22 @@ export function TaskCard({ task, isDragging }: TaskCardProps) {
   };
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: dnd-kit requires div with ref/listeners spread
     <div
       ref={setNodeRef}
       style={style}
       {...listeners}
       {...attributes}
+      role="button"
+      tabIndex={0}
       onPointerDown={handlePointerDown}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openTaskDetail(task.id);
+        }
+      }}
       data-testid="task-card"
       className={`cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm ${
         isDragging ? 'opacity-50' : ''

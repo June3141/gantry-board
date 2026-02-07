@@ -24,8 +24,7 @@ export const useUiStore = create<UiState>((set) => ({
   closeTaskModal: () => set({ isTaskModalOpen: false, defaultStatus: null }),
   selectedTaskId: null,
   isTaskDetailOpen: false,
-  openTaskDetail: (taskId: string) =>
-    set({ selectedTaskId: taskId, isTaskDetailOpen: true }),
+  openTaskDetail: (taskId: string) => set({ selectedTaskId: taskId, isTaskDetailOpen: true }),
   closeTaskDetail: () => set({ selectedTaskId: null, isTaskDetailOpen: false }),
   isProjectModalOpen: false,
   openProjectModal: () => set({ isProjectModalOpen: true }),
