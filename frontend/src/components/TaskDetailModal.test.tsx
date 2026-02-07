@@ -81,16 +81,18 @@ describe('TaskDetailModal', () => {
     expect(screen.getByText('Test description')).toBeInTheDocument();
   });
 
-  it('displays task status', () => {
+  it('displays task status as select', () => {
     useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
     renderWithProviders(<TaskDetailModal />);
-    expect(screen.getByText('todo')).toBeInTheDocument();
+    const statusSelect = screen.getByLabelText(/status/i) as HTMLSelectElement;
+    expect(statusSelect.value).toBe('todo');
   });
 
-  it('displays task priority', () => {
+  it('displays task priority as select', () => {
     useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
     renderWithProviders(<TaskDetailModal />);
-    expect(screen.getByText('medium')).toBeInTheDocument();
+    const prioritySelect = screen.getByLabelText(/priority/i) as HTMLSelectElement;
+    expect(prioritySelect.value).toBe('medium');
   });
 
   it('shows loading state', () => {
@@ -135,5 +137,130 @@ describe('TaskDetailModal', () => {
     useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
     renderWithProviders(<TaskDetailModal />);
     expect(screen.getByText(/no description/i)).toBeInTheDocument();
+  });
+
+  describe('inline editing', () => {
+    it('enters title edit mode on click', async () => {
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.click(screen.getByText('Test Task'));
+
+      expect(screen.getByDisplayValue('Test Task')).toBeInTheDocument();
+    });
+
+    it('saves title on blur', async () => {
+      const mockMutateAsync = vi.fn().mockResolvedValue({});
+      vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+      } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.click(screen.getByText('Test Task'));
+      const input = screen.getByDisplayValue('Test Task');
+      await user.clear(input);
+      await user.type(input, 'Updated Title');
+      await user.tab();
+
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        id: 'task-1',
+        data: { title: 'Updated Title' },
+      });
+    });
+
+    it('does not save empty title', async () => {
+      const mockMutateAsync = vi.fn().mockResolvedValue({});
+      vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+      } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.click(screen.getByText('Test Task'));
+      const input = screen.getByDisplayValue('Test Task');
+      await user.clear(input);
+      await user.tab();
+
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('enters description edit mode on click', async () => {
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.click(screen.getByText('Test description'));
+
+      expect(screen.getByDisplayValue('Test description')).toBeInTheDocument();
+    });
+
+    it('saves description on blur', async () => {
+      const mockMutateAsync = vi.fn().mockResolvedValue({});
+      vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+      } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.click(screen.getByText('Test description'));
+      const textarea = screen.getByDisplayValue('Test description');
+      await user.clear(textarea);
+      await user.type(textarea, 'Updated description');
+      await user.tab();
+
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        id: 'task-1',
+        data: { description: 'Updated description' },
+      });
+    });
+
+    it('updates status via select', async () => {
+      const mockMutateAsync = vi.fn().mockResolvedValue({});
+      vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+      } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.selectOptions(screen.getByLabelText(/status/i), 'in_progress');
+
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        id: 'task-1',
+        data: { status: 'in_progress' },
+      });
+    });
+
+    it('updates priority via select', async () => {
+      const mockMutateAsync = vi.fn().mockResolvedValue({});
+      vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+      } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.selectOptions(screen.getByLabelText(/priority/i), 'high');
+
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        id: 'task-1',
+        data: { priority: 'high' },
+      });
+    });
   });
 });
