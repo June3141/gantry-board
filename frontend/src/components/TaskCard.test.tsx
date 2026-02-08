@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { Task } from '../api/generated/model';
 import { TaskPriority, TaskStatus } from '../api/generated/model';
+import { useUiStore } from '../stores/uiStore';
 import { TaskCard } from './TaskCard';
 
 const createMockTask = (overrides: Partial<Task> = {}): Task => ({
@@ -18,6 +20,13 @@ const createMockTask = (overrides: Partial<Task> = {}): Task => ({
 });
 
 describe('TaskCard', () => {
+  beforeEach(() => {
+    useUiStore.setState({
+      selectedTaskId: null,
+      isTaskDetailOpen: false,
+    });
+  });
+
   it('renders task title', () => {
     const task = createMockTask({ title: 'My Task Title' });
     render(<TaskCard task={task} />);
@@ -76,5 +85,24 @@ describe('TaskCard', () => {
 
     const badge = screen.getByText('low');
     expect(badge).toHaveClass('bg-gray-100');
+  });
+
+  it('opens task detail on click', async () => {
+    const user = userEvent.setup();
+    const task = createMockTask({ id: 'task-42' });
+    render(<TaskCard task={task} />);
+
+    await user.click(screen.getByText('Test Task'));
+
+    expect(useUiStore.getState().selectedTaskId).toBe('task-42');
+    expect(useUiStore.getState().isTaskDetailOpen).toBe(true);
+  });
+
+  it('has pointer cursor', () => {
+    const task = createMockTask();
+    render(<TaskCard task={task} />);
+
+    const card = screen.getByText('Test Task').closest('[data-testid="task-card"]');
+    expect(card).toHaveClass('cursor-pointer');
   });
 });

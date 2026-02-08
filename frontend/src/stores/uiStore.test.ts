@@ -10,6 +10,8 @@ describe('uiStore', () => {
       isTaskModalOpen: false,
       defaultStatus: null,
       isProjectModalOpen: false,
+      selectedTaskId: null,
+      isTaskDetailOpen: false,
     });
   });
 
@@ -40,6 +42,29 @@ describe('uiStore', () => {
       const state = useUiStore.getState();
       expect(state.isTaskModalOpen).toBe(false);
       expect(state.defaultStatus).toBeNull();
+    });
+  });
+
+  describe('task detail modal', () => {
+    it('has correct initial state', () => {
+      const state = useUiStore.getState();
+      expect(state.selectedTaskId).toBeNull();
+      expect(state.isTaskDetailOpen).toBe(false);
+    });
+
+    it('opens task detail with task id', () => {
+      useUiStore.getState().openTaskDetail('task-123');
+      const state = useUiStore.getState();
+      expect(state.selectedTaskId).toBe('task-123');
+      expect(state.isTaskDetailOpen).toBe(true);
+    });
+
+    it('closes task detail and resets selectedTaskId', () => {
+      useUiStore.getState().openTaskDetail('task-123');
+      useUiStore.getState().closeTaskDetail();
+      const state = useUiStore.getState();
+      expect(state.selectedTaskId).toBeNull();
+      expect(state.isTaskDetailOpen).toBe(false);
     });
   });
 
