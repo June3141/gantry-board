@@ -1,26 +1,21 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/main/.schema/devbox.schema.json",
   "packages": {
-    "rustup": "latest",
-    "nodejs": "22",
-    "sqlite": "latest",
+    "nodejs":     "22",
+    "sqlite":     "latest",
     "pkg-config": "latest",
-    "gcc": "latest",
-    "curl": "latest",
-    "sccache": "latest",
-    "mold": "latest"
+    "gcc":        "latest",
+    "curl":       "latest",
+    "sccache":    "latest",
+    "mold":       "latest"
   },
   "env": {
-    "RUST_LOG": "info",
+    "RUST_LOG":      "info",
     "RUSTC_WRAPPER": "sccache"
   },
   "shell": {
     "init_hook": [
       "echo 'Setting up Gantry Board development environment...'",
-      "export PATH=\"$HOME/.cargo/bin:$PATH\"",
-      "# Rust toolchain",
-      "rustup default stable 2>/dev/null",
-      "rustup component add clippy rustfmt 2>/dev/null",
       "# Configure mold linker",
       "if command -v mold > /dev/null 2>&1; then export RUSTFLAGS=\"-C link-arg=-fuse-ld=mold\"; fi",
       "# Install cargo tools (first time only)",
@@ -33,7 +28,7 @@
       "echo '  Run \"devbox services up\" to start backend + frontend.'"
     ],
     "scripts": {
-      "dev": "devbox services up",
+      "dev":      "devbox services up",
       "setup-db": "cd backend && sqlx database create && sqlx migrate run",
       "reset-db": "cd backend && sqlx database drop -y && sqlx database create && sqlx migrate run"
     }

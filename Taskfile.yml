@@ -47,26 +47,32 @@ tasks:
   # ── Backend (Rust) ────────────────────────────
   backend:fmt:
     desc: Format Rust code
+    dir: "{{.BACKEND_DIR}}"
     cmd: cargo fmt
 
   backend:fmt:check:
     desc: Check Rust formatting
+    dir: "{{.BACKEND_DIR}}"
     cmd: cargo fmt --check
 
   backend:lint:
     desc: Run clippy
+    dir: "{{.BACKEND_DIR}}"
     cmd: cargo clippy --all-targets -- -D warnings
 
   backend:build:
     desc: Build Rust backend
+    dir: "{{.BACKEND_DIR}}"
     cmd: cargo build
 
   backend:test:
     desc: Run Rust tests
+    dir: "{{.BACKEND_DIR}}"
     cmd: cargo test
 
   backend:run:
     desc: Run backend server
+    dir: "{{.BACKEND_DIR}}"
     cmd: cargo run
     env:
       RUST_LOG: info
@@ -139,6 +145,7 @@ tasks:
   # ── API (OpenAPI / orval) ─────────────────────
   api:export:
     desc: Export OpenAPI spec from Rust tests
+    dir: "{{.BACKEND_DIR}}"
     cmd: cargo test --test export_openapi -- --nocapture
     generates:
       - openapi.json
