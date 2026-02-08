@@ -6,12 +6,13 @@ use crate::models::project::MemberRole;
 
 /// Check if user is a member of the project (any role).
 /// Returns the member's role or Forbidden.
-/// When user_id is nil (auth_disabled mode), returns Owner to grant full access.
 pub async fn require_project_member(
     pool: &SqlitePool,
     user_id: Uuid,
     project_id: Uuid,
 ) -> AppResult<MemberRole> {
+    // Nil UUID bypass for auth_disabled mode — compiled out of release builds
+    #[cfg(debug_assertions)]
     if user_id.is_nil() {
         return Ok(MemberRole::Owner);
     }

@@ -13,6 +13,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let config = Config::load()?;
+
+    #[cfg(debug_assertions)]
+    if config.auth_disabled {
+        tracing::warn!("Authentication is DISABLED. Do not use in production!");
+    }
+
     let pool = db::init_pool(&config.database_url).await?;
 
     let state = AppState {
