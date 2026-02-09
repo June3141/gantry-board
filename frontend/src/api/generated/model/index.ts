@@ -7,7 +7,13 @@
  */
 
 export * from './addMemberRequest';
+export * from './agentSession';
+export * from './agentSessionFinishedAt';
+export * from './agentSessionStartedAt';
+export * from './agentSessionStatus';
+export * from './agentType';
 export * from './authResponse';
+export * from './createAgentSessionRequest';
 export * from './createProjectRequest';
 export * from './createProjectRequestDescription';
 export * from './createTaskRequest';
@@ -36,6 +42,7 @@ export * from './taskDescription';
 export * from './taskParentId';
 export * from './taskPriority';
 export * from './taskStatus';
+export * from './updateAgentSessionRequest';
 export * from './updateMemberRequest';
 export * from './updateProjectRequest';
 export * from './updateProjectRequestDescription';
