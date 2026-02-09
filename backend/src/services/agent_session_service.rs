@@ -39,33 +39,126 @@ impl TryFrom<AgentSessionRow> for AgentSession {
 }
 
 pub async fn create_agent_session(
-    _pool: &SqlitePool,
-    _task_id: Uuid,
-    _req: &CreateAgentSessionRequest,
+    pool: &SqlitePool,
+    task_id: Uuid,
+    req: &CreateAgentSessionRequest,
 ) -> AppResult<AgentSession> {
-    todo!()
+    let id = Uuid::new_v4();
+    let now = Utc::now();
+
+    sqlx::query(
+        r#"
+        INSERT INTO agent_sessions (id, task_id, agent_type, status, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        "#,
+    )
+    .bind(id.to_string())
+    .bind(task_id.to_string())
+    .bind(&req.agent_type)
+    .bind(&AgentSessionStatus::Pending)
+    .bind(now)
+    .bind(now)
+    .execute(pool)
+    .await?;
+
+    Ok(AgentSession {
+        id,
+        task_id,
+        agent_type: req.agent_type.clone(),
+        status: AgentSessionStatus::Pending,
+        started_at: None,
+        finished_at: None,
+        created_at: now,
+        updated_at: now,
+    })
 }
 
-pub async fn get_agent_session(
-    _pool: &SqlitePool,
-    _id: Uuid,
-) -> AppResult<AgentSession> {
-    todo!()
+pub async fn get_agent_session(pool: &SqlitePool, id: Uuid) -> AppResult<AgentSession> {
+    let row = sqlx::query_as::<_, AgentSessionRow>(
+        r#"
+        SELECT id, task_id, agent_type, status, started_at, finished_at, created_at, updated_at
+        FROM agent_sessions
+        WHERE id = $1
+        "#,
+    )
+    .bind(id.to_string())
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(|r| r.try_into())
+        .transpose()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("agent session {} not found", id)))
 }
 
-pub async fn list_agent_sessions(
-    _pool: &SqlitePool,
-    _task_id: Uuid,
-) -> AppResult<Vec<AgentSession>> {
-    todo!()
+pub async fn list_agent_sessions(pool: &SqlitePool, task_id: Uuid) -> AppResult<Vec<AgentSession>> {
+    let rows = sqlx::query_as::<_, AgentSessionRow>(
+        r#"
+        SELECT id, task_id, agent_type, status, started_at, finished_at, created_at, updated_at
+        FROM agent_sessions
+        WHERE task_id = $1
+        ORDER BY created_at ASC
+        "#,
+    )
+    .bind(task_id.to_string())
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
 pub async fn update_agent_session(
-    _pool: &SqlitePool,
-    _id: Uuid,
-    _req: &UpdateAgentSessionRequest,
+    pool: &SqlitePool,
+    id: Uuid,
+    req: &UpdateAgentSessionRequest,
 ) -> AppResult<AgentSession> {
-    todo!()
+    let existing = get_agent_session(pool, id).await?;
+    let now = Utc::now();
+
+    let started_at = match req.status {
+        AgentSessionStatus::Running if existing.started_at.is_none() => Some(now),
+        _ => existing.started_at,
+    };
+
+    let finished_at = match req.status {
+        AgentSessionStatus::Completed
+        | AgentSessionStatus::Failed
+        | AgentSessionStatus::Cancelled
+            if existing.finished_at.is_none() =>
+        {
+            Some(now)
+        }
+        _ => existing.finished_at,
+    };
+
+    sqlx::query(
+        r#"
+        UPDATE agent_sessions
+        SET status = $1, started_at = $2, finished_at = $3, updated_at = $4
+        WHERE id = $5
+        "#,
+    )
+    .bind(&req.status)
+    .bind(started_at)
+    .bind(finished_at)
+    .bind(now)
+    .bind(id.to_string())
+    .execute(pool)
+    .await?;
+
+    Ok(AgentSession {
+        id,
+        task_id: existing.task_id,
+        agent_type: existing.agent_type,
+        status: req.status.clone(),
+        started_at,
+        finished_at,
+        created_at: existing.created_at,
+        updated_at: now,
+    })
 }
 
 #[cfg(test)]
