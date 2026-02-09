@@ -69,6 +69,23 @@ pub fn app(state: AppState) -> Router {
             "/projects/{project_id}/members/{user_id}",
             delete(handlers::project_members::remove_member),
         )
+        // Agent session endpoints
+        .route(
+            "/tasks/{task_id}/sessions",
+            get(handlers::agent_sessions::list_agent_sessions),
+        )
+        .route(
+            "/tasks/{task_id}/sessions",
+            post(handlers::agent_sessions::create_agent_session),
+        )
+        .route(
+            "/tasks/{task_id}/sessions/{session_id}",
+            get(handlers::agent_sessions::get_agent_session),
+        )
+        .route(
+            "/tasks/{task_id}/sessions/{session_id}",
+            patch(handlers::agent_sessions::update_agent_session),
+        )
         // SSE for real-time updates
         .route("/events", get(sse::handler::sse_handler));
 

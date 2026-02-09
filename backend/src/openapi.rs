@@ -27,6 +27,10 @@ use crate::sse;
         handlers::project_members::get_member,
         handlers::project_members::update_member,
         handlers::project_members::remove_member,
+        handlers::agent_sessions::create_agent_session,
+        handlers::agent_sessions::list_agent_sessions,
+        handlers::agent_sessions::get_agent_session,
+        handlers::agent_sessions::update_agent_session,
     ),
     components(schemas(
         models::task::Task,
@@ -45,6 +49,11 @@ use crate::sse;
         models::user::RegisterRequest,
         models::user::LoginRequest,
         models::user::AuthResponse,
+        models::agent_session::AgentSession,
+        models::agent_session::AgentType,
+        models::agent_session::AgentSessionStatus,
+        models::agent_session::CreateAgentSessionRequest,
+        models::agent_session::UpdateAgentSessionRequest,
         sse::event::SseEvent,
     )),
     tags(
@@ -53,6 +62,7 @@ use crate::sse;
         (name = "tasks", description = "Task management"),
         (name = "projects", description = "Project management"),
         (name = "project-members", description = "Project member management"),
+        (name = "agent-sessions", description = "Agent session management"),
     ),
     info(
         title = "Gantry Board API",
