@@ -61,6 +61,7 @@ impl Default for Config {
 }
 
 #[cfg(test)]
+#[cfg(debug_assertions)]
 mod tests {
     use super::*;
 
@@ -72,8 +73,6 @@ mod tests {
 
     #[test]
     fn test_auth_disabled_can_be_enabled_in_debug_builds() {
-        // In release builds, this field is gated by #[cfg(debug_assertions)]
-        // and does not exist. Tests always run in debug mode.
         let config = Config {
             auth_disabled: true,
             ..Default::default()

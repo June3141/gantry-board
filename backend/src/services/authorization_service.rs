@@ -181,6 +181,7 @@ mod tests {
         assert!(matches!(result, Err(AppError::Forbidden(_))));
     }
 
+    #[cfg(debug_assertions)]
     #[tokio::test]
     async fn test_require_project_member_skips_for_nil_user() {
         let pool = setup_test_db().await;
