@@ -45,3 +45,16 @@ pub struct UpdateAgentSessionRequest {
     #[garde(skip)]
     pub status: AgentSessionStatus,
 }
+
+#[derive(Debug, Deserialize, ToSchema, garde::Validate)]
+pub struct StartAgentSessionRequest {
+    #[garde(skip)]
+    pub agent_type: AgentType,
+    #[garde(length(min = 1, max = 10000))]
+    pub prompt: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct StartAgentSessionResponse {
+    pub session: AgentSession,
+}

@@ -89,6 +89,14 @@ pub fn app(state: AppState) -> Router {
             "/tasks/{task_id}/sessions/{session_id}",
             patch(handlers::agent_sessions::update_agent_session),
         )
+        .route(
+            "/tasks/{task_id}/sessions/start",
+            post(handlers::agent_sessions::start_agent_session),
+        )
+        .route(
+            "/tasks/{task_id}/sessions/{session_id}/stop",
+            post(handlers::agent_sessions::stop_agent_session),
+        )
         // SSE for real-time updates
         .route("/events", get(sse::handler::sse_handler));
 

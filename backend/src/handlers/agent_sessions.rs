@@ -3,10 +3,14 @@ use axum::http::StatusCode;
 use axum::Json;
 use uuid::Uuid;
 
+use garde::Validate;
+
+use crate::agent::orchestrator::StartSessionRequest;
 use crate::auth::middleware::AuthUser;
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 use crate::models::agent_session::{
-    AgentSession, CreateAgentSessionRequest, UpdateAgentSessionRequest,
+    AgentSession, CreateAgentSessionRequest, StartAgentSessionRequest, StartAgentSessionResponse,
+    UpdateAgentSessionRequest,
 };
 use crate::services::{agent_session_service, authorization_service, task_service};
 use crate::AppState;
@@ -114,5 +118,78 @@ pub async fn update_agent_session(
     let session =
         agent_session_service::update_agent_session(&state.pool, task_id, session_id, &body)
             .await?;
+    Ok(Json(session))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/tasks/{task_id}/sessions/start",
+    params(("task_id" = Uuid, Path, description = "Task ID")),
+    request_body = StartAgentSessionRequest,
+    responses(
+        (status = 201, description = "Agent session started", body = StartAgentSessionResponse),
+        (status = 400, description = "Validation error"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Task not found"),
+        (status = 409, description = "Active session already exists")
+    ),
+    tag = "agent-sessions"
+)]
+pub async fn start_agent_session(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(task_id): Path<Uuid>,
+    Json(body): Json<StartAgentSessionRequest>,
+) -> AppResult<(StatusCode, Json<StartAgentSessionResponse>)> {
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+    let task = task_service::get_task(&state.pool, task_id).await?;
+    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
+        .await?;
+
+    let result = state
+        .orchestrator
+        .start_session(StartSessionRequest {
+            task_id,
+            agent_type: body.agent_type,
+            prompt: body.prompt,
+        })
+        .await?;
+
+    let session =
+        agent_session_service::get_agent_session(&state.pool, task_id, result.session_id).await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(StartAgentSessionResponse { session }),
+    ))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/tasks/{task_id}/sessions/{session_id}/stop",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID"),
+        ("session_id" = Uuid, Path, description = "Agent session ID")
+    ),
+    responses(
+        (status = 200, description = "Agent session stopped", body = AgentSession),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Session not found or not running")
+    ),
+    tag = "agent-sessions"
+)]
+pub async fn stop_agent_session(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((task_id, session_id)): Path<(Uuid, Uuid)>,
+) -> AppResult<Json<AgentSession>> {
+    let task = task_service::get_task(&state.pool, task_id).await?;
+    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
+        .await?;
+
+    state.orchestrator.stop_session(task_id, session_id).await?;
+
+    let session =
+        agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
     Ok(Json(session))
 }
