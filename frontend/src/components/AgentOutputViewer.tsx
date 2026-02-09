@@ -7,21 +7,17 @@ interface AgentOutputViewerProps {
 export function AgentOutputViewer({ lines }: AgentOutputViewerProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const lastLine = lines.length > 0 ? lines[lines.length - 1] : undefined;
-
+  const lineCount = lines.length;
   useEffect(() => {
+    if (lineCount === 0) return;
     const container = bottomRef.current?.parentElement;
     if (container) {
       container.scrollTop = container.scrollHeight;
     }
-  }, [lastLine]);
+  }, [lineCount]);
 
   if (lines.length === 0) {
-    return (
-      <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">
-        No output yet
-      </div>
-    );
+    return <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">No output yet</div>;
   }
 
   return (

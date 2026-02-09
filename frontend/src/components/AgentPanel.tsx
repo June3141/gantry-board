@@ -30,8 +30,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
   const startSession = useStartAgentSession();
   const stopSession = useStopAgentSession();
 
-  const { activeSessionId, outputLines, appendOutput, setActiveSession, reset } =
-    useAgentStore();
+  const { activeSessionId, outputLines, appendOutput, setActiveSession, reset } = useAgentStore();
 
   // Derive active session from both store and server data
   const activeSession =
@@ -47,10 +46,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
     }
   }, [activeSession, activeSessionId, setActiveSession, reset]);
 
-  const handleOutput = useCallback(
-    (text: string) => appendOutput(text),
-    [appendOutput],
-  );
+  const handleOutput = useCallback((text: string) => appendOutput(text), [appendOutput]);
   useAgentEvents(activeSessionId, handleOutput);
 
   const handleStart = async () => {
@@ -126,7 +122,10 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
             </select>
           </div>
           <div>
-            <label htmlFor="agent-prompt-textarea" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="agent-prompt-textarea"
+              className="block text-sm font-medium text-gray-700"
+            >
               Prompt
             </label>
             <textarea

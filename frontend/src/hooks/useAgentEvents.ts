@@ -2,10 +2,7 @@ import { useEffect } from 'react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
-export function useAgentEvents(
-  sessionId: string | null,
-  onOutput: (text: string) => void,
-): void {
+export function useAgentEvents(sessionId: string | null, onOutput: (text: string) => void): void {
   useEffect(() => {
     if (!sessionId) return;
 
