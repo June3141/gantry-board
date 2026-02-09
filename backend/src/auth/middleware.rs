@@ -23,9 +23,9 @@ impl FromRequestParts<AppState> for AuthUser {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        // Check if auth is disabled (development mode)
+        // Auth bypass for development — compiled out of release builds
+        #[cfg(debug_assertions)]
         if state.config.auth_disabled {
-            // Return a dummy user for development
             return Ok(AuthUser {
                 user_id: Uuid::nil(),
                 session_id: Uuid::nil(),

@@ -24,9 +24,14 @@ pub async fn list_projects(
     State(state): State<AppState>,
     auth: AuthUser,
 ) -> AppResult<Json<Vec<Project>>> {
-    let projects = if auth.user_id.is_nil() {
-        project_service::list_projects(&state.pool).await?
-    } else {
+    let projects = {
+        #[cfg(debug_assertions)]
+        if auth.user_id.is_nil() {
+            project_service::list_projects(&state.pool).await?
+        } else {
+            project_service::list_projects_for_user(&state.pool, auth.user_id).await?
+        }
+        #[cfg(not(debug_assertions))]
         project_service::list_projects_for_user(&state.pool, auth.user_id).await?
     };
     Ok(Json(projects))
@@ -50,8 +55,18 @@ pub async fn create_project(
         .map_err(|e| AppError::Validation(e.to_string()))?;
     let project = project_service::create_project(&state.pool, &body).await?;
 
-    // Auto-add creator as owner (skip in auth_disabled mode)
-    if !auth.user_id.is_nil() {
+    // Auto-add creator as owner (skip in auth_disabled mode for debug builds)
+    let should_add_owner = {
+        #[cfg(debug_assertions)]
+        {
+            !auth.user_id.is_nil()
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            true
+        }
+    };
+    if should_add_owner {
         member_service::add_member(
             &state.pool,
             project.id,

@@ -1,1 +1,13 @@
+# Gantry Board - direnv configuration
+# Copy this file to .envrc and run `direnv allow`
+#   cp .envrc.sample .envrc && direnv allow
+
 eval "$(devbox generate direnv --print-envrc)"
+
+# Cargo / Rust toolchain
+path_add PATH "$HOME/.cargo/bin"
+
+# Use mold linker if available
+if has mold; then
+  export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
+fi

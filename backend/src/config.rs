@@ -14,7 +14,8 @@ pub struct Config {
     #[serde(default = "default_session_duration_hours")]
     pub session_duration_hours: u64,
 
-    /// Disable authentication (for development only)
+    /// Disable authentication (debug builds only — never available in release)
+    #[cfg(debug_assertions)]
     #[serde(default)]
     pub auth_disabled: bool,
 
@@ -52,8 +53,30 @@ impl Default for Config {
             bind_addr: default_bind_addr(),
             database_url: default_database_url(),
             session_duration_hours: default_session_duration_hours(),
+            #[cfg(debug_assertions)]
             auth_disabled: false,
             cookie_secure: false,
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg(debug_assertions)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_auth_disabled_defaults_to_false() {
+        let config = Config::default();
+        assert!(!config.auth_disabled);
+    }
+
+    #[test]
+    fn test_auth_disabled_can_be_enabled_in_debug_builds() {
+        let config = Config {
+            auth_disabled: true,
+            ..Default::default()
+        };
+        assert!(config.auth_disabled);
     }
 }
