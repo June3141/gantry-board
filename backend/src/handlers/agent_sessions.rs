@@ -81,7 +81,8 @@ pub async fn get_agent_session(
     let task = task_service::get_task(&state.pool, task_id).await?;
     authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
         .await?;
-    let session = agent_session_service::get_agent_session(&state.pool, session_id).await?;
+    let session =
+        agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
     Ok(Json(session))
 }
 
@@ -95,6 +96,7 @@ pub async fn get_agent_session(
     request_body = UpdateAgentSessionRequest,
     responses(
         (status = 200, description = "Agent session updated", body = AgentSession),
+        (status = 400, description = "Invalid status transition"),
         (status = 403, description = "Forbidden"),
         (status = 404, description = "Agent session not found")
     ),
@@ -110,6 +112,7 @@ pub async fn update_agent_session(
     authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
         .await?;
     let session =
-        agent_session_service::update_agent_session(&state.pool, session_id, &body).await?;
+        agent_session_service::update_agent_session(&state.pool, task_id, session_id, &body)
+            .await?;
     Ok(Json(session))
 }

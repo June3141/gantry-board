@@ -73,15 +73,20 @@ pub async fn create_agent_session(
     })
 }
 
-pub async fn get_agent_session(pool: &SqlitePool, id: Uuid) -> AppResult<AgentSession> {
+pub async fn get_agent_session(
+    pool: &SqlitePool,
+    task_id: Uuid,
+    id: Uuid,
+) -> AppResult<AgentSession> {
     let row = sqlx::query_as::<_, AgentSessionRow>(
         r#"
         SELECT id, task_id, agent_type, status, started_at, finished_at, created_at, updated_at
         FROM agent_sessions
-        WHERE id = $1
+        WHERE id = $1 AND task_id = $2
         "#,
     )
     .bind(id.to_string())
+    .bind(task_id.to_string())
     .fetch_optional(pool)
     .await?;
 
@@ -110,35 +115,59 @@ pub async fn list_agent_sessions(pool: &SqlitePool, task_id: Uuid) -> AppResult<
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
+fn validate_status_transition(from: &AgentSessionStatus, to: &AgentSessionStatus) -> AppResult<()> {
+    use AgentSessionStatus::*;
+    let allowed = matches!(
+        (from, to),
+        (Pending, Running)
+            | (Pending, Cancelled)
+            | (Running, Completed)
+            | (Running, Failed)
+            | (Running, Cancelled)
+    );
+    if !allowed {
+        return Err(AppError::Validation(format!(
+            "invalid status transition from {} to {}",
+            serde_json::to_value(from)
+                .unwrap_or_default()
+                .as_str()
+                .unwrap_or("unknown"),
+            serde_json::to_value(to)
+                .unwrap_or_default()
+                .as_str()
+                .unwrap_or("unknown"),
+        )));
+    }
+    Ok(())
+}
+
 pub async fn update_agent_session(
     pool: &SqlitePool,
+    task_id: Uuid,
     id: Uuid,
     req: &UpdateAgentSessionRequest,
 ) -> AppResult<AgentSession> {
-    let existing = get_agent_session(pool, id).await?;
+    let existing = get_agent_session(pool, task_id, id).await?;
+    validate_status_transition(&existing.status, &req.status)?;
     let now = Utc::now();
 
     let started_at = match req.status {
-        AgentSessionStatus::Running if existing.started_at.is_none() => Some(now),
+        AgentSessionStatus::Running => existing.started_at.or(Some(now)),
         _ => existing.started_at,
     };
 
     let finished_at = match req.status {
         AgentSessionStatus::Completed
         | AgentSessionStatus::Failed
-        | AgentSessionStatus::Cancelled
-            if existing.finished_at.is_none() =>
-        {
-            Some(now)
-        }
-        _ => existing.finished_at,
+        | AgentSessionStatus::Cancelled => Some(existing.finished_at.unwrap_or(now)),
+        _ => None,
     };
 
     sqlx::query(
         r#"
         UPDATE agent_sessions
         SET status = $1, started_at = $2, finished_at = $3, updated_at = $4
-        WHERE id = $5
+        WHERE id = $5 AND task_id = $6
         "#,
     )
     .bind(&req.status)
@@ -146,6 +175,7 @@ pub async fn update_agent_session(
     .bind(finished_at)
     .bind(now)
     .bind(id.to_string())
+    .bind(task_id.to_string())
     .execute(pool)
     .await?;
 
@@ -257,7 +287,7 @@ mod tests {
             .await
             .expect("Failed to create");
 
-        let session = get_agent_session(&pool, created.id)
+        let session = get_agent_session(&pool, task_id, created.id)
             .await
             .expect("Failed to get");
 
@@ -268,9 +298,31 @@ mod tests {
     #[tokio::test]
     async fn test_get_agent_session_returns_not_found() {
         let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
         let random_id = Uuid::new_v4();
 
-        let result = get_agent_session(&pool, random_id).await;
+        let result = get_agent_session(&pool, task_id, random_id).await;
+
+        assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_get_agent_session_wrong_task_returns_not_found() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+        let (_project_id2, other_task_id) = create_test_task(&pool).await;
+
+        let created = create_agent_session(
+            &pool,
+            task_id,
+            &CreateAgentSessionRequest {
+                agent_type: AgentType::ClaudeCode,
+            },
+        )
+        .await
+        .expect("Failed to create");
+
+        let result = get_agent_session(&pool, other_task_id, created.id).await;
 
         assert!(matches!(result, Err(AppError::NotFound(_))));
     }
@@ -326,6 +378,7 @@ mod tests {
 
         let updated = update_agent_session(
             &pool,
+            task_id,
             created.id,
             &UpdateAgentSessionRequest {
                 status: AgentSessionStatus::Running,
@@ -357,6 +410,7 @@ mod tests {
         // First transition to running
         update_agent_session(
             &pool,
+            task_id,
             created.id,
             &UpdateAgentSessionRequest {
                 status: AgentSessionStatus::Running,
@@ -368,6 +422,7 @@ mod tests {
         // Then complete
         let updated = update_agent_session(
             &pool,
+            task_id,
             created.id,
             &UpdateAgentSessionRequest {
                 status: AgentSessionStatus::Completed,
@@ -396,8 +451,21 @@ mod tests {
         .await
         .expect("Failed to create");
 
+        // Pending -> Running first
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Failed to update to running");
+
         let updated = update_agent_session(
             &pool,
+            task_id,
             created.id,
             &UpdateAgentSessionRequest {
                 status: AgentSessionStatus::Failed,
@@ -413,10 +481,12 @@ mod tests {
     #[tokio::test]
     async fn test_update_nonexistent_session_returns_not_found() {
         let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
         let random_id = Uuid::new_v4();
 
         let result = update_agent_session(
             &pool,
+            task_id,
             random_id,
             &UpdateAgentSessionRequest {
                 status: AgentSessionStatus::Running,
@@ -425,5 +495,85 @@ mod tests {
         .await;
 
         assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_invalid_transition_completed_to_running_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let created = create_agent_session(
+            &pool,
+            task_id,
+            &CreateAgentSessionRequest {
+                agent_type: AgentType::ClaudeCode,
+            },
+        )
+        .await
+        .expect("Failed to create");
+
+        // Pending -> Running -> Completed
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Failed");
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Completed,
+            },
+        )
+        .await
+        .expect("Failed");
+
+        // Completed -> Running should fail
+        let result = update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_invalid_transition_pending_to_completed_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let created = create_agent_session(
+            &pool,
+            task_id,
+            &CreateAgentSessionRequest {
+                agent_type: AgentType::ClaudeCode,
+            },
+        )
+        .await
+        .expect("Failed to create");
+
+        // Pending -> Completed should fail (must go through Running)
+        let result = update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Completed,
+            },
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
     }
 }

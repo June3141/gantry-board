@@ -191,3 +191,45 @@ async fn test_update_agent_session_changes_status() {
     assert_eq!(session["status"], "running");
     assert!(!session["started_at"].is_null());
 }
+
+#[tokio::test]
+async fn test_get_session_under_wrong_task_returns_404() {
+    let server = create_test_server().await;
+    let (_project_id, task_a) = create_test_task(&server).await;
+    let (_project_id2, task_b) = create_test_task(&server).await;
+
+    let create_response = server
+        .post(&format!("/api/tasks/{}/sessions", task_a))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+    let created: serde_json::Value = create_response.json();
+    let session_id = created["id"].as_str().unwrap();
+
+    // Access session of task_a via task_b should 404
+    let response = server
+        .get(&format!("/api/tasks/{}/sessions/{}", task_b, session_id))
+        .await;
+
+    response.assert_status(StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn test_invalid_status_transition_returns_400() {
+    let server = create_test_server().await;
+    let (_project_id, task_id) = create_test_task(&server).await;
+
+    let create_response = server
+        .post(&format!("/api/tasks/{}/sessions", task_id))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+    let created: serde_json::Value = create_response.json();
+    let session_id = created["id"].as_str().unwrap();
+
+    // Pending -> Completed should fail (must go through Running)
+    let response = server
+        .patch(&format!("/api/tasks/{}/sessions/{}", task_id, session_id))
+        .json(&json!({ "status": "completed" }))
+        .await;
+
+    response.assert_status(StatusCode::BAD_REQUEST);
+}
