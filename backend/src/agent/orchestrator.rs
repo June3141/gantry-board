@@ -13,6 +13,7 @@ use crate::models::agent_session::{
     AgentSessionStatus, AgentType, CreateAgentSessionRequest, UpdateAgentSessionRequest,
 };
 use crate::services::{agent_session_service, worktree_service};
+use crate::sse::event::SseEvent;
 use crate::sse::hub::SseHub;
 
 struct RunningSession {
@@ -41,7 +42,7 @@ pub struct AgentOrchestrator {
     executor: Arc<dyn AgentExecutor>,
     pool: SqlitePool,
     repo_path: PathBuf,
-    _sse_hub: Arc<SseHub>,
+    sse_hub: Arc<SseHub>,
     /// Per-task lock to prevent concurrent start_session for the same task.
     task_locks: Mutex<HashMap<Uuid, Arc<Mutex<()>>>>,
     /// Currently running sessions, keyed by session_id.
@@ -59,7 +60,7 @@ impl AgentOrchestrator {
             executor,
             pool,
             repo_path,
-            _sse_hub: sse_hub,
+            sse_hub,
             task_locks: Mutex::new(HashMap::new()),
             running: Arc::new(Mutex::new(HashMap::new())),
         }
@@ -135,7 +136,7 @@ impl AgentOrchestrator {
         };
 
         // Step 6: Update DB session to Running
-        if let Err(e) = agent_session_service::update_agent_session(
+        let running_session = match agent_session_service::update_agent_session(
             &self.pool,
             req.task_id,
             session.id,
@@ -145,12 +146,19 @@ impl AgentOrchestrator {
         )
         .await
         {
-            // Rollback: cancel executor + delete worktree + mark cancelled
-            handle.cancel.cancel();
-            let _ = Self::delete_worktree_blocking(&self.repo_path, &worktree_name).await;
-            let _ = self.mark_session_cancelled(req.task_id, session.id).await;
-            return Err(e);
-        }
+            Ok(s) => s,
+            Err(e) => {
+                // Rollback: cancel executor + delete worktree + mark cancelled
+                handle.cancel.cancel();
+                let _ = Self::delete_worktree_blocking(&self.repo_path, &worktree_name).await;
+                let _ = self.mark_session_cancelled(req.task_id, session.id).await;
+                return Err(e);
+            }
+        };
+
+        // Broadcast status change to Running
+        self.sse_hub
+            .broadcast(SseEvent::agent_session_status_changed(running_session));
 
         // Step 7: Spawn background monitor to drain output_rx and update DB on completion
         let monitor_handle = self.spawn_session_monitor(
@@ -270,13 +278,21 @@ impl AgentOrchestrator {
     ) -> tokio::task::JoinHandle<()> {
         let pool = self.pool.clone();
         let running = Arc::clone(&self.running);
+        let sse_hub = Arc::clone(&self.sse_hub);
         tokio::spawn(async move {
+            // Track terminal event to determine final status
+            let mut final_status = AgentSessionStatus::Completed;
+
             // Drain output events until the channel closes
             while let Some(event) = output_rx.recv().await {
                 match event {
-                    AgentOutputEvent::Completed | AgentOutputEvent::Failed { .. } => break,
-                    AgentOutputEvent::Output { .. } => {
-                        // Future: forward to SSE hub
+                    AgentOutputEvent::Completed => break,
+                    AgentOutputEvent::Failed { .. } => {
+                        final_status = AgentSessionStatus::Failed;
+                        break;
+                    }
+                    AgentOutputEvent::Output { text } => {
+                        sse_hub.broadcast(SseEvent::agent_output(session_id, text));
                     }
                 }
             }
@@ -289,18 +305,23 @@ impl AgentOrchestrator {
                 return;
             }
 
-            // Natural completion: update DB (best-effort)
-            if let Err(e) = agent_session_service::update_agent_session(
+            // Natural completion: update DB and broadcast (best-effort)
+            match agent_session_service::update_agent_session(
                 &pool,
                 task_id,
                 session_id,
                 &UpdateAgentSessionRequest {
-                    status: AgentSessionStatus::Completed,
+                    status: final_status.clone(),
                 },
             )
             .await
             {
-                warn!("failed to update session {session_id} status: {e}");
+                Ok(session) => {
+                    sse_hub.broadcast(SseEvent::agent_session_status_changed(session));
+                }
+                Err(e) => {
+                    warn!("failed to update session {session_id} status: {e}");
+                }
             }
 
             // Remove from running map
@@ -417,6 +438,15 @@ mod tests {
         repo_path: PathBuf,
     ) -> AgentOrchestrator {
         let sse_hub = Arc::new(SseHub::new(16));
+        AgentOrchestrator::new(executor, pool, repo_path, sse_hub)
+    }
+
+    fn create_orchestrator_with_hub(
+        executor: Arc<dyn AgentExecutor>,
+        pool: SqlitePool,
+        repo_path: PathBuf,
+        sse_hub: Arc<SseHub>,
+    ) -> AgentOrchestrator {
         AgentOrchestrator::new(executor, pool, repo_path, sse_hub)
     }
 
@@ -596,5 +626,106 @@ mod tests {
             .expect("stop should succeed");
 
         assert!(!orchestrator.is_running(result.session_id).await);
+    }
+
+    #[tokio::test]
+    async fn test_start_session_broadcasts_status_change() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+        let tmp = tempfile::tempdir().unwrap();
+        let repo_path = init_test_repo(tmp.path());
+
+        let sse_hub = Arc::new(SseHub::new(16));
+        let mut rx = sse_hub.subscribe();
+
+        let executor = Arc::new(MockExecutor::new());
+        let orchestrator =
+            create_orchestrator_with_hub(executor, pool.clone(), repo_path, Arc::clone(&sse_hub));
+
+        orchestrator
+            .start_session(StartSessionRequest {
+                task_id,
+                agent_type: AgentType::ClaudeCode,
+                prompt: "test".to_string(),
+            })
+            .await
+            .expect("start should succeed");
+
+        // Should receive a status changed event (Running)
+        let event = tokio::time::timeout(std::time::Duration::from_secs(1), rx.recv())
+            .await
+            .expect("should receive event within timeout")
+            .expect("recv should succeed");
+
+        assert_eq!(event.event_type(), "agent_session_status_changed");
+    }
+
+    #[tokio::test]
+    async fn test_agent_output_is_broadcast_to_sse() {
+        use crate::agent::executor::AgentHandle;
+
+        /// Mock executor that sends output events before completing.
+        struct OutputExecutor;
+
+        #[async_trait::async_trait]
+        impl AgentExecutor for OutputExecutor {
+            async fn start(&self, _config: AgentConfig) -> AppResult<AgentHandle> {
+                let cancel = CancellationToken::new();
+                let (tx, rx) = mpsc::channel(16);
+                let join_handle = tokio::spawn(async move {
+                    let _ = tx
+                        .send(AgentOutputEvent::Output {
+                            text: "hello world".to_string(),
+                        })
+                        .await;
+                    let _ = tx.send(AgentOutputEvent::Completed).await;
+                    Ok(())
+                });
+                Ok(AgentHandle {
+                    cancel,
+                    output_rx: rx,
+                    join_handle,
+                })
+            }
+        }
+
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+        let tmp = tempfile::tempdir().unwrap();
+        let repo_path = init_test_repo(tmp.path());
+
+        let sse_hub = Arc::new(SseHub::new(16));
+        let mut rx = sse_hub.subscribe();
+
+        let executor = Arc::new(OutputExecutor);
+        let orchestrator =
+            create_orchestrator_with_hub(executor, pool.clone(), repo_path, Arc::clone(&sse_hub));
+
+        orchestrator
+            .start_session(StartSessionRequest {
+                task_id,
+                agent_type: AgentType::ClaudeCode,
+                prompt: "test".to_string(),
+            })
+            .await
+            .expect("start should succeed");
+
+        // Collect events (status_changed for Running, agent_output, status_changed for Completed)
+        let mut event_types = Vec::new();
+        for _ in 0..3 {
+            match tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await {
+                Ok(Ok(event)) => event_types.push(event.event_type().to_string()),
+                _ => break,
+            }
+        }
+
+        assert!(
+            event_types.contains(&"agent_output".to_string()),
+            "expected agent_output event, got: {event_types:?}"
+        );
+        assert!(
+            event_types.contains(&"agent_session_status_changed".to_string()),
+            "expected agent_session_status_changed event, got: {event_types:?}"
+        );
     }
 }
