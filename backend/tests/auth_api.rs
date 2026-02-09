@@ -2,11 +2,14 @@ use std::sync::Arc;
 
 use axum::http::{header, StatusCode};
 use axum_test::TestServer;
+use gantry_board::agent::executor::NoopExecutor;
+use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
 use serde_json::json;
 use sqlx::sqlite::SqlitePoolOptions;
+use std::path::PathBuf;
 
 async fn create_test_server() -> TestServer {
     let pool = SqlitePoolOptions::new()
@@ -26,10 +29,18 @@ async fn create_test_server() -> TestServer {
         ..Default::default()
     };
 
+    let sse_hub = Arc::new(SseHub::default());
+    let orchestrator = Arc::new(AgentOrchestrator::new(
+        Arc::new(NoopExecutor),
+        pool.clone(),
+        PathBuf::from("."),
+        Arc::clone(&sse_hub),
+    ));
     let state = AppState {
         pool,
-        sse_hub: Arc::new(SseHub::default()),
+        sse_hub,
         config: Arc::new(config),
+        orchestrator,
     };
 
     let app = gantry_board::app(state);

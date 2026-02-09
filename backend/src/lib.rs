@@ -21,6 +21,7 @@ use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+use crate::agent::orchestrator::AgentOrchestrator;
 use crate::sse::hub::SseHub;
 
 #[derive(Clone)]
@@ -28,6 +29,7 @@ pub struct AppState {
     pub pool: SqlitePool,
     pub sse_hub: Arc<SseHub>,
     pub config: Arc<config::Config>,
+    pub orchestrator: Arc<AgentOrchestrator>,
 }
 
 pub fn app(state: AppState) -> Router {

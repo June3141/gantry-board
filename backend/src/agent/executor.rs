@@ -38,3 +38,25 @@ pub trait AgentExecutor: Send + Sync {
     /// Start an agent process with the given configuration.
     async fn start(&self, config: AgentConfig) -> AppResult<AgentHandle>;
 }
+
+/// No-op executor placeholder. Waits for cancellation, then emits Completed.
+pub struct NoopExecutor;
+
+#[async_trait::async_trait]
+impl AgentExecutor for NoopExecutor {
+    async fn start(&self, _config: AgentConfig) -> AppResult<AgentHandle> {
+        let cancel = CancellationToken::new();
+        let (tx, rx) = mpsc::channel(1);
+        let token = cancel.clone();
+        let join_handle = tokio::spawn(async move {
+            token.cancelled().await;
+            let _ = tx.send(AgentOutputEvent::Completed).await;
+            Ok(())
+        });
+        Ok(AgentHandle {
+            cancel,
+            output_rx: rx,
+            join_handle,
+        })
+    }
+}

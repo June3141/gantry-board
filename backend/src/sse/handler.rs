@@ -33,10 +33,13 @@ pub async fn sse_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::agent::executor::NoopExecutor;
+    use crate::agent::orchestrator::AgentOrchestrator;
     use crate::config::Config;
     use crate::sse::event::SseEvent;
     use crate::sse::hub::SseHub;
     use sqlx::sqlite::SqlitePoolOptions;
+    use std::path::PathBuf;
     use std::sync::Arc;
 
     async fn create_test_state() -> AppState {
@@ -50,10 +53,18 @@ mod tests {
             .await
             .expect("Failed to run migrations");
 
+        let sse_hub = Arc::new(SseHub::default());
+        let orchestrator = Arc::new(AgentOrchestrator::new(
+            Arc::new(NoopExecutor),
+            pool.clone(),
+            PathBuf::from("."),
+            Arc::clone(&sse_hub),
+        ));
         AppState {
             pool,
-            sse_hub: Arc::new(SseHub::default()),
+            sse_hub,
             config: Arc::new(Config::default()),
+            orchestrator,
         }
     }
 
