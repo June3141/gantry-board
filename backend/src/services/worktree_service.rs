@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use crate::error::AppResult;
+use git2::{BranchType, Repository, WorktreeAddOptions, WorktreePruneOptions};
+
+use crate::error::{AppError, AppResult};
 
 /// Information about a git worktree.
 #[derive(Debug, Clone)]
@@ -12,23 +14,91 @@ pub struct WorktreeInfo {
 }
 
 /// Create a new worktree with a branch forked from HEAD.
-pub fn create_worktree(_repo_path: &Path, _name: &str) -> AppResult<WorktreeInfo> {
-    todo!()
+pub fn create_worktree(repo_path: &Path, name: &str) -> AppResult<WorktreeInfo> {
+    let repo = Repository::open(repo_path)?;
+
+    let head = repo.head()?;
+    let commit = head.peel_to_commit()?;
+    let branch = repo.branch(name, &commit, false)?;
+
+    let wt_path = repo_path
+        .parent()
+        .ok_or_else(|| AppError::Internal("repository has no parent directory".to_string()))?
+        .join(name);
+
+    let branch_ref = branch.into_reference();
+    let mut opts = WorktreeAddOptions::new();
+    opts.reference(Some(&branch_ref));
+    repo.worktree(name, &wt_path, Some(&opts))?;
+
+    Ok(WorktreeInfo {
+        name: name.to_string(),
+        path: wt_path,
+        branch: Some(name.to_string()),
+        is_valid: true,
+    })
 }
 
 /// List all worktrees in the repository.
-pub fn list_worktrees(_repo_path: &Path) -> AppResult<Vec<WorktreeInfo>> {
-    todo!()
+pub fn list_worktrees(repo_path: &Path) -> AppResult<Vec<WorktreeInfo>> {
+    let repo = Repository::open(repo_path)?;
+    let worktrees = repo.worktrees()?;
+
+    let mut result = Vec::new();
+    for name in worktrees.iter().flatten() {
+        if let Ok(info) = build_worktree_info(&repo, name) {
+            result.push(info);
+        }
+    }
+    Ok(result)
 }
 
 /// Get information about a specific worktree by name.
-pub fn get_worktree(_repo_path: &Path, _name: &str) -> AppResult<WorktreeInfo> {
-    todo!()
+pub fn get_worktree(repo_path: &Path, name: &str) -> AppResult<WorktreeInfo> {
+    let repo = Repository::open(repo_path)?;
+    build_worktree_info(&repo, name)
 }
 
 /// Delete a worktree and its working directory.
-pub fn delete_worktree(_repo_path: &Path, _name: &str) -> AppResult<()> {
-    todo!()
+pub fn delete_worktree(repo_path: &Path, name: &str) -> AppResult<()> {
+    let repo = Repository::open(repo_path)?;
+    let wt = repo.find_worktree(name)?;
+
+    let mut opts = WorktreePruneOptions::new();
+    opts.valid(true);
+    opts.working_tree(true);
+    wt.prune(Some(&mut opts))?;
+
+    // Clean up the branch
+    if let Ok(mut branch) = repo.find_branch(name, BranchType::Local) {
+        let _ = branch.delete();
+    }
+
+    Ok(())
+}
+
+fn build_worktree_info(repo: &Repository, name: &str) -> AppResult<WorktreeInfo> {
+    let wt = repo.find_worktree(name)?;
+    let is_valid = wt.validate().is_ok();
+    let wt_path = wt.path().to_path_buf();
+
+    let branch = if is_valid {
+        Repository::open(&wt_path).ok().and_then(|wt_repo| {
+            wt_repo
+                .head()
+                .ok()
+                .and_then(|h| h.shorthand().map(String::from))
+        })
+    } else {
+        None
+    };
+
+    Ok(WorktreeInfo {
+        name: name.to_string(),
+        path: wt_path,
+        branch,
+        is_valid,
+    })
 }
 
 #[cfg(test)]
@@ -38,9 +108,13 @@ mod tests {
     use tempfile::TempDir;
 
     /// Creates a temporary git repository with one initial commit.
+    /// The repo is placed in a `repo` subdirectory so worktrees can be
+    /// created as siblings inside the same TempDir.
     fn setup_test_repo() -> (TempDir, PathBuf) {
         let dir = TempDir::new().expect("Failed to create temp dir");
-        let repo = git2::Repository::init(dir.path()).expect("Failed to init repo");
+        let repo_path = dir.path().join("repo");
+        std::fs::create_dir(&repo_path).expect("Failed to create repo dir");
+        let repo = git2::Repository::init(&repo_path).expect("Failed to init repo");
 
         let sig =
             git2::Signature::now("Test", "test@example.com").expect("Failed to create signature");
@@ -53,12 +127,11 @@ mod tests {
         repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[])
             .expect("Failed to create initial commit");
 
-        let path = dir.path().to_path_buf();
-        (dir, path)
+        (dir, repo_path)
     }
 
     #[test]
-    #[ignore = "TDD: pending implementation"]
+
     fn test_create_worktree_returns_info() {
         let (_dir, repo_path) = setup_test_repo();
 
@@ -70,7 +143,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TDD: pending implementation"]
+
     fn test_create_worktree_directory_exists() {
         let (_dir, repo_path) = setup_test_repo();
 
@@ -80,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TDD: pending implementation"]
+
     fn test_create_duplicate_worktree_returns_error() {
         let (_dir, repo_path) = setup_test_repo();
 
@@ -91,7 +164,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TDD: pending implementation"]
+
     fn test_list_worktrees_empty() {
         let (_dir, repo_path) = setup_test_repo();
 
@@ -101,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TDD: pending implementation"]
+
     fn test_list_worktrees_returns_created() {
         let (_dir, repo_path) = setup_test_repo();
 
@@ -117,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TDD: pending implementation"]
+
     fn test_get_worktree_returns_existing() {
         let (_dir, repo_path) = setup_test_repo();
 
@@ -130,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TDD: pending implementation"]
+
     fn test_get_worktree_not_found() {
         let (_dir, repo_path) = setup_test_repo();
 
@@ -140,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TDD: pending implementation"]
+
     fn test_delete_worktree_removes_it() {
         let (_dir, repo_path) = setup_test_repo();
 
