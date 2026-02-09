@@ -136,7 +136,7 @@ impl AgentOrchestrator {
         };
 
         // Step 6: Update DB session to Running
-        if let Err(e) = agent_session_service::update_agent_session(
+        let running_session = match agent_session_service::update_agent_session(
             &self.pool,
             req.task_id,
             session.id,
@@ -146,20 +146,19 @@ impl AgentOrchestrator {
         )
         .await
         {
-            // Rollback: cancel executor + delete worktree + mark cancelled
-            handle.cancel.cancel();
-            let _ = Self::delete_worktree_blocking(&self.repo_path, &worktree_name).await;
-            let _ = self.mark_session_cancelled(req.task_id, session.id).await;
-            return Err(e);
-        }
+            Ok(s) => s,
+            Err(e) => {
+                // Rollback: cancel executor + delete worktree + mark cancelled
+                handle.cancel.cancel();
+                let _ = Self::delete_worktree_blocking(&self.repo_path, &worktree_name).await;
+                let _ = self.mark_session_cancelled(req.task_id, session.id).await;
+                return Err(e);
+            }
+        };
 
         // Broadcast status change to Running
-        if let Ok(session) =
-            agent_session_service::get_agent_session(&self.pool, req.task_id, session.id).await
-        {
-            self.sse_hub
-                .broadcast(SseEvent::agent_session_status_changed(session));
-        }
+        self.sse_hub
+            .broadcast(SseEvent::agent_session_status_changed(running_session));
 
         // Step 7: Spawn background monitor to drain output_rx and update DB on completion
         let monitor_handle = self.spawn_session_monitor(
@@ -306,8 +305,8 @@ impl AgentOrchestrator {
                 return;
             }
 
-            // Natural completion: update DB (best-effort)
-            if let Err(e) = agent_session_service::update_agent_session(
+            // Natural completion: update DB and broadcast (best-effort)
+            match agent_session_service::update_agent_session(
                 &pool,
                 task_id,
                 session_id,
@@ -317,14 +316,12 @@ impl AgentOrchestrator {
             )
             .await
             {
-                warn!("failed to update session {session_id} status: {e}");
-            }
-
-            // Broadcast status change
-            if let Ok(session) =
-                agent_session_service::get_agent_session(&pool, task_id, session_id).await
-            {
-                sse_hub.broadcast(SseEvent::agent_session_status_changed(session));
+                Ok(session) => {
+                    sse_hub.broadcast(SseEvent::agent_session_status_changed(session));
+                }
+                Err(e) => {
+                    warn!("failed to update session {session_id} status: {e}");
+                }
             }
 
             // Remove from running map

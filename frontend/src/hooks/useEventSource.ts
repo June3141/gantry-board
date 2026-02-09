@@ -40,11 +40,18 @@ export function connectEventSource(queryClient: QueryClient): () => void {
 
   const handleAgentSessionEvent = (event: MessageEvent) => {
     try {
-      JSON.parse(event.data);
-      queryClient.invalidateQueries({
-        queryKey: ['/api/tasks'],
-        exact: false,
-      });
+      const parsed = JSON.parse(event.data) as SseEvent;
+      if (parsed.type !== 'AgentSessionStatusChanged') {
+        return;
+      }
+      const { task_id: taskId } = parsed.session;
+      if (taskId) {
+        queryClient.invalidateQueries({
+          queryKey: [`/api/tasks/${taskId}/sessions`],
+          exact: false,
+        });
+      }
+      handleTaskEvent();
     } catch {
       console.error('Failed to parse SSE event:', event.data);
     }
