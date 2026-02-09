@@ -1,5 +1,8 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
+use gantry_board::agent::executor::NoopExecutor;
+use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::db;
 use gantry_board::sse::hub::SseHub;
@@ -20,11 +23,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let pool = db::init_pool(&config.database_url).await?;
+    let sse_hub = Arc::new(SseHub::default());
+
+    let repo_path = config
+        .repository_path
+        .as_deref()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+    let executor = Arc::new(NoopExecutor);
+    let orchestrator = Arc::new(AgentOrchestrator::new(
+        executor,
+        pool.clone(),
+        repo_path,
+        Arc::clone(&sse_hub),
+    ));
 
     let state = AppState {
         pool,
-        sse_hub: Arc::new(SseHub::default()),
+        sse_hub,
         config: Arc::new(config.clone()),
+        orchestrator,
     };
 
     let app = gantry_board::app(state);
