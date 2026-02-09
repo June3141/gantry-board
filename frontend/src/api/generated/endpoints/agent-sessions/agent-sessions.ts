@@ -339,7 +339,7 @@ export const updateAgentSession = (
 };
 
 export const getUpdateAgentSessionMutationOptions = <
-  TError = void | void,
+  TError = void | void | void,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -377,9 +377,9 @@ export type UpdateAgentSessionMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateAgentSession>>
 >;
 export type UpdateAgentSessionMutationBody = UpdateAgentSessionRequest;
-export type UpdateAgentSessionMutationError = void | void;
+export type UpdateAgentSessionMutationError = void | void | void;
 
-export const useUpdateAgentSession = <TError = void | void, TContext = unknown>(
+export const useUpdateAgentSession = <TError = void | void | void, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateAgentSession>>,
