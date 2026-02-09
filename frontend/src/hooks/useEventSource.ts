@@ -1,13 +1,15 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { Task } from '../api/generated/model';
+import type { AgentSession, Task } from '../api/generated/model';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
 export type SseEvent =
   | { type: 'TaskCreated'; task: Task }
   | { type: 'TaskUpdated'; task: Task }
-  | { type: 'TaskDeleted'; task_id: string };
+  | { type: 'TaskDeleted'; task_id: string }
+  | { type: 'AgentOutput'; session_id: string; text: string }
+  | { type: 'AgentSessionStatusChanged'; session: AgentSession };
 
 export function connectEventSource(queryClient: QueryClient): () => void {
   const eventSource = new EventSource(`${API_BASE_URL}/api/events`);
@@ -35,6 +37,19 @@ export function connectEventSource(queryClient: QueryClient): () => void {
   eventSource.addEventListener('task_created', handleSseMessage);
   eventSource.addEventListener('task_updated', handleSseMessage);
   eventSource.addEventListener('task_deleted', handleSseMessage);
+
+  const handleAgentSessionEvent = (event: MessageEvent) => {
+    try {
+      JSON.parse(event.data);
+      queryClient.invalidateQueries({
+        queryKey: ['/api/tasks'],
+        exact: false,
+      });
+    } catch {
+      console.error('Failed to parse SSE event:', event.data);
+    }
+  };
+  eventSource.addEventListener('agent_session_status_changed', handleAgentSessionEvent);
 
   eventSource.onerror = (event: Event) => {
     const source = event.currentTarget as EventSource | null;
