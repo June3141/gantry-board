@@ -22,6 +22,10 @@ pub struct Config {
     /// Use secure cookies (HTTPS only) - should be true in production
     #[serde(default)]
     pub cookie_secure: bool,
+
+    /// Path to the git repository for worktree management
+    #[serde(default)]
+    pub repository_path: Option<String>,
 }
 
 fn default_bind_addr() -> String {
@@ -56,6 +60,7 @@ impl Default for Config {
             #[cfg(debug_assertions)]
             auth_disabled: false,
             cookie_secure: false,
+            repository_path: None,
         }
     }
 }

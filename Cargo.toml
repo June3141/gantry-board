@@ -52,3 +52,6 @@ tokio-stream = { version = "0.1", features = ["sync"] }
 argon2 = "0.5"
 rand = "0.8"
 axum-extra = { version = "0.10", features = ["cookie"] }
+
+# Git
+git2 = "0.20"

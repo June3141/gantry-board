@@ -34,6 +34,9 @@ pub enum AppError {
     #[error("database error: {0}")]
     Database(#[from] sqlx::Error),
 
+    #[error("git error: {0}")]
+    Git(#[from] git2::Error),
+
     #[error(transparent)]
     Anyhow(#[from] anyhow::Error),
 }
@@ -72,6 +75,13 @@ impl IntoResponse for AppError {
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "database error".to_string(),
                 )
+            }
+            AppError::Git(err) => {
+                if err.code() == git2::ErrorCode::NotFound {
+                    return AppError::NotFound(err.message().to_string()).into_response();
+                }
+                tracing::error!(%err, "git error");
+                (StatusCode::INTERNAL_SERVER_ERROR, "git error".to_string())
             }
             AppError::Anyhow(err) => {
                 tracing::error!(%err, "internal server error");
