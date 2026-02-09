@@ -1,12 +1,13 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use sqlx::SqlitePool;
 use tokio::sync::Mutex;
+use tracing::warn;
 use uuid::Uuid;
 
-use crate::agent::executor::{AgentConfig, AgentExecutor, AgentHandle};
+use crate::agent::executor::{AgentConfig, AgentExecutor, AgentOutputEvent};
 use crate::error::{AppError, AppResult};
 use crate::models::agent_session::{
     AgentSessionStatus, AgentType, CreateAgentSessionRequest, UpdateAgentSessionRequest,
@@ -15,7 +16,8 @@ use crate::services::{agent_session_service, worktree_service};
 use crate::sse::hub::SseHub;
 
 struct RunningSession {
-    handle: AgentHandle,
+    cancel: tokio_util::sync::CancellationToken,
+    _monitor_handle: tokio::task::JoinHandle<()>,
 }
 
 /// Parameters for starting a new agent session.
@@ -40,7 +42,10 @@ pub struct AgentOrchestrator {
     pool: SqlitePool,
     repo_path: PathBuf,
     _sse_hub: Arc<SseHub>,
-    running: Mutex<HashMap<Uuid, RunningSession>>,
+    /// Per-task lock to prevent concurrent start_session for the same task.
+    task_locks: Mutex<HashMap<Uuid, Arc<Mutex<()>>>>,
+    /// Currently running sessions, keyed by session_id.
+    running: Arc<Mutex<HashMap<Uuid, RunningSession>>>,
 }
 
 impl AgentOrchestrator {
@@ -55,23 +60,36 @@ impl AgentOrchestrator {
             pool,
             repo_path,
             _sse_hub: sse_hub,
-            running: Mutex::new(HashMap::new()),
+            task_locks: Mutex::new(HashMap::new()),
+            running: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     /// Start a new agent session for a task.
     ///
-    /// 1. Check no active session for this task (duplicate prevention)
-    /// 2. Create DB session (Pending)
-    /// 3. Create git worktree
-    /// 4. Start agent executor
-    /// 5. Update DB session (Running)
-    /// 6. Register in running sessions map
+    /// 1. Acquire per-task lock (atomic duplicate prevention)
+    /// 2. Check no active session for this task
+    /// 3. Create DB session (Pending)
+    /// 4. Create git worktree (via spawn_blocking)
+    /// 5. Start agent executor
+    /// 6. Update DB session (Running)
+    /// 7. Spawn background monitor for output_rx
+    /// 8. Register in running sessions map
     pub async fn start_session(&self, req: StartSessionRequest) -> AppResult<StartSessionResult> {
-        // Step 1: Duplicate prevention
+        // Step 1: Acquire per-task lock
+        let task_lock = {
+            let mut locks = self.task_locks.lock().await;
+            locks
+                .entry(req.task_id)
+                .or_insert_with(|| Arc::new(Mutex::new(())))
+                .clone()
+        };
+        let _guard = task_lock.lock().await;
+
+        // Step 2: Duplicate prevention (now atomic under task lock)
         self.check_no_active_session(req.task_id).await?;
 
-        // Step 2: Create DB session
+        // Step 3: Create DB session
         let session = agent_session_service::create_agent_session(
             &self.pool,
             req.task_id,
@@ -81,17 +99,24 @@ impl AgentOrchestrator {
         )
         .await?;
 
-        // Step 3: Create worktree
-        let worktree_name = format!("task-{}", req.task_id);
-        let worktree = match worktree_service::create_worktree(&self.repo_path, &worktree_name) {
+        // Step 4: Create worktree (spawn_blocking for synchronous git2 operations)
+        let worktree_name = format!("task-{}-session-{}", req.task_id, session.id);
+        let repo_path = self.repo_path.clone();
+        let wt_name = worktree_name.clone();
+        let worktree = match tokio::task::spawn_blocking(move || {
+            worktree_service::create_worktree(&repo_path, &wt_name)
+        })
+        .await
+        .map_err(|e| AppError::Internal(format!("worktree task panicked: {e}")))?
+        {
             Ok(wt) => wt,
             Err(e) => {
-                let _ = self.mark_session_failed(req.task_id, session.id).await;
+                let _ = self.mark_session_cancelled(req.task_id, session.id).await;
                 return Err(e);
             }
         };
 
-        // Step 4: Start executor
+        // Step 5: Start executor
         let config = AgentConfig {
             agent_type: req.agent_type,
             session_id: session.id,
@@ -103,14 +128,14 @@ impl AgentOrchestrator {
         let handle = match self.executor.start(config).await {
             Ok(h) => h,
             Err(e) => {
-                let _ = worktree_service::delete_worktree(&self.repo_path, &worktree_name);
-                let _ = self.mark_session_failed(req.task_id, session.id).await;
+                let _ = Self::delete_worktree_blocking(&self.repo_path, &worktree_name).await;
+                let _ = self.mark_session_cancelled(req.task_id, session.id).await;
                 return Err(e);
             }
         };
 
-        // Step 5: Update DB session to Running
-        agent_session_service::update_agent_session(
+        // Step 6: Update DB session to Running
+        if let Err(e) = agent_session_service::update_agent_session(
             &self.pool,
             req.task_id,
             session.id,
@@ -118,13 +143,35 @@ impl AgentOrchestrator {
                 status: AgentSessionStatus::Running,
             },
         )
-        .await?;
+        .await
+        {
+            // Rollback: cancel executor + delete worktree + mark cancelled
+            handle.cancel.cancel();
+            let _ = Self::delete_worktree_blocking(&self.repo_path, &worktree_name).await;
+            let _ = self.mark_session_cancelled(req.task_id, session.id).await;
+            return Err(e);
+        }
 
-        // Step 6: Register in running sessions map
+        // Step 7: Spawn background monitor to drain output_rx and update DB on completion
+        let monitor_handle = self.spawn_session_monitor(
+            handle.output_rx,
+            handle.join_handle,
+            handle.cancel.clone(),
+            req.task_id,
+            session.id,
+        );
+
+        // Step 8: Register in running sessions map
         let worktree_path = worktree.path.clone();
         {
             let mut running = self.running.lock().await;
-            running.insert(session.id, RunningSession { handle });
+            running.insert(
+                session.id,
+                RunningSession {
+                    cancel: handle.cancel,
+                    _monitor_handle: monitor_handle,
+                },
+            );
         }
 
         Ok(StartSessionResult {
@@ -135,20 +182,20 @@ impl AgentOrchestrator {
 
     /// Stop a running agent session.
     ///
-    /// 1. Remove from running map
-    /// 2. Cancel the agent process
-    /// 3. Update DB session (Cancelled)
+    /// 1. Cancel the agent process
+    /// 2. Update DB session (Cancelled)
+    /// 3. Remove from running map only after DB update succeeds
     pub async fn stop_session(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
-        let running_session = {
-            let mut running = self.running.lock().await;
-            running.remove(&session_id)
-        };
+        // Step 1: Check session exists and cancel it (keep in map)
+        {
+            let running = self.running.lock().await;
+            let session = running.get(&session_id).ok_or_else(|| {
+                AppError::NotFound(format!("no running session found: {session_id}"))
+            })?;
+            session.cancel.cancel();
+        }
 
-        let running_session = running_session
-            .ok_or_else(|| AppError::NotFound(format!("no running session found: {session_id}")))?;
-
-        running_session.handle.cancel.cancel();
-
+        // Step 2: Update DB session to Cancelled
         agent_session_service::update_agent_session(
             &self.pool,
             task_id,
@@ -158,6 +205,12 @@ impl AgentOrchestrator {
             },
         )
         .await?;
+
+        // Step 3: Remove from running map after DB success
+        {
+            let mut running = self.running.lock().await;
+            running.remove(&session_id);
+        }
 
         Ok(())
     }
@@ -183,9 +236,8 @@ impl AgentOrchestrator {
         Ok(())
     }
 
-    async fn mark_session_failed(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
-        // Pending -> Failed is not a valid transition in agent_session_service.
-        // We need Pending -> Cancelled instead.
+    async fn mark_session_cancelled(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
+        // Pending -> Failed is not a valid transition; use Pending -> Cancelled.
         agent_session_service::update_agent_session(
             &self.pool,
             task_id,
@@ -196,6 +248,65 @@ impl AgentOrchestrator {
         )
         .await?;
         Ok(())
+    }
+
+    async fn delete_worktree_blocking(repo_path: &Path, name: &str) -> AppResult<()> {
+        let repo = repo_path.to_path_buf();
+        let n = name.to_string();
+        tokio::task::spawn_blocking(move || worktree_service::delete_worktree(&repo, &n))
+            .await
+            .map_err(|e| AppError::Internal(format!("worktree delete task panicked: {e}")))?
+    }
+
+    /// Spawn a background task that drains `output_rx` and updates DB status
+    /// when the agent completes or fails naturally (not via stop_session).
+    fn spawn_session_monitor(
+        &self,
+        mut output_rx: tokio::sync::mpsc::Receiver<AgentOutputEvent>,
+        join_handle: tokio::task::JoinHandle<AppResult<()>>,
+        cancel: tokio_util::sync::CancellationToken,
+        task_id: Uuid,
+        session_id: Uuid,
+    ) -> tokio::task::JoinHandle<()> {
+        let pool = self.pool.clone();
+        let running = Arc::clone(&self.running);
+        tokio::spawn(async move {
+            // Drain output events until the channel closes
+            while let Some(event) = output_rx.recv().await {
+                match event {
+                    AgentOutputEvent::Completed | AgentOutputEvent::Failed { .. } => break,
+                    AgentOutputEvent::Output { .. } => {
+                        // Future: forward to SSE hub
+                    }
+                }
+            }
+
+            // Wait for the executor task to finish
+            let _ = join_handle.await;
+
+            // If cancelled by stop_session, don't update DB (stop_session handles it)
+            if cancel.is_cancelled() {
+                return;
+            }
+
+            // Natural completion: update DB (best-effort)
+            if let Err(e) = agent_session_service::update_agent_session(
+                &pool,
+                task_id,
+                session_id,
+                &UpdateAgentSessionRequest {
+                    status: AgentSessionStatus::Completed,
+                },
+            )
+            .await
+            {
+                warn!("failed to update session {session_id} status: {e}");
+            }
+
+            // Remove from running map
+            let mut map = running.lock().await;
+            map.remove(&session_id);
+        })
     }
 }
 
@@ -433,8 +544,9 @@ mod tests {
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].status, AgentSessionStatus::Cancelled);
 
-        // Verify worktree was cleaned up
-        let worktree_name = format!("task-{task_id}");
+        // Verify worktree was cleaned up (name includes session_id)
+        let session_id = sessions[0].id;
+        let worktree_name = format!("task-{task_id}-session-{session_id}");
         let worktree_result = worktree_service::get_worktree(&repo_path, &worktree_name);
         assert!(worktree_result.is_err());
     }
