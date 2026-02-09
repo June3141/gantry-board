@@ -12,14 +12,7 @@ use sqlx::sqlite::SqlitePoolOptions;
 use tempfile::TempDir;
 use uuid::Uuid;
 
-async fn create_test_server() -> TestServer {
-    let (_dir, server) = create_test_server_with_repo().await;
-    // Leak TempDir so it lives for the test — acceptable in tests
-    std::mem::forget(_dir);
-    server
-}
-
-async fn create_test_server_with_repo() -> (TempDir, TestServer) {
+async fn create_test_server() -> (TempDir, TestServer) {
     let pool = SqlitePoolOptions::new()
         .connect("sqlite::memory:")
         .await
@@ -94,7 +87,7 @@ async fn create_test_task(server: &TestServer) -> (String, String) {
 
 #[tokio::test]
 async fn test_create_agent_session_returns_created() {
-    let server = create_test_server().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     let response = server
@@ -113,7 +106,7 @@ async fn test_create_agent_session_returns_created() {
 
 #[tokio::test]
 async fn test_create_agent_session_for_nonexistent_task_returns_404() {
-    let server = create_test_server().await;
+    let (_tmp, server) = create_test_server().await;
     let fake_id = Uuid::new_v4();
 
     let response = server
@@ -126,7 +119,7 @@ async fn test_create_agent_session_for_nonexistent_task_returns_404() {
 
 #[tokio::test]
 async fn test_list_agent_sessions_returns_empty() {
-    let server = create_test_server().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     let response = server
@@ -140,7 +133,7 @@ async fn test_list_agent_sessions_returns_empty() {
 
 #[tokio::test]
 async fn test_list_agent_sessions_returns_created_sessions() {
-    let server = create_test_server().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     server
@@ -163,7 +156,7 @@ async fn test_list_agent_sessions_returns_created_sessions() {
 
 #[tokio::test]
 async fn test_get_agent_session_returns_existing() {
-    let server = create_test_server().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     let create_response = server
@@ -185,7 +178,7 @@ async fn test_get_agent_session_returns_existing() {
 
 #[tokio::test]
 async fn test_get_agent_session_returns_not_found() {
-    let server = create_test_server().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
     let fake_session_id = Uuid::new_v4();
 
@@ -201,7 +194,7 @@ async fn test_get_agent_session_returns_not_found() {
 
 #[tokio::test]
 async fn test_update_agent_session_changes_status() {
-    let server = create_test_server().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     let create_response = server
@@ -224,7 +217,7 @@ async fn test_update_agent_session_changes_status() {
 
 #[tokio::test]
 async fn test_get_session_under_wrong_task_returns_404() {
-    let server = create_test_server().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_a) = create_test_task(&server).await;
     let (_project_id2, task_b) = create_test_task(&server).await;
 
@@ -245,7 +238,7 @@ async fn test_get_session_under_wrong_task_returns_404() {
 
 #[tokio::test]
 async fn test_invalid_status_transition_returns_400() {
-    let server = create_test_server().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     let create_response = server
@@ -268,7 +261,7 @@ async fn test_invalid_status_transition_returns_400() {
 
 #[tokio::test]
 async fn test_start_agent_session_returns_created() {
-    let (_tmp, server) = create_test_server_with_repo().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     let response = server
@@ -290,7 +283,7 @@ async fn test_start_agent_session_returns_created() {
 
 #[tokio::test]
 async fn test_start_agent_session_409_when_active_session_exists() {
-    let (_tmp, server) = create_test_server_with_repo().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     // First start succeeds
@@ -317,7 +310,7 @@ async fn test_start_agent_session_409_when_active_session_exists() {
 
 #[tokio::test]
 async fn test_start_agent_session_400_for_empty_prompt() {
-    let (_tmp, server) = create_test_server_with_repo().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     let response = server
@@ -333,7 +326,7 @@ async fn test_start_agent_session_400_for_empty_prompt() {
 
 #[tokio::test]
 async fn test_start_agent_session_404_for_nonexistent_task() {
-    let (_tmp, server) = create_test_server_with_repo().await;
+    let (_tmp, server) = create_test_server().await;
     let fake_id = Uuid::new_v4();
 
     let response = server
@@ -349,7 +342,7 @@ async fn test_start_agent_session_404_for_nonexistent_task() {
 
 #[tokio::test]
 async fn test_stop_agent_session_returns_200() {
-    let (_tmp, server) = create_test_server_with_repo().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
     // Start a session first
@@ -380,7 +373,7 @@ async fn test_stop_agent_session_returns_200() {
 
 #[tokio::test]
 async fn test_stop_agent_session_404_for_nonrunning_session() {
-    let (_tmp, server) = create_test_server_with_repo().await;
+    let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
     let fake_session_id = Uuid::new_v4();
 

@@ -187,6 +187,9 @@ pub async fn stop_agent_session(
     authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
         .await?;
 
+    // Ensure the session belongs to this task before attempting to stop it
+    agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
+
     state.orchestrator.stop_session(task_id, session_id).await?;
 
     let session =
