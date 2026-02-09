@@ -76,13 +76,22 @@ impl IntoResponse for AppError {
                     "database error".to_string(),
                 )
             }
-            AppError::Git(err) => {
-                if err.code() == git2::ErrorCode::NotFound {
-                    return AppError::NotFound(err.message().to_string()).into_response();
+            AppError::Git(err) => match err.code() {
+                git2::ErrorCode::NotFound => {
+                    tracing::info!(%err, "git not found");
+                    return AppError::NotFound("resource not found".to_string()).into_response();
                 }
-                tracing::error!(%err, "git error");
-                (StatusCode::INTERNAL_SERVER_ERROR, "git error".to_string())
-            }
+                git2::ErrorCode::Exists => {
+                    return AppError::Conflict(err.message().to_string()).into_response();
+                }
+                git2::ErrorCode::InvalidSpec | git2::ErrorCode::Invalid => {
+                    return AppError::Validation(err.message().to_string()).into_response();
+                }
+                _ => {
+                    tracing::error!(%err, "git error");
+                    (StatusCode::INTERNAL_SERVER_ERROR, "git error".to_string())
+                }
+            },
             AppError::Anyhow(err) => {
                 tracing::error!(%err, "internal server error");
                 (

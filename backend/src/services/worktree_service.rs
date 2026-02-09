@@ -1,8 +1,25 @@
 use std::path::{Path, PathBuf};
 
 use git2::{BranchType, Repository, WorktreeAddOptions, WorktreePruneOptions};
+use tracing::warn;
 
 use crate::error::{AppError, AppResult};
+
+fn validate_worktree_name(name: &str) -> AppResult<()> {
+    if name.is_empty()
+        || name.contains('/')
+        || name.contains('\\')
+        || name.contains('\0')
+        || name == "."
+        || name == ".."
+        || name.starts_with('-')
+    {
+        return Err(AppError::Validation(format!(
+            "invalid worktree name: {name}"
+        )));
+    }
+    Ok(())
+}
 
 /// Information about a git worktree.
 #[derive(Debug, Clone)]
@@ -15,21 +32,24 @@ pub struct WorktreeInfo {
 
 /// Create a new worktree with a branch forked from HEAD.
 pub fn create_worktree(repo_path: &Path, name: &str) -> AppResult<WorktreeInfo> {
+    validate_worktree_name(name)?;
     let repo = Repository::open(repo_path)?;
 
     let head = repo.head()?;
     let commit = head.peel_to_commit()?;
-    let branch = repo.branch(name, &commit, false)?;
+    let mut branch = repo.branch(name, &commit, false)?;
 
     let wt_path = repo_path
         .parent()
         .ok_or_else(|| AppError::Internal("repository has no parent directory".to_string()))?
         .join(name);
 
-    let branch_ref = branch.into_reference();
     let mut opts = WorktreeAddOptions::new();
-    opts.reference(Some(&branch_ref));
-    repo.worktree(name, &wt_path, Some(&opts))?;
+    opts.reference(Some(branch.get()));
+    if let Err(e) = repo.worktree(name, &wt_path, Some(&opts)) {
+        let _ = branch.delete();
+        return Err(e.into());
+    }
 
     Ok(WorktreeInfo {
         name: name.to_string(),
@@ -46,9 +66,8 @@ pub fn list_worktrees(repo_path: &Path) -> AppResult<Vec<WorktreeInfo>> {
 
     let mut result = Vec::new();
     for name in worktrees.iter().flatten() {
-        if let Ok(info) = build_worktree_info(&repo, name) {
-            result.push(info);
-        }
+        let info = build_worktree_info(&repo, name)?;
+        result.push(info);
     }
     Ok(result)
 }
@@ -71,7 +90,9 @@ pub fn delete_worktree(repo_path: &Path, name: &str) -> AppResult<()> {
 
     // Clean up the branch
     if let Ok(mut branch) = repo.find_branch(name, BranchType::Local) {
-        let _ = branch.delete();
+        if let Err(e) = branch.delete() {
+            warn!(%e, name, "failed to delete branch after worktree removal");
+        }
     }
 
     Ok(())
@@ -224,5 +245,16 @@ mod tests {
 
         assert!(get_worktree(&repo_path, "del-wt").is_err());
         assert!(!wt_path.exists());
+    }
+
+    #[test]
+    fn test_create_worktree_rejects_path_traversal() {
+        let (_dir, repo_path) = setup_test_repo();
+
+        assert!(create_worktree(&repo_path, "../escape").is_err());
+        assert!(create_worktree(&repo_path, "a/b").is_err());
+        assert!(create_worktree(&repo_path, "..").is_err());
+        assert!(create_worktree(&repo_path, ".").is_err());
+        assert!(create_worktree(&repo_path, "").is_err());
     }
 }
