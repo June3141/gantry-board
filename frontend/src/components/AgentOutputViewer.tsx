@@ -7,12 +7,14 @@ interface AgentOutputViewerProps {
 export function AgentOutputViewer({ lines }: AgentOutputViewerProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const lastLine = lines.length > 0 ? lines[lines.length - 1] : undefined;
+
   useEffect(() => {
     const container = bottomRef.current?.parentElement;
     if (container) {
       container.scrollTop = container.scrollHeight;
     }
-  }, [lines.length]);
+  }, [lastLine]);
 
   if (lines.length === 0) {
     return (

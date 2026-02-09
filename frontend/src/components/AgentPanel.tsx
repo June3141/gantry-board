@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   useListAgentSessions,
   useStartAgentSession,
   useStopAgentSession,
 } from '../api/generated/endpoints/agent-sessions/agent-sessions';
-import type { AgentType } from '../api/generated/model';
+import type { AgentSessionStatus, AgentType } from '../api/generated/model';
 import { useAgentEvents } from '../hooks/useAgentEvents';
 import { useAgentStore } from '../stores/agentStore';
 import { AgentOutputViewer } from './AgentOutputViewer';
@@ -13,7 +13,7 @@ interface AgentPanelProps {
   taskId: string;
 }
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_COLORS: Record<AgentSessionStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   running: 'bg-blue-100 text-blue-800',
   completed: 'bg-green-100 text-green-800',
@@ -24,17 +24,28 @@ const STATUS_COLORS: Record<string, string> = {
 export function AgentPanel({ taskId }: AgentPanelProps) {
   const [agentType, setAgentType] = useState<AgentType>('claude_code');
   const [prompt, setPrompt] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const { data: sessions } = useListAgentSessions(taskId);
   const startSession = useStartAgentSession();
   const stopSession = useStopAgentSession();
 
-  const activeSession = sessions?.find(
-    (s) => s.status === 'running' || s.status === 'pending',
-  );
-
   const { activeSessionId, outputLines, appendOutput, setActiveSession, reset } =
     useAgentStore();
+
+  // Derive active session from both store and server data
+  const activeSession =
+    sessions?.find((s) => s.id === activeSessionId) ??
+    sessions?.find((s) => s.status === 'running' || s.status === 'pending');
+
+  // Sync activeSessionId from server data on mount/refresh
+  useEffect(() => {
+    if (activeSession && !activeSessionId) {
+      setActiveSession(activeSession.id);
+    } else if (!activeSession && activeSessionId) {
+      reset();
+    }
+  }, [activeSession, activeSessionId, setActiveSession, reset]);
 
   const handleOutput = useCallback(
     (text: string) => appendOutput(text),
@@ -43,7 +54,9 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
   useAgentEvents(activeSessionId, handleOutput);
 
   const handleStart = async () => {
+    setError(null);
     try {
+      reset();
       const result = await startSession.mutateAsync({
         taskId,
         data: { agent_type: agentType, prompt },
@@ -51,12 +64,13 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
       setActiveSession(result.session.id);
       setPrompt('');
     } catch {
-      // Error handled by mutation state
+      setError('Failed to start agent session. Please try again.');
     }
   };
 
   const handleStop = async () => {
     if (!activeSession) return;
+    setError(null);
     try {
       await stopSession.mutateAsync({
         taskId,
@@ -64,12 +78,13 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
       });
       reset();
     } catch {
-      // Error handled by mutation state
+      setError('Failed to stop agent session. Please try again.');
     }
   };
 
   return (
     <div className="space-y-3">
+      {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {activeSession ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -78,7 +93,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
                 {activeSession.agent_type === 'claude_code' ? 'Claude Code' : 'Gemini CLI'}
               </span>
               <span
-                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[activeSession.status] ?? ''}`}
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[activeSession.status]}`}
               >
                 {activeSession.status}
               </span>
@@ -111,12 +126,16 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
             </select>
           </div>
           <div>
+            <label htmlFor="agent-prompt-textarea" className="block text-sm font-medium text-gray-700">
+              Prompt
+            </label>
             <textarea
+              id="agent-prompt-textarea"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Enter prompt for the agent..."
               rows={3}
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <button

@@ -79,9 +79,9 @@ describe('AgentPanel', () => {
     expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument();
   });
 
-  it('shows prompt textarea', () => {
+  it('shows prompt textarea with label', () => {
     renderWithProviders(<AgentPanel taskId="task-1" />);
-    expect(screen.getByPlaceholderText(/prompt/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/prompt/i)).toBeInTheDocument();
   });
 
   it('disables start button when prompt is empty', () => {
@@ -97,7 +97,7 @@ describe('AgentPanel', () => {
     const user = userEvent.setup();
     renderWithProviders(<AgentPanel taskId="task-1" />);
 
-    await user.type(screen.getByPlaceholderText(/prompt/i), 'Fix the bug');
+    await user.type(screen.getByLabelText(/prompt/i), 'Fix the bug');
     await user.click(screen.getByRole('button', { name: /start/i }));
 
     expect(mockStartMutateAsync).toHaveBeenCalledWith({
@@ -135,6 +135,18 @@ describe('AgentPanel', () => {
       taskId: 'task-1',
       sessionId: 'session-1',
     });
+  });
+
+  it('shows error message when start fails', async () => {
+    mockStartMutateAsync.mockRejectedValue(new Error('Network error'));
+
+    const user = userEvent.setup();
+    renderWithProviders(<AgentPanel taskId="task-1" />);
+
+    await user.type(screen.getByLabelText(/prompt/i), 'Fix the bug');
+    await user.click(screen.getByRole('button', { name: /start/i }));
+
+    expect(screen.getByText(/failed to start/i)).toBeInTheDocument();
   });
 
   it('displays session status badge', () => {
