@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as agentSessionsApi from '../api/generated/endpoints/agent-sessions/agent-sessions';
 import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
 import type { Task } from '../api/generated/model';
 import { TaskPriority, TaskStatus } from '../api/generated/model';
@@ -12,6 +13,16 @@ vi.mock('../api/generated/endpoints/tasks/tasks', () => ({
   useGetTask: vi.fn(),
   useUpdateTask: vi.fn(),
   useDeleteTask: vi.fn(),
+}));
+
+vi.mock('../api/generated/endpoints/agent-sessions/agent-sessions', () => ({
+  useListAgentSessions: vi.fn(),
+  useStartAgentSession: vi.fn(),
+  useStopAgentSession: vi.fn(),
+}));
+
+vi.mock('../hooks/useAgentEvents', () => ({
+  useAgentEvents: vi.fn(),
 }));
 
 const mockTask: Task = {
@@ -56,6 +67,21 @@ describe('TaskDetailModal', () => {
       selectedTaskId: null,
       isTaskDetailOpen: false,
     });
+
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    vi.mocked(agentSessionsApi.useStartAgentSession).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useStartAgentSession>);
+
+    vi.mocked(agentSessionsApi.useStopAgentSession).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useStopAgentSession>);
   });
 
   it('does not render when modal is closed', () => {
@@ -261,6 +287,15 @@ describe('TaskDetailModal', () => {
         id: 'task-1',
         data: { priority: 'high' },
       });
+    });
+  });
+
+  describe('agent panel', () => {
+    it('renders agent panel section when modal is open', () => {
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+      expect(screen.getByText('Agent')).toBeInTheDocument();
+      expect(screen.getByLabelText(/agent type/i)).toBeInTheDocument();
     });
   });
 
