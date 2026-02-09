@@ -1,3 +1,4 @@
+pub mod agent_session_service;
 pub mod authorization_service;
 pub mod member_service;
 pub mod project_service;
