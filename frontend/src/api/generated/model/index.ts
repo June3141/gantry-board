@@ -36,6 +36,8 @@ export * from './sseEventOneOfFiveType';
 export * from './sseEventOneOfThree';
 export * from './sseEventOneOfThreeType';
 export * from './sseEventOneOfType';
+export * from './startAgentSessionRequest';
+export * from './startAgentSessionResponse';
 export * from './task';
 export * from './taskAssignedTo';
 export * from './taskDescription';

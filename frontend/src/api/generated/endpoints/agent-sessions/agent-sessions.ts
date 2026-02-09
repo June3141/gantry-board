@@ -25,6 +25,8 @@ import { customInstance } from '../../../client';
 import type {
   AgentSession,
   CreateAgentSessionRequest,
+  StartAgentSessionRequest,
+  StartAgentSessionResponse,
   UpdateAgentSessionRequest,
 } from '../../model';
 
@@ -208,6 +210,81 @@ export const useCreateAgentSession = <TError = void | void, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getCreateAgentSessionMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+export const startAgentSession = (
+  taskId: string,
+  startAgentSessionRequest: StartAgentSessionRequest,
+  signal?: AbortSignal,
+) => {
+  return customInstance<StartAgentSessionResponse>({
+    url: `/api/tasks/${taskId}/sessions/start`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: startAgentSessionRequest,
+    signal,
+  });
+};
+
+export const getStartAgentSessionMutationOptions = <
+  TError = void | void | void | void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startAgentSession>>,
+    TError,
+    { taskId: string; data: StartAgentSessionRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startAgentSession>>,
+  TError,
+  { taskId: string; data: StartAgentSessionRequest },
+  TContext
+> => {
+  const mutationKey = ['startAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startAgentSession>>,
+    { taskId: string; data: StartAgentSessionRequest }
+  > = (props) => {
+    const { taskId, data } = props ?? {};
+
+    return startAgentSession(taskId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startAgentSession>>
+>;
+export type StartAgentSessionMutationBody = StartAgentSessionRequest;
+export type StartAgentSessionMutationError = void | void | void | void;
+
+export const useStartAgentSession = <TError = void | void | void | void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startAgentSession>>,
+      TError,
+      { taskId: string; data: StartAgentSessionRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof startAgentSession>>,
+  TError,
+  { taskId: string; data: StartAgentSessionRequest },
+  TContext
+> => {
+  const mutationOptions = getStartAgentSessionMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
@@ -396,6 +473,75 @@ export const useUpdateAgentSession = <TError = void | void | void, TContext = un
   TContext
 > => {
   const mutationOptions = getUpdateAgentSessionMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+export const stopAgentSession = (taskId: string, sessionId: string, signal?: AbortSignal) => {
+  return customInstance<AgentSession>({
+    url: `/api/tasks/${taskId}/sessions/${sessionId}/stop`,
+    method: 'POST',
+    signal,
+  });
+};
+
+export const getStopAgentSessionMutationOptions = <
+  TError = void | void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof stopAgentSession>>,
+    TError,
+    { taskId: string; sessionId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof stopAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationKey = ['stopAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof stopAgentSession>>,
+    { taskId: string; sessionId: string }
+  > = (props) => {
+    const { taskId, sessionId } = props ?? {};
+
+    return stopAgentSession(taskId, sessionId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StopAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof stopAgentSession>>
+>;
+
+export type StopAgentSessionMutationError = void | void;
+
+export const useStopAgentSession = <TError = void | void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof stopAgentSession>>,
+      TError,
+      { taskId: string; sessionId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof stopAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationOptions = getStopAgentSessionMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
