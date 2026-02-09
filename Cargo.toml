@@ -55,3 +55,7 @@ axum-extra = { version = "0.10", features = ["cookie"] }
 
 # Git
 git2 = "0.20"
+
+# Agent
+async-trait = "0.1"
+tokio-util = { version = "0.7", features = ["rt"] }
