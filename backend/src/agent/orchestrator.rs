@@ -59,16 +59,143 @@ impl AgentOrchestrator {
         }
     }
 
-    pub async fn start_session(&self, _req: StartSessionRequest) -> AppResult<StartSessionResult> {
-        todo!()
+    /// Start a new agent session for a task.
+    ///
+    /// 1. Check no active session for this task (duplicate prevention)
+    /// 2. Create DB session (Pending)
+    /// 3. Create git worktree
+    /// 4. Start agent executor
+    /// 5. Update DB session (Running)
+    /// 6. Register in running sessions map
+    pub async fn start_session(&self, req: StartSessionRequest) -> AppResult<StartSessionResult> {
+        // Step 1: Duplicate prevention
+        self.check_no_active_session(req.task_id).await?;
+
+        // Step 2: Create DB session
+        let session = agent_session_service::create_agent_session(
+            &self.pool,
+            req.task_id,
+            &CreateAgentSessionRequest {
+                agent_type: req.agent_type.clone(),
+            },
+        )
+        .await?;
+
+        // Step 3: Create worktree
+        let worktree_name = format!("task-{}", req.task_id);
+        let worktree = match worktree_service::create_worktree(&self.repo_path, &worktree_name) {
+            Ok(wt) => wt,
+            Err(e) => {
+                let _ = self.mark_session_failed(req.task_id, session.id).await;
+                return Err(e);
+            }
+        };
+
+        // Step 4: Start executor
+        let config = AgentConfig {
+            agent_type: req.agent_type,
+            session_id: session.id,
+            task_id: req.task_id,
+            working_dir: worktree.path.clone(),
+            prompt: req.prompt,
+        };
+
+        let handle = match self.executor.start(config).await {
+            Ok(h) => h,
+            Err(e) => {
+                let _ = worktree_service::delete_worktree(&self.repo_path, &worktree_name);
+                let _ = self.mark_session_failed(req.task_id, session.id).await;
+                return Err(e);
+            }
+        };
+
+        // Step 5: Update DB session to Running
+        agent_session_service::update_agent_session(
+            &self.pool,
+            req.task_id,
+            session.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await?;
+
+        // Step 6: Register in running sessions map
+        let worktree_path = worktree.path.clone();
+        {
+            let mut running = self.running.lock().await;
+            running.insert(session.id, RunningSession { handle });
+        }
+
+        Ok(StartSessionResult {
+            session_id: session.id,
+            worktree_path,
+        })
     }
 
-    pub async fn stop_session(&self, _task_id: Uuid, _session_id: Uuid) -> AppResult<()> {
-        todo!()
+    /// Stop a running agent session.
+    ///
+    /// 1. Remove from running map
+    /// 2. Cancel the agent process
+    /// 3. Update DB session (Cancelled)
+    pub async fn stop_session(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
+        let running_session = {
+            let mut running = self.running.lock().await;
+            running.remove(&session_id)
+        };
+
+        let running_session = running_session
+            .ok_or_else(|| AppError::NotFound(format!("no running session found: {session_id}")))?;
+
+        running_session.handle.cancel.cancel();
+
+        agent_session_service::update_agent_session(
+            &self.pool,
+            task_id,
+            session_id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Cancelled,
+            },
+        )
+        .await?;
+
+        Ok(())
     }
 
-    pub async fn is_running(&self, _session_id: Uuid) -> bool {
-        todo!()
+    pub async fn is_running(&self, session_id: Uuid) -> bool {
+        let running = self.running.lock().await;
+        running.contains_key(&session_id)
+    }
+
+    async fn check_no_active_session(&self, task_id: Uuid) -> AppResult<()> {
+        let sessions = agent_session_service::list_agent_sessions(&self.pool, task_id).await?;
+        let has_active = sessions.iter().any(|s| {
+            matches!(
+                s.status,
+                AgentSessionStatus::Pending | AgentSessionStatus::Running
+            )
+        });
+        if has_active {
+            return Err(AppError::Conflict(format!(
+                "task {task_id} already has an active agent session"
+            )));
+        }
+        Ok(())
+    }
+
+    async fn mark_session_failed(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
+        // Pending -> Failed is not a valid transition in agent_session_service.
+        // We need Pending -> Cancelled instead.
+        agent_session_service::update_agent_session(
+            &self.pool,
+            task_id,
+            session_id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Cancelled,
+            },
+        )
+        .await?;
+        Ok(())
     }
 }
 
@@ -280,7 +407,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_start_session_executor_failure_marks_failed() {
+    async fn test_start_session_executor_failure_cleans_up() {
         let pool = setup_test_db().await;
         let (_project_id, task_id) = create_test_task(&pool).await;
         let tmp = tempfile::tempdir().unwrap();
@@ -299,12 +426,12 @@ mod tests {
 
         assert!(result.is_err());
 
-        // Verify DB session is Failed
+        // Verify DB session is Cancelled (Pending → Failed is not a valid transition)
         let sessions = agent_session_service::list_agent_sessions(&pool, task_id)
             .await
             .unwrap();
         assert_eq!(sessions.len(), 1);
-        assert_eq!(sessions[0].status, AgentSessionStatus::Failed);
+        assert_eq!(sessions[0].status, AgentSessionStatus::Cancelled);
 
         // Verify worktree was cleaned up
         let worktree_name = format!("task-{task_id}");
