@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDeleteTask, useGetTask, useUpdateTask } from '../api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
+import { AgentPanel } from './AgentPanel';
 
 export function TaskDetailModal() {
   const selectedTaskId = useUiStore((s) => s.selectedTaskId);
@@ -96,7 +97,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
         if (e.target === e.currentTarget) closeTaskDetail();
       }}
     >
-      <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+      <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
         {isLoading ? (
           <p className="text-sm text-gray-500">Loading...</p>
         ) : isError || !task ? (
@@ -197,6 +198,11 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   <option value="urgent">Urgent</option>
                 </select>
               </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Agent</h3>
+              <AgentPanel taskId={taskId} />
             </div>
 
             <div className="border-t pt-4">

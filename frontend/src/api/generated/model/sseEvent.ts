@@ -7,9 +7,16 @@
  */
 import type { SseEventOneOf } from './sseEventOneOf';
 import type { SseEventOneOfFive } from './sseEventOneOfFive';
+import type { SseEventOneOfNine } from './sseEventOneOfNine';
+import type { SseEventOneOfSeven } from './sseEventOneOfSeven';
 import type { SseEventOneOfThree } from './sseEventOneOfThree';
 
 /**
  * Server-Sent Event for real-time updates
  */
-export type SseEvent = SseEventOneOf | SseEventOneOfThree | SseEventOneOfFive;
+export type SseEvent =
+  | SseEventOneOf
+  | SseEventOneOfThree
+  | SseEventOneOfFive
+  | SseEventOneOfSeven
+  | SseEventOneOfNine;
