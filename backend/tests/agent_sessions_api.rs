@@ -144,10 +144,7 @@ async fn test_get_agent_session_returns_existing() {
     let session_id = created["id"].as_str().unwrap();
 
     let response = server
-        .get(&format!(
-            "/api/tasks/{}/sessions/{}",
-            task_id, session_id
-        ))
+        .get(&format!("/api/tasks/{}/sessions/{}", task_id, session_id))
         .await;
 
     response.assert_status_ok();
@@ -185,10 +182,7 @@ async fn test_update_agent_session_changes_status() {
     let session_id = created["id"].as_str().unwrap();
 
     let response = server
-        .patch(&format!(
-            "/api/tasks/{}/sessions/{}",
-            task_id, session_id
-        ))
+        .patch(&format!("/api/tasks/{}/sessions/{}", task_id, session_id))
         .json(&json!({ "status": "running" }))
         .await;
 
