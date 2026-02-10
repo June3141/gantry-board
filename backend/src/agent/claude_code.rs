@@ -93,15 +93,29 @@ impl AgentExecutor for ClaudeCodeExecutor {
             }
         }
 
-        cmd.arg("--").arg(&config.prompt);
+        // Prompt is written to stdin (not argv) to avoid leaking via ps/proc
+        // and to avoid OS argv length limits for large prompts.
         cmd.current_dir(&config.working_dir);
+        cmd.stdin(Stdio::piped());
         cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::piped());
+        cmd.stderr(Stdio::inherit());
         cmd.kill_on_drop(true);
 
         let mut child = cmd
             .spawn()
             .map_err(|e| AppError::Internal(format!("failed to spawn claude CLI: {e}")))?;
+
+        // Write prompt to stdin and close it so the CLI starts processing.
+        if let Some(mut stdin) = child.stdin.take() {
+            use tokio::io::AsyncWriteExt;
+            stdin
+                .write_all(config.prompt.as_bytes())
+                .await
+                .map_err(|e| {
+                    AppError::Internal(format!("failed to write prompt to claude stdin: {e}"))
+                })?;
+            // stdin is dropped here, closing the pipe
+        }
 
         let stdout = child
             .stdout
