@@ -13,12 +13,13 @@ pub mod test_helpers;
 
 use std::sync::Arc;
 
+use axum::http::{HeaderValue, Method};
 use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use sqlx::SqlitePool;
 use tower_governor::governor::GovernorConfigBuilder;
 use tower_governor::GovernorLayer;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -129,7 +130,23 @@ pub fn app(state: AppState) -> Router {
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
         )
-        .layer(CorsLayer::permissive())
+        .layer(build_cors_layer(&state.config))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
+}
+
+fn build_cors_layer(config: &config::Config) -> CorsLayer {
+    match &config.cors_origin {
+        Some(origin) => {
+            let origin: HeaderValue = origin
+                .parse()
+                .expect("GANTRY_CORS_ORIGIN must be a valid header value");
+            CorsLayer::new()
+                .allow_origin(AllowOrigin::exact(origin))
+                .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
+                .allow_headers([axum::http::header::CONTENT_TYPE])
+                .allow_credentials(true)
+        }
+        None => CorsLayer::permissive(),
+    }
 }

@@ -30,6 +30,10 @@ pub struct Config {
     /// Interval in seconds between session cleanup runs (default: 3600 = 1 hour)
     #[serde(default = "default_session_cleanup_interval_secs")]
     pub session_cleanup_interval_secs: u64,
+
+    /// Allowed CORS origin (e.g. "http://localhost:5173"). When unset, CORS is permissive.
+    #[serde(default)]
+    pub cors_origin: Option<String>,
 }
 
 fn default_bind_addr() -> String {
@@ -74,6 +78,7 @@ impl Default for Config {
             cookie_secure: default_cookie_secure(),
             repository_path: None,
             session_cleanup_interval_secs: default_session_cleanup_interval_secs(),
+            cors_origin: None,
         }
     }
 }
