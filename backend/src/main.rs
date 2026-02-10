@@ -24,6 +24,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::warn!("Authentication is DISABLED. Do not use in production!");
     }
 
+    if !config.cookie_secure {
+        tracing::warn!("cookie_secure is false — session cookies will be sent over HTTP. Set GANTRY_COOKIE_SECURE=true in production.");
+    }
+
+    if config.cors_origin.is_none() {
+        tracing::warn!(
+            "cors_origin is not set — CORS is permissive. Set GANTRY_CORS_ORIGIN in production."
+        );
+    }
+
     let pool = db::init_pool(&config.database_url).await?;
     let sse_hub = Arc::new(SseHub::default());
 
