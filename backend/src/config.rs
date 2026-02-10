@@ -26,6 +26,10 @@ pub struct Config {
     /// Path to the git repository for worktree management
     #[serde(default)]
     pub repository_path: Option<String>,
+
+    /// Interval in seconds between session cleanup runs (default: 3600 = 1 hour)
+    #[serde(default = "default_session_cleanup_interval_secs")]
+    pub session_cleanup_interval_secs: u64,
 }
 
 fn default_bind_addr() -> String {
@@ -38,6 +42,10 @@ fn default_database_url() -> String {
 
 fn default_session_duration_hours() -> u64 {
     168 // 1 week
+}
+
+fn default_session_cleanup_interval_secs() -> u64 {
+    3600 // 1 hour
 }
 
 impl Config {
@@ -61,6 +69,7 @@ impl Default for Config {
             auth_disabled: false,
             cookie_secure: false,
             repository_path: None,
+            session_cleanup_interval_secs: default_session_cleanup_interval_secs(),
         }
     }
 }
@@ -83,5 +92,11 @@ mod tests {
             ..Default::default()
         };
         assert!(config.auth_disabled);
+    }
+
+    #[test]
+    fn test_session_cleanup_interval_defaults_to_3600() {
+        let config = Config::default();
+        assert_eq!(config.session_cleanup_interval_secs, 3600);
     }
 }
