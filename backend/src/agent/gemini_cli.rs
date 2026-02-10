@@ -41,8 +41,35 @@ struct GeminiError {
 /// Returns `Some(AgentOutputEvent)` for lines that produce output,
 /// or `None` for lines that should be ignored.
 pub fn parse_gemini_stream_line(line: &str) -> Option<AgentOutputEvent> {
-    let _ = (line, warn!(""));
-    todo!()
+    let event: GeminiStreamEvent = serde_json::from_str(line).ok()?;
+    match event {
+        GeminiStreamEvent::Message {
+            role,
+            content,
+            delta,
+        } => {
+            if role == "assistant" && delta == Some(true) {
+                Some(AgentOutputEvent::Output { text: content })
+            } else {
+                None
+            }
+        }
+        GeminiStreamEvent::Result { status, error } => {
+            if status == "success" {
+                Some(AgentOutputEvent::Completed)
+            } else {
+                let error_msg = error
+                    .map(|e| format!("{}: {}", e.error_type, e.message))
+                    .unwrap_or_else(|| "unknown error".to_string());
+                Some(AgentOutputEvent::Failed { error: error_msg })
+            }
+        }
+        GeminiStreamEvent::Error { message } => {
+            warn!("gemini non-fatal error: {message}");
+            None
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]
