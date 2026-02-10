@@ -537,4 +537,98 @@ mod tests {
 
         assert!(matches!(result, Err(AppError::NotFound(_))));
     }
+
+    #[tokio::test]
+    async fn test_create_task_with_nonexistent_assigned_to_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+        let nonexistent_user = Uuid::new_v4();
+
+        let req = CreateTaskRequest {
+            project_id,
+            title: "Task".to_string(),
+            description: None,
+            status: None,
+            priority: None,
+            parent_id: None,
+            assigned_to: Some(nonexistent_user),
+        };
+        let result = create_task(&pool, &req).await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_create_task_with_parent_in_different_project_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let project1 = create_test_project(&pool).await;
+        let project2 = create_test_project(&pool).await;
+
+        let parent = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id: project1,
+                title: "Parent".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .unwrap();
+
+        let req = CreateTaskRequest {
+            project_id: project2,
+            title: "Child".to_string(),
+            description: None,
+            status: None,
+            priority: None,
+            parent_id: Some(parent.id),
+            assigned_to: None,
+        };
+        let result = create_task(&pool, &req).await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_update_task_with_nonexistent_assigned_to_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+        let nonexistent_user = Uuid::new_v4();
+
+        let created = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id,
+                title: "Task".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .unwrap();
+
+        let result = update_task(
+            &pool,
+            created.id,
+            &UpdateTaskRequest {
+                title: None,
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: Some(nonexistent_user),
+                position: None,
+            },
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+    }
 }
