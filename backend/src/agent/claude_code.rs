@@ -1,12 +1,65 @@
+use serde::Deserialize;
+
 use crate::agent::executor::AgentOutputEvent;
+
+/// Top-level message types from Claude Code CLI's `--output-format=stream-json`.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
+enum StreamMessage {
+    System {},
+    Assistant {},
+    User {},
+    Result { is_error: bool, subtype: String },
+    StreamEvent { event: RawStreamEvent },
+}
+
+/// Raw streaming event from the Claude API, wrapped in a `stream_event` message.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
+enum RawStreamEvent {
+    ContentBlockDelta {
+        delta: Delta,
+    },
+    #[serde(other)]
+    Other,
+}
+
+/// Delta payload within a `content_block_delta` event.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
+enum Delta {
+    TextDelta {
+        text: String,
+    },
+    #[serde(other)]
+    Other,
+}
 
 /// Parse a single NDJSON line from Claude Code CLI's stream-json output.
 ///
 /// Returns `Some(AgentOutputEvent)` for lines that produce output,
 /// or `None` for lines that should be ignored (system, user, etc.).
 pub fn parse_stream_line(line: &str) -> Option<AgentOutputEvent> {
-    // TODO: implement
-    None
+    let msg: StreamMessage = serde_json::from_str(line).ok()?;
+    match msg {
+        StreamMessage::StreamEvent {
+            event:
+                RawStreamEvent::ContentBlockDelta {
+                    delta: Delta::TextDelta { text },
+                },
+        } => Some(AgentOutputEvent::Output { text }),
+        StreamMessage::Result {
+            is_error: false, ..
+        } => Some(AgentOutputEvent::Completed),
+        StreamMessage::Result {
+            is_error: true,
+            subtype,
+        } => Some(AgentOutputEvent::Failed { error: subtype }),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
