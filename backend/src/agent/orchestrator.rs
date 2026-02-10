@@ -39,7 +39,7 @@ pub struct StartSessionResult {
 /// Orchestrates agent session lifecycle:
 /// DB session creation → worktree setup → executor launch → status updates → cleanup.
 pub struct AgentOrchestrator {
-    executor: Arc<dyn AgentExecutor>,
+    executors: HashMap<AgentType, Arc<dyn AgentExecutor>>,
     pool: SqlitePool,
     repo_path: PathBuf,
     sse_hub: Arc<SseHub>,
@@ -51,13 +51,13 @@ pub struct AgentOrchestrator {
 
 impl AgentOrchestrator {
     pub fn new(
-        executor: Arc<dyn AgentExecutor>,
+        executors: HashMap<AgentType, Arc<dyn AgentExecutor>>,
         pool: SqlitePool,
         repo_path: PathBuf,
         sse_hub: Arc<SseHub>,
     ) -> Self {
         Self {
-            executor,
+            executors,
             pool,
             repo_path,
             sse_hub,
@@ -69,13 +69,14 @@ impl AgentOrchestrator {
     /// Start a new agent session for a task.
     ///
     /// 1. Acquire per-task lock (atomic duplicate prevention)
-    /// 2. Check no active session for this task
-    /// 3. Create DB session (Pending)
-    /// 4. Create git worktree (via spawn_blocking)
-    /// 5. Start agent executor
-    /// 6. Update DB session (Running)
-    /// 7. Spawn background monitor for output_rx
-    /// 8. Register in running sessions map
+    /// 2. Validate executor exists (fail fast before allocating resources)
+    /// 3. Check no active session for this task
+    /// 4. Create DB session (Pending)
+    /// 5. Create git worktree (via spawn_blocking)
+    /// 6. Start agent executor
+    /// 7. Update DB session (Running)
+    /// 8. Spawn background monitor for output_rx
+    /// 9. Register in running sessions map
     pub async fn start_session(&self, req: StartSessionRequest) -> AppResult<StartSessionResult> {
         // Step 1: Acquire per-task lock
         let task_lock = {
@@ -87,10 +88,19 @@ impl AgentOrchestrator {
         };
         let _guard = task_lock.lock().await;
 
-        // Step 2: Duplicate prevention (now atomic under task lock)
+        // Step 2: Validate executor exists before allocating resources
+        let executor = self
+            .executors
+            .get(&req.agent_type)
+            .ok_or_else(|| {
+                AppError::Validation(format!("unsupported agent type: {}", req.agent_type))
+            })?
+            .clone();
+
+        // Step 3: Duplicate prevention (now atomic under task lock)
         self.check_no_active_session(req.task_id).await?;
 
-        // Step 3: Create DB session
+        // Step 4: Create DB session (now safe: executor is validated)
         let session = agent_session_service::create_agent_session(
             &self.pool,
             req.task_id,
@@ -100,7 +110,7 @@ impl AgentOrchestrator {
         )
         .await?;
 
-        // Step 4: Create worktree (spawn_blocking for synchronous git2 operations)
+        // Step 5: Create worktree (spawn_blocking for synchronous git2 operations)
         let worktree_name = format!("task-{}-session-{}", req.task_id, session.id);
         let repo_path = self.repo_path.clone();
         let wt_name = worktree_name.clone();
@@ -117,7 +127,7 @@ impl AgentOrchestrator {
             }
         };
 
-        // Step 5: Start executor
+        // Step 6: Start executor
         let config = AgentConfig {
             agent_type: req.agent_type,
             session_id: session.id,
@@ -127,7 +137,7 @@ impl AgentOrchestrator {
             allowed_tools: vec![],
         };
 
-        let handle = match self.executor.start(config).await {
+        let handle = match executor.start(config).await {
             Ok(h) => h,
             Err(e) => {
                 let _ = Self::delete_worktree_blocking(&self.repo_path, &worktree_name).await;
@@ -136,7 +146,7 @@ impl AgentOrchestrator {
             }
         };
 
-        // Step 6: Update DB session to Running
+        // Step 7: Update DB session to Running
         let running_session = match agent_session_service::update_agent_session(
             &self.pool,
             req.task_id,
@@ -161,7 +171,7 @@ impl AgentOrchestrator {
         self.sse_hub
             .broadcast(SseEvent::agent_session_status_changed(running_session));
 
-        // Step 7: Spawn background monitor to drain output_rx and update DB on completion
+        // Step 8: Spawn background monitor to drain output_rx and update DB on completion
         let monitor_handle = self.spawn_session_monitor(
             handle.output_rx,
             handle.join_handle,
@@ -170,7 +180,7 @@ impl AgentOrchestrator {
             session.id,
         );
 
-        // Step 8: Register in running sessions map
+        // Step 9: Register in running sessions map
         let worktree_path = worktree.path.clone();
         {
             let mut running = self.running.lock().await;
@@ -439,7 +449,7 @@ mod tests {
         repo_path: PathBuf,
     ) -> AgentOrchestrator {
         let sse_hub = Arc::new(SseHub::new(16));
-        AgentOrchestrator::new(executor, pool, repo_path, sse_hub)
+        create_orchestrator_with_hub(executor, pool, repo_path, sse_hub)
     }
 
     fn create_orchestrator_with_hub(
@@ -448,7 +458,9 @@ mod tests {
         repo_path: PathBuf,
         sse_hub: Arc<SseHub>,
     ) -> AgentOrchestrator {
-        AgentOrchestrator::new(executor, pool, repo_path, sse_hub)
+        let mut executors = HashMap::new();
+        executors.insert(AgentType::ClaudeCode, executor);
+        AgentOrchestrator::new(executors, pool, repo_path, sse_hub)
     }
 
     #[tokio::test]
@@ -727,6 +739,41 @@ mod tests {
         assert!(
             event_types.contains(&"agent_session_status_changed".to_string()),
             "expected agent_session_status_changed event, got: {event_types:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_start_session_unsupported_agent_type() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+        let tmp = tempfile::tempdir().unwrap();
+        let repo_path = init_test_repo(tmp.path());
+
+        // Register only ClaudeCode executor
+        let executor = Arc::new(MockExecutor::new());
+        let orchestrator = create_orchestrator(executor, pool.clone(), repo_path);
+
+        // Request GeminiCli which is not registered
+        let result = orchestrator
+            .start_session(StartSessionRequest {
+                task_id,
+                agent_type: AgentType::GeminiCli,
+                prompt: "test".to_string(),
+            })
+            .await;
+
+        assert!(
+            matches!(result, Err(AppError::Validation(_))),
+            "expected Validation error for unsupported agent type, got: {result:?}"
+        );
+
+        // Verify no DB session was created (early validation prevents resource leaks)
+        let sessions = agent_session_service::list_agent_sessions(&pool, task_id)
+            .await
+            .unwrap();
+        assert!(
+            sessions.is_empty(),
+            "no DB session should be created for unsupported agent type"
         );
     }
 }

@@ -58,8 +58,13 @@ mod tests {
             .expect("Failed to run migrations");
 
         let sse_hub = Arc::new(SseHub::default());
+        let mut executors = std::collections::HashMap::new();
+        executors.insert(
+            crate::models::agent_session::AgentType::ClaudeCode,
+            Arc::new(NoopExecutor) as Arc<dyn crate::agent::executor::AgentExecutor>,
+        );
         let orchestrator = Arc::new(AgentOrchestrator::new(
-            Arc::new(NoopExecutor),
+            executors,
             pool.clone(),
             PathBuf::from("."),
             Arc::clone(&sse_hub),
