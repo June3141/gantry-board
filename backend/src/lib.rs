@@ -13,7 +13,7 @@ pub mod test_helpers;
 
 use std::sync::Arc;
 
-use axum::http::{HeaderValue, Method};
+use axum::http::Method;
 use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use sqlx::SqlitePool;
@@ -136,17 +136,17 @@ pub fn app(state: AppState) -> Router {
 }
 
 fn build_cors_layer(config: &config::Config) -> CorsLayer {
-    match &config.cors_origin {
-        Some(origin) => {
-            let origin: HeaderValue = origin
-                .parse()
-                .expect("GANTRY_CORS_ORIGIN must be a valid header value");
-            CorsLayer::new()
-                .allow_origin(AllowOrigin::exact(origin))
-                .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-                .allow_headers([axum::http::header::CONTENT_TYPE])
-                .allow_credentials(true)
+    match config.cors_origin_header() {
+        Some(origin) => CorsLayer::new()
+            .allow_origin(AllowOrigin::exact(origin))
+            .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
+            .allow_headers([axum::http::header::CONTENT_TYPE])
+            .allow_credentials(true),
+        None => {
+            tracing::warn!(
+                "GANTRY_CORS_ORIGIN is not set — CORS is permissive; set it in production"
+            );
+            CorsLayer::permissive()
         }
-        None => CorsLayer::permissive(),
     }
 }
