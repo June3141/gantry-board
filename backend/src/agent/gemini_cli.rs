@@ -97,12 +97,9 @@ impl AgentExecutor for GeminiCliExecutor {
         let mut cmd = Command::new("gemini");
         cmd.args(["--output-format", "stream-json"]);
 
-        if !config.allowed_tools.is_empty() {
-            cmd.arg("--allowedTools");
-            for tool in &config.allowed_tools {
-                cmd.arg(tool);
-            }
-        }
+        // NOTE: allowed_tools is not forwarded to Gemini CLI because the flag
+        // semantics differ from Claude Code's --allowedTools. Gemini CLI tool
+        // restrictions will be addressed when the flag mapping is confirmed.
 
         // Prompt is written to stdin (not argv) to avoid leaking via ps/proc
         // and to avoid OS argv length limits for large prompts.
@@ -145,6 +142,7 @@ impl AgentExecutor for GeminiCliExecutor {
                 tokio::select! {
                     _ = token.cancelled() => {
                         let _ = child.kill().await;
+                        let _ = child.wait().await; // reap to avoid zombie
                         let _ = tx.send(AgentOutputEvent::Completed).await;
                         break;
                     }
@@ -189,6 +187,10 @@ impl AgentExecutor for GeminiCliExecutor {
                     }
                 }
             }
+            // Reap the child on all non-wait exit paths (terminal event, IO error,
+            // channel close) to prevent zombie processes.
+            // Ok(None) already calls wait(); double-wait is harmless.
+            let _ = child.wait().await;
             Ok(())
         });
 
