@@ -1,0 +1,138 @@
+use serde::Deserialize;
+use tracing::warn;
+
+use crate::agent::executor::AgentOutputEvent;
+
+/// Gemini CLI stream-json event types.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
+enum GeminiStreamEvent {
+    Init {},
+    Message {
+        role: String,
+        content: String,
+        #[serde(default)]
+        delta: Option<bool>,
+    },
+    ToolUse {},
+    ToolResult {},
+    Error {
+        message: String,
+    },
+    Result {
+        status: String,
+        #[serde(default)]
+        error: Option<GeminiError>,
+    },
+    #[serde(other)]
+    Other,
+}
+
+#[derive(Debug, Deserialize)]
+struct GeminiError {
+    #[serde(rename = "type")]
+    error_type: String,
+    message: String,
+}
+
+/// Parse a single NDJSON line from Gemini CLI's `--output-format stream-json` output.
+///
+/// Returns `Some(AgentOutputEvent)` for lines that produce output,
+/// or `None` for lines that should be ignored.
+pub fn parse_gemini_stream_line(line: &str) -> Option<AgentOutputEvent> {
+    let _ = (line, warn!(""));
+    todo!()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_assistant_delta_message() {
+        let line = r#"{"type":"message","role":"assistant","content":"Hello world","delta":true,"timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        match parse_gemini_stream_line(line) {
+            Some(AgentOutputEvent::Output { text }) => assert_eq!(text, "Hello world"),
+            other => panic!("expected Output, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_assistant_non_delta_ignored() {
+        let line = r#"{"type":"message","role":"assistant","content":"Full response","timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        assert!(parse_gemini_stream_line(line).is_none());
+    }
+
+    #[test]
+    fn test_parse_assistant_delta_false_ignored() {
+        let line = r#"{"type":"message","role":"assistant","content":"Full","delta":false,"timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        assert!(parse_gemini_stream_line(line).is_none());
+    }
+
+    #[test]
+    fn test_parse_user_message_ignored() {
+        let line = r#"{"type":"message","role":"user","content":"List files","timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        assert!(parse_gemini_stream_line(line).is_none());
+    }
+
+    #[test]
+    fn test_parse_result_success() {
+        let line = r#"{"type":"result","status":"success","timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        assert!(matches!(
+            parse_gemini_stream_line(line),
+            Some(AgentOutputEvent::Completed)
+        ));
+    }
+
+    #[test]
+    fn test_parse_result_error_with_details() {
+        let line = r#"{"type":"result","status":"error","error":{"type":"api_error","message":"Rate limit exceeded"},"timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        match parse_gemini_stream_line(line) {
+            Some(AgentOutputEvent::Failed { error }) => {
+                assert!(error.contains("api_error"));
+                assert!(error.contains("Rate limit exceeded"));
+            }
+            other => panic!("expected Failed, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_result_error_without_details() {
+        let line = r#"{"type":"result","status":"error","timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        assert!(matches!(
+            parse_gemini_stream_line(line),
+            Some(AgentOutputEvent::Failed { .. })
+        ));
+    }
+
+    #[test]
+    fn test_parse_init_ignored() {
+        let line = r#"{"type":"init","timestamp":"2025-10-10T12:00:00.000Z","session_id":"abc","model":"gemini-2.0-flash"}"#;
+        assert!(parse_gemini_stream_line(line).is_none());
+    }
+
+    #[test]
+    fn test_parse_tool_use_ignored() {
+        let line = r#"{"type":"tool_use","tool_name":"Bash","tool_id":"bash-1","parameters":{"command":"ls"},"timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        assert!(parse_gemini_stream_line(line).is_none());
+    }
+
+    #[test]
+    fn test_parse_tool_result_ignored() {
+        let line = r#"{"type":"tool_result","tool_id":"bash-1","status":"success","output":"file1.txt","timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        assert!(parse_gemini_stream_line(line).is_none());
+    }
+
+    #[test]
+    fn test_parse_invalid_json() {
+        assert!(parse_gemini_stream_line("not json").is_none());
+        assert!(parse_gemini_stream_line("").is_none());
+    }
+
+    #[test]
+    fn test_parse_unknown_type_ignored() {
+        let line = r#"{"type":"unknown_future_event","data":"something","timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        assert!(parse_gemini_stream_line(line).is_none());
+    }
+}
