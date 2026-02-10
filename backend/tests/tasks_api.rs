@@ -1,11 +1,13 @@
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::http::StatusCode;
 use axum_test::TestServer;
-use gantry_board::agent::executor::NoopExecutor;
+use gantry_board::agent::executor::{AgentExecutor, NoopExecutor};
 use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
+use gantry_board::models::agent_session::AgentType;
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
 use serde_json::json;
@@ -32,8 +34,10 @@ async fn create_test_server() -> TestServer {
     };
 
     let sse_hub = Arc::new(SseHub::default());
+    let mut executors: HashMap<AgentType, Arc<dyn AgentExecutor>> = HashMap::new();
+    executors.insert(AgentType::ClaudeCode, Arc::new(NoopExecutor));
     let orchestrator = Arc::new(AgentOrchestrator::new(
-        Arc::new(NoopExecutor),
+        executors,
         pool.clone(),
         PathBuf::from("."),
         Arc::clone(&sse_hub),

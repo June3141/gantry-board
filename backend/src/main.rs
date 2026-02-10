@@ -1,11 +1,14 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
 use gantry_board::agent::claude_code::ClaudeCodeExecutor;
+use gantry_board::agent::executor::AgentExecutor;
 use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::db;
+use gantry_board::models::agent_session::AgentType;
 use gantry_board::services::session_service;
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
@@ -42,9 +45,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_deref()
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
-    let executor = Arc::new(ClaudeCodeExecutor);
+    let mut executors: HashMap<AgentType, Arc<dyn AgentExecutor>> = HashMap::new();
+    executors.insert(AgentType::ClaudeCode, Arc::new(ClaudeCodeExecutor));
     let orchestrator = Arc::new(AgentOrchestrator::new(
-        executor,
+        executors,
         pool.clone(),
         repo_path,
         Arc::clone(&sse_hub),

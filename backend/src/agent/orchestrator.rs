@@ -39,7 +39,7 @@ pub struct StartSessionResult {
 /// Orchestrates agent session lifecycle:
 /// DB session creation → worktree setup → executor launch → status updates → cleanup.
 pub struct AgentOrchestrator {
-    executor: Arc<dyn AgentExecutor>,
+    executors: HashMap<AgentType, Arc<dyn AgentExecutor>>,
     pool: SqlitePool,
     repo_path: PathBuf,
     sse_hub: Arc<SseHub>,
@@ -51,13 +51,13 @@ pub struct AgentOrchestrator {
 
 impl AgentOrchestrator {
     pub fn new(
-        executor: Arc<dyn AgentExecutor>,
+        executors: HashMap<AgentType, Arc<dyn AgentExecutor>>,
         pool: SqlitePool,
         repo_path: PathBuf,
         sse_hub: Arc<SseHub>,
     ) -> Self {
         Self {
-            executor,
+            executors,
             pool,
             repo_path,
             sse_hub,
@@ -127,7 +127,11 @@ impl AgentOrchestrator {
             allowed_tools: vec![],
         };
 
-        let handle = match self.executor.start(config).await {
+        let executor = self.executors.get(&config.agent_type).ok_or_else(|| {
+            AppError::Validation(format!("unsupported agent type: {:?}", config.agent_type))
+        })?;
+
+        let handle = match executor.start(config).await {
             Ok(h) => h,
             Err(e) => {
                 let _ = Self::delete_worktree_blocking(&self.repo_path, &worktree_name).await;
@@ -439,7 +443,7 @@ mod tests {
         repo_path: PathBuf,
     ) -> AgentOrchestrator {
         let sse_hub = Arc::new(SseHub::new(16));
-        AgentOrchestrator::new(executor, pool, repo_path, sse_hub)
+        create_orchestrator_with_hub(executor, pool, repo_path, sse_hub)
     }
 
     fn create_orchestrator_with_hub(
@@ -448,7 +452,9 @@ mod tests {
         repo_path: PathBuf,
         sse_hub: Arc<SseHub>,
     ) -> AgentOrchestrator {
-        AgentOrchestrator::new(executor, pool, repo_path, sse_hub)
+        let mut executors = HashMap::new();
+        executors.insert(AgentType::ClaudeCode, executor);
+        AgentOrchestrator::new(executors, pool, repo_path, sse_hub)
     }
 
     #[tokio::test]
@@ -727,6 +733,32 @@ mod tests {
         assert!(
             event_types.contains(&"agent_session_status_changed".to_string()),
             "expected agent_session_status_changed event, got: {event_types:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_start_session_unsupported_agent_type() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+        let tmp = tempfile::tempdir().unwrap();
+        let repo_path = init_test_repo(tmp.path());
+
+        // Register only ClaudeCode executor
+        let executor = Arc::new(MockExecutor::new());
+        let orchestrator = create_orchestrator(executor, pool.clone(), repo_path);
+
+        // Request GeminiCli which is not registered
+        let result = orchestrator
+            .start_session(StartSessionRequest {
+                task_id,
+                agent_type: AgentType::GeminiCli,
+                prompt: "test".to_string(),
+            })
+            .await;
+
+        assert!(
+            matches!(result, Err(AppError::Validation(_))),
+            "expected Validation error for unsupported agent type, got: {result:?}"
         );
     }
 }
