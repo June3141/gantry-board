@@ -7,10 +7,12 @@ use futures_util::stream::Stream;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
 
+use crate::auth::middleware::AuthUser;
 use crate::AppState;
 
 /// SSE endpoint for real-time task updates
 pub async fn sse_handler(
+    _auth: AuthUser,
     State(state): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let rx = state.sse_hub.subscribe();
@@ -35,12 +37,14 @@ mod tests {
     use super::*;
     use crate::agent::executor::NoopExecutor;
     use crate::agent::orchestrator::AgentOrchestrator;
+    use crate::auth::middleware::AuthUser;
     use crate::config::Config;
     use crate::sse::event::SseEvent;
     use crate::sse::hub::SseHub;
     use sqlx::sqlite::SqlitePoolOptions;
     use std::path::PathBuf;
     use std::sync::Arc;
+    use uuid::Uuid;
 
     async fn create_test_state() -> AppState {
         let pool = SqlitePoolOptions::new()
@@ -71,9 +75,13 @@ mod tests {
     #[tokio::test]
     async fn test_sse_handler_creates_stream() {
         let state = create_test_state().await;
+        let auth = AuthUser {
+            user_id: Uuid::new_v4(),
+            session_id: Uuid::new_v4(),
+        };
 
         // Just verify the handler can be called without panic
-        let _sse = sse_handler(State(state)).await;
+        let _sse = sse_handler(auth, State(state)).await;
     }
 
     #[tokio::test]
