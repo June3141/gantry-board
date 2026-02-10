@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::http::{header, StatusCode};
@@ -43,7 +44,7 @@ async fn create_test_server() -> TestServer {
         orchestrator,
     };
 
-    let app = gantry_board::app(state);
+    let app = gantry_board::app(state).into_make_service_with_connect_info::<SocketAddr>();
     TestServer::new(app).expect("Failed to create test server")
 }
 
@@ -301,4 +302,47 @@ async fn test_logout_without_auth() {
     let response = server.post("/api/auth/logout").await;
 
     response.assert_status(StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_login_rate_limit_returns_429_after_burst() {
+    let server = create_test_server().await;
+
+    let body = json!({
+        "email": "nobody@example.com",
+        "password": "doesnotmatter123"
+    });
+
+    // Exhaust burst_size (5) for login
+    for _ in 0..5 {
+        server.post("/api/auth/login").json(&body).await;
+    }
+
+    // 6th request should be rate-limited
+    let response = server.post("/api/auth/login").json(&body).await;
+    response.assert_status(StatusCode::TOO_MANY_REQUESTS);
+}
+
+#[tokio::test]
+async fn test_register_rate_limit_returns_429_after_burst() {
+    let server = create_test_server().await;
+
+    // Exhaust burst_size (3) for register — use different emails so the first ones succeed
+    for i in 0..3 {
+        let body = json!({
+            "email": format!("user{}@example.com", i),
+            "name": "Test User",
+            "password": "Tr0ub4dor&3-correct-horse"
+        });
+        server.post("/api/auth/register").json(&body).await;
+    }
+
+    // 4th request should be rate-limited
+    let body = json!({
+        "email": "user3@example.com",
+        "name": "Test User",
+        "password": "Tr0ub4dor&3-correct-horse"
+    });
+    let response = server.post("/api/auth/register").json(&body).await;
+    response.assert_status(StatusCode::TOO_MANY_REQUESTS);
 }

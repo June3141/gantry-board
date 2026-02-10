@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum_test::TestServer;
@@ -42,7 +43,7 @@ async fn create_test_server() -> TestServer {
         orchestrator,
     };
 
-    let app = gantry_board::app(state);
+    let app = gantry_board::app(state).into_make_service_with_connect_info::<SocketAddr>();
     TestServer::new(app).expect("Failed to create test server")
 }
 

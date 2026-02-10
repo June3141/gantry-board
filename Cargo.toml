@@ -48,6 +48,9 @@ chrono = { version = "0.4", features = ["serde"] }
 futures-util = "0.3"
 tokio-stream = { version = "0.1", features = ["sync"] }
 
+# Rate limiting
+tower_governor = "0.8"
+
 # Authentication
 argon2 = "0.5"
 rand = "0.8"
