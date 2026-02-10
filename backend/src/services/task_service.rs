@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::task::{CreateTaskRequest, Task, TaskPriority, TaskStatus, UpdateTaskRequest};
+use crate::services::user_service;
 
 #[derive(FromRow)]
 struct TaskRow {
@@ -42,6 +43,9 @@ impl TryFrom<TaskRow> for Task {
 }
 
 pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResult<Task> {
+    validate_assigned_to(pool, req.assigned_to).await?;
+    validate_parent_project(pool, req.parent_id, req.project_id).await?;
+
     let id = Uuid::new_v4();
     let now = Utc::now();
     let status = req.status.clone().unwrap_or(TaskStatus::Backlog);
@@ -121,6 +125,10 @@ pub async fn list_tasks(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<Ta
 
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
     let existing = get_task(pool, id).await?;
+
+    validate_assigned_to(pool, req.assigned_to).await?;
+    validate_parent_project(pool, req.parent_id, existing.project_id).await?;
+
     let now = Utc::now();
 
     let title = req.title.as_ref().unwrap_or(&existing.title);
@@ -163,6 +171,43 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
         created_at: existing.created_at,
         updated_at: now,
     })
+}
+
+async fn validate_assigned_to(pool: &SqlitePool, assigned_to: Option<Uuid>) -> AppResult<()> {
+    if let Some(user_id) = assigned_to {
+        match user_service::get_user(pool, user_id).await {
+            Err(AppError::NotFound(_)) => {
+                return Err(AppError::Validation(format!(
+                    "assigned user {} does not exist",
+                    user_id
+                )));
+            }
+            Err(e) => return Err(e),
+            Ok(_) => {}
+        }
+    }
+    Ok(())
+}
+
+async fn validate_parent_project(
+    pool: &SqlitePool,
+    parent_id: Option<Uuid>,
+    project_id: Uuid,
+) -> AppResult<()> {
+    if let Some(pid) = parent_id {
+        let parent = get_task(pool, pid).await.map_err(|e| match e {
+            AppError::NotFound(_) => {
+                AppError::Validation(format!("parent task {} does not exist", pid))
+            }
+            other => other,
+        })?;
+        if parent.project_id != project_id {
+            return Err(AppError::Validation(
+                "parent task must belong to the same project".to_string(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 pub async fn delete_task(pool: &SqlitePool, id: Uuid) -> AppResult<()> {
@@ -536,5 +581,153 @@ mod tests {
         let result = delete_task(&pool, random_id).await;
 
         assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_create_task_with_nonexistent_assigned_to_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+        let nonexistent_user = Uuid::new_v4();
+
+        let req = CreateTaskRequest {
+            project_id,
+            title: "Task".to_string(),
+            description: None,
+            status: None,
+            priority: None,
+            parent_id: None,
+            assigned_to: Some(nonexistent_user),
+        };
+        let result = create_task(&pool, &req).await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_create_task_with_parent_in_different_project_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let project1 = create_test_project(&pool).await;
+        let project2 = create_test_project(&pool).await;
+
+        let parent = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id: project1,
+                title: "Parent".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("parent task creation should succeed");
+
+        let req = CreateTaskRequest {
+            project_id: project2,
+            title: "Child".to_string(),
+            description: None,
+            status: None,
+            priority: None,
+            parent_id: Some(parent.id),
+            assigned_to: None,
+        };
+        let result = create_task(&pool, &req).await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_update_task_with_nonexistent_assigned_to_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+        let nonexistent_user = Uuid::new_v4();
+
+        let created = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id,
+                title: "Task".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("task creation should succeed");
+
+        let result = update_task(
+            &pool,
+            created.id,
+            &UpdateTaskRequest {
+                title: None,
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: Some(nonexistent_user),
+                position: None,
+            },
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_update_task_with_parent_in_different_project_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let project1 = create_test_project(&pool).await;
+        let project2 = create_test_project(&pool).await;
+
+        let parent_in_p2 = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id: project2,
+                title: "Parent in project 2".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("parent task creation should succeed");
+
+        let child = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id: project1,
+                title: "Child in project 1".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("child task creation should succeed");
+
+        let result = update_task(
+            &pool,
+            child.id,
+            &UpdateTaskRequest {
+                title: None,
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: Some(parent_in_p2.id),
+                assigned_to: None,
+                position: None,
+            },
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
     }
 }
