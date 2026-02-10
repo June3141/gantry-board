@@ -1,6 +1,14 @@
-use serde::Deserialize;
+use std::process::Stdio;
 
-use crate::agent::executor::AgentOutputEvent;
+use serde::Deserialize;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::Command;
+use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
+use tracing::warn;
+
+use crate::agent::executor::{AgentConfig, AgentExecutor, AgentHandle, AgentOutputEvent};
+use crate::error::{AppError, AppResult};
 
 /// Top-level message types from Claude Code CLI's `--output-format=stream-json`.
 #[derive(Debug, Deserialize)]
@@ -59,6 +67,111 @@ pub fn parse_stream_line(line: &str) -> Option<AgentOutputEvent> {
             subtype,
         } => Some(AgentOutputEvent::Failed { error: subtype }),
         _ => None,
+    }
+}
+
+/// Agent executor that spawns `claude` CLI as a subprocess.
+///
+/// Uses `--output-format=stream-json --include-partial-messages` for
+/// real-time token-level streaming of agent output.
+pub struct ClaudeCodeExecutor;
+
+#[async_trait::async_trait]
+impl AgentExecutor for ClaudeCodeExecutor {
+    async fn start(&self, config: AgentConfig) -> AppResult<AgentHandle> {
+        let mut cmd = Command::new("claude");
+        cmd.args([
+            "-p",
+            "--output-format=stream-json",
+            "--include-partial-messages",
+        ]);
+
+        if !config.allowed_tools.is_empty() {
+            cmd.arg("--allowedTools");
+            for tool in &config.allowed_tools {
+                cmd.arg(tool);
+            }
+        }
+
+        cmd.arg("--").arg(&config.prompt);
+        cmd.current_dir(&config.working_dir);
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
+        cmd.kill_on_drop(true);
+
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| AppError::Internal(format!("failed to spawn claude CLI: {e}")))?;
+
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| AppError::Internal("claude CLI stdout not captured".into()))?;
+
+        let cancel = CancellationToken::new();
+        let (tx, rx) = mpsc::channel(256);
+        let token = cancel.clone();
+
+        let join_handle = tokio::spawn(async move {
+            let reader = BufReader::new(stdout);
+            let mut lines = reader.lines();
+
+            loop {
+                tokio::select! {
+                    _ = token.cancelled() => {
+                        let _ = child.kill().await;
+                        let _ = tx.send(AgentOutputEvent::Completed).await;
+                        break;
+                    }
+                    line = lines.next_line() => {
+                        match line {
+                            Ok(Some(line)) => {
+                                if let Some(event) = parse_stream_line(&line) {
+                                    let is_terminal = matches!(
+                                        event,
+                                        AgentOutputEvent::Completed | AgentOutputEvent::Failed { .. }
+                                    );
+                                    if tx.send(event).await.is_err() {
+                                        break;
+                                    }
+                                    if is_terminal {
+                                        break;
+                                    }
+                                }
+                            }
+                            Ok(None) => {
+                                // stdout closed — check process exit code
+                                let terminal = match child.wait().await {
+                                    Ok(status) if status.success() => AgentOutputEvent::Completed,
+                                    Ok(status) => AgentOutputEvent::Failed {
+                                        error: format!("claude exited with {status}"),
+                                    },
+                                    Err(e) => AgentOutputEvent::Failed {
+                                        error: format!("failed to wait on claude: {e}"),
+                                    },
+                                };
+                                let _ = tx.send(terminal).await;
+                                break;
+                            }
+                            Err(e) => {
+                                warn!("IO error reading claude stdout: {e}");
+                                let _ = tx.send(AgentOutputEvent::Failed {
+                                    error: format!("IO error: {e}"),
+                                }).await;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+
+        Ok(AgentHandle {
+            cancel,
+            output_rx: rx,
+            join_handle,
+        })
     }
 }
 

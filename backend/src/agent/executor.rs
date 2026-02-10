@@ -15,6 +15,9 @@ pub struct AgentConfig {
     pub task_id: Uuid,
     pub working_dir: PathBuf,
     pub prompt: String,
+    /// Tool names to pass via `--allowedTools` for Claude Code CLI.
+    /// Empty means no restriction (uses CLI's default permission mode).
+    pub allowed_tools: Vec<String>,
 }
 
 /// Events emitted by a running agent process.
