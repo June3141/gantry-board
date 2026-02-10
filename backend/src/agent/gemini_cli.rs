@@ -1,7 +1,14 @@
+use std::process::Stdio;
+
 use serde::Deserialize;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::Command;
+use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 use tracing::warn;
 
-use crate::agent::executor::AgentOutputEvent;
+use crate::agent::executor::{AgentConfig, AgentExecutor, AgentHandle, AgentOutputEvent};
+use crate::error::{AppError, AppResult};
 
 /// Gemini CLI stream-json event types.
 #[derive(Debug, Deserialize)]
@@ -76,6 +83,18 @@ pub fn parse_gemini_stream_line(line: &str) -> Option<AgentOutputEvent> {
             None
         }
         _ => None,
+    }
+}
+
+/// Agent executor that spawns `gemini` CLI as a subprocess.
+///
+/// Uses `--output-format stream-json` for real-time streaming of agent output.
+pub struct GeminiCliExecutor;
+
+#[async_trait::async_trait]
+impl AgentExecutor for GeminiCliExecutor {
+    async fn start(&self, _config: AgentConfig) -> AppResult<AgentHandle> {
+        todo!()
     }
 }
 
@@ -185,5 +204,37 @@ mod tests {
     fn test_parse_unknown_type_ignored() {
         let line = r#"{"type":"unknown_future_event","data":"something","timestamp":"2025-10-10T12:00:00.000Z"}"#;
         assert!(parse_gemini_stream_line(line).is_none());
+    }
+
+    #[test]
+    fn test_gemini_cli_executor_implements_trait() {
+        let executor = GeminiCliExecutor;
+        let _: &dyn AgentExecutor = &executor;
+    }
+
+    #[tokio::test]
+    async fn test_gemini_cli_executor_spawn_failure() {
+        use std::path::PathBuf;
+
+        use uuid::Uuid;
+
+        use crate::models::agent_session::AgentType;
+
+        let executor = GeminiCliExecutor;
+        let config = AgentConfig {
+            agent_type: AgentType::GeminiCli,
+            session_id: Uuid::new_v4(),
+            task_id: Uuid::new_v4(),
+            working_dir: PathBuf::from("/tmp"),
+            prompt: "test".to_string(),
+            allowed_tools: vec![],
+        };
+        match executor.start(config).await {
+            Err(e) => {
+                let msg = e.to_string();
+                assert!(msg.contains("gemini"), "error should mention gemini: {msg}");
+            }
+            Ok(_) => panic!("should fail when gemini CLI is not found"),
+        }
     }
 }
