@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::task::{CreateTaskRequest, Task, TaskPriority, TaskStatus, UpdateTaskRequest};
+use crate::services::user_service;
 
 #[derive(FromRow)]
 struct TaskRow {
@@ -42,6 +43,9 @@ impl TryFrom<TaskRow> for Task {
 }
 
 pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResult<Task> {
+    validate_assigned_to(pool, req.assigned_to).await?;
+    validate_parent_project(pool, req.parent_id, req.project_id).await?;
+
     let id = Uuid::new_v4();
     let now = Utc::now();
     let status = req.status.clone().unwrap_or(TaskStatus::Backlog);
@@ -121,6 +125,14 @@ pub async fn list_tasks(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<Ta
 
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
     let existing = get_task(pool, id).await?;
+
+    if req.assigned_to.is_some() {
+        validate_assigned_to(pool, req.assigned_to).await?;
+    }
+    if req.parent_id.is_some() {
+        validate_parent_project(pool, req.parent_id, existing.project_id).await?;
+    }
+
     let now = Utc::now();
 
     let title = req.title.as_ref().unwrap_or(&existing.title);
@@ -163,6 +175,43 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
         created_at: existing.created_at,
         updated_at: now,
     })
+}
+
+async fn validate_assigned_to(pool: &SqlitePool, assigned_to: Option<Uuid>) -> AppResult<()> {
+    if let Some(user_id) = assigned_to {
+        match user_service::get_user(pool, user_id).await {
+            Err(AppError::NotFound(_)) => {
+                return Err(AppError::Validation(format!(
+                    "assigned user {} does not exist",
+                    user_id
+                )));
+            }
+            Err(e) => return Err(e),
+            Ok(_) => {}
+        }
+    }
+    Ok(())
+}
+
+async fn validate_parent_project(
+    pool: &SqlitePool,
+    parent_id: Option<Uuid>,
+    project_id: Uuid,
+) -> AppResult<()> {
+    if let Some(pid) = parent_id {
+        let parent = get_task(pool, pid).await.map_err(|e| match e {
+            AppError::NotFound(_) => {
+                AppError::Validation(format!("parent task {} does not exist", pid))
+            }
+            other => other,
+        })?;
+        if parent.project_id != project_id {
+            return Err(AppError::Validation(
+                "parent task must belong to the same project".to_string(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 pub async fn delete_task(pool: &SqlitePool, id: Uuid) -> AppResult<()> {
