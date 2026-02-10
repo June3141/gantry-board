@@ -16,6 +16,8 @@ use std::sync::Arc;
 use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use sqlx::SqlitePool;
+use tower_governor::governor::GovernorConfigBuilder;
+use tower_governor::GovernorLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
@@ -33,10 +35,30 @@ pub struct AppState {
 }
 
 pub fn app(state: AppState) -> Router {
+    // Rate limit: login — 5 attempts per 15 min per IP (1 token / 180s, burst 5)
+    let login_governor = GovernorConfigBuilder::default()
+        .per_second(180)
+        .burst_size(5)
+        .finish()
+        .expect("valid governor config");
+
+    // Rate limit: register — 3 attempts per hour per IP (1 token / 1200s, burst 3)
+    let register_governor = GovernorConfigBuilder::default()
+        .per_second(1200)
+        .burst_size(3)
+        .finish()
+        .expect("valid governor config");
+
     let api_routes = Router::new()
-        // Auth endpoints
-        .route("/auth/register", post(handlers::auth::register))
-        .route("/auth/login", post(handlers::auth::login))
+        // Auth endpoints (rate-limited)
+        .route(
+            "/auth/register",
+            post(handlers::auth::register).layer(GovernorLayer::new(register_governor)),
+        )
+        .route(
+            "/auth/login",
+            post(handlers::auth::login).layer(GovernorLayer::new(login_governor)),
+        )
         .route("/auth/logout", post(handlers::auth::logout))
         .route("/auth/me", get(handlers::auth::me))
         // Task endpoints
