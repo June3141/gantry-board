@@ -57,7 +57,7 @@ async fn test_register_creates_user_and_returns_session_cookie() {
         .json(&json!({
             "email": "test@example.com",
             "name": "Test User",
-            "password": "password123"
+            "password": "Tr0ub4dor&3-correct-horse"
         }))
         .await;
 
@@ -85,7 +85,7 @@ async fn test_register_validates_email() {
         .json(&json!({
             "email": "not-an-email",
             "name": "Test User",
-            "password": "password123"
+            "password": "Tr0ub4dor&3-correct-horse"
         }))
         .await;
 
@@ -115,7 +115,7 @@ async fn test_register_duplicate_email_fails() {
     let body = json!({
         "email": "test@example.com",
         "name": "Test User",
-        "password": "password123"
+        "password": "Tr0ub4dor&3-correct-horse"
     });
 
     // First registration should succeed
@@ -137,7 +137,7 @@ async fn test_login_with_valid_credentials() {
         .json(&json!({
             "email": "test@example.com",
             "name": "Test User",
-            "password": "password123"
+            "password": "Tr0ub4dor&3-correct-horse"
         }))
         .await;
 
@@ -146,7 +146,7 @@ async fn test_login_with_valid_credentials() {
         .post("/api/auth/login")
         .json(&json!({
             "email": "test@example.com",
-            "password": "password123"
+            "password": "Tr0ub4dor&3-correct-horse"
         }))
         .await;
 
@@ -170,7 +170,7 @@ async fn test_login_with_wrong_password() {
         .json(&json!({
             "email": "test@example.com",
             "name": "Test User",
-            "password": "password123"
+            "password": "Tr0ub4dor&3-correct-horse"
         }))
         .await;
 
@@ -194,7 +194,7 @@ async fn test_login_with_nonexistent_email() {
         .post("/api/auth/login")
         .json(&json!({
             "email": "nonexistent@example.com",
-            "password": "password123"
+            "password": "Tr0ub4dor&3-correct-horse"
         }))
         .await;
 
@@ -220,7 +220,7 @@ async fn test_me_with_auth() {
         .json(&json!({
             "email": "test@example.com",
             "name": "Test User",
-            "password": "password123"
+            "password": "Tr0ub4dor&3-correct-horse"
         }))
         .await;
 
@@ -258,7 +258,7 @@ async fn test_logout_clears_session() {
         .json(&json!({
             "email": "test@example.com",
             "name": "Test User",
-            "password": "password123"
+            "password": "Tr0ub4dor&3-correct-horse"
         }))
         .await;
 
