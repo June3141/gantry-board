@@ -93,4 +93,10 @@ mod tests {
         };
         assert!(config.auth_disabled);
     }
+
+    #[test]
+    fn test_session_cleanup_interval_defaults_to_3600() {
+        let config = Config::default();
+        assert_eq!(config.session_cleanup_interval_secs, 3600);
+    }
 }

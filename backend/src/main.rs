@@ -51,9 +51,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = gantry_board::app(state);
 
     // Spawn background task for periodic session cleanup
-    let cleanup_interval = Duration::from_secs(config.session_cleanup_interval_secs);
+    let cleanup_interval_secs = config.session_cleanup_interval_secs.max(1);
+    let cleanup_interval = Duration::from_secs(cleanup_interval_secs);
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(cleanup_interval);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         interval.tick().await; // skip the immediate first tick
         loop {
             interval.tick().await;
