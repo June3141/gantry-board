@@ -25,7 +25,8 @@ pub async fn register(
     State(state): State<AppState>,
     Json(body): Json<RegisterRequest>,
 ) -> AppResult<impl IntoResponse> {
-    body.validate()
+    let ctx = body.password_context();
+    body.validate_with(&ctx)
         .map_err(|e| AppError::Validation(e.to_string()))?;
 
     let user = user_service::create_user(&state.pool, &body).await?;

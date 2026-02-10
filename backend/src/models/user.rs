@@ -38,8 +38,15 @@ impl TryFrom<UserWithPassword> for User {
     }
 }
 
+/// Context for password validation — passes user-specific inputs to zxcvbn.
+pub struct PasswordContext {
+    pub email: String,
+    pub name: String,
+}
+
 /// Request to register a new user
 #[derive(Debug, Deserialize, ToSchema, garde::Validate)]
+#[garde(context(PasswordContext))]
 pub struct RegisterRequest {
     #[garde(email)]
     pub email: String,
@@ -49,8 +56,18 @@ pub struct RegisterRequest {
     pub password: String,
 }
 
-fn password_strength(value: &str, _context: &()) -> garde::Result {
-    let estimate = zxcvbn::zxcvbn(value, &[]);
+impl RegisterRequest {
+    pub fn password_context(&self) -> PasswordContext {
+        PasswordContext {
+            email: self.email.clone(),
+            name: self.name.clone(),
+        }
+    }
+}
+
+fn password_strength(value: &str, context: &PasswordContext) -> garde::Result {
+    let user_inputs: Vec<&str> = vec![&context.email, &context.name];
+    let estimate = zxcvbn::zxcvbn(value, &user_inputs);
     if estimate.score() < zxcvbn::Score::Three {
         let warning = estimate
             .feedback()
@@ -99,31 +116,47 @@ mod tests {
     #[test]
     fn test_weak_password_rejected() {
         let req = make_register("password123");
-        assert!(req.validate().is_err());
+        let ctx = req.password_context();
+        assert!(req.validate_with(&ctx).is_err());
     }
 
     #[test]
     fn test_common_password_rejected() {
         let req = make_register("qwerty1234");
-        assert!(req.validate().is_err());
+        let ctx = req.password_context();
+        assert!(req.validate_with(&ctx).is_err());
     }
 
     #[test]
     fn test_strong_password_accepted() {
         let req = make_register("c0rr3ct-h0rse-b@ttery-st@ple!");
-        assert!(req.validate().is_ok());
+        let ctx = req.password_context();
+        assert!(req.validate_with(&ctx).is_ok());
     }
 
     #[test]
     fn test_passphrase_accepted() {
         let req = make_register("correct horse battery staple purple");
-        assert!(req.validate().is_ok());
+        let ctx = req.password_context();
+        assert!(req.validate_with(&ctx).is_ok());
     }
 
     #[test]
     fn test_short_password_rejected() {
         let req = make_register("Ab1!");
-        assert!(req.validate().is_err());
+        let ctx = req.password_context();
+        assert!(req.validate_with(&ctx).is_err());
+    }
+
+    #[test]
+    fn test_password_containing_email_rejected() {
+        let req = RegisterRequest {
+            email: "alice@example.com".to_string(),
+            name: "Alice".to_string(),
+            password: "alice@example.com!!".to_string(),
+        };
+        let ctx = req.password_context();
+        assert!(req.validate_with(&ctx).is_err());
     }
 }
 
