@@ -19,8 +19,8 @@ pub struct Config {
     #[serde(default)]
     pub auth_disabled: bool,
 
-    /// Use secure cookies (HTTPS only) - should be true in production
-    #[serde(default)]
+    /// Use secure cookies (HTTPS only) - defaults to true; set to false only for local HTTP dev
+    #[serde(default = "default_cookie_secure")]
     pub cookie_secure: bool,
 
     /// Path to the git repository for worktree management
@@ -42,6 +42,10 @@ fn default_database_url() -> String {
 
 fn default_session_duration_hours() -> u64 {
     168 // 1 week
+}
+
+fn default_cookie_secure() -> bool {
+    true
 }
 
 fn default_session_cleanup_interval_secs() -> u64 {
@@ -67,7 +71,7 @@ impl Default for Config {
             session_duration_hours: default_session_duration_hours(),
             #[cfg(debug_assertions)]
             auth_disabled: false,
-            cookie_secure: false,
+            cookie_secure: default_cookie_secure(),
             repository_path: None,
             session_cleanup_interval_secs: default_session_cleanup_interval_secs(),
         }
