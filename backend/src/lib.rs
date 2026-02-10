@@ -35,17 +35,18 @@ pub struct AppState {
 }
 
 pub fn app(state: AppState) -> Router {
-    // Rate limit: login — 5 attempts per 15 min per IP (1 token / 180s, burst 5)
+    // Rate limit: login — 5 attempts per 15 min per IP.
+    // per_second(N) sets the replenishment *interval* to N seconds (NOT N req/sec).
     let login_governor = GovernorConfigBuilder::default()
-        .per_second(180)
-        .burst_size(5)
+        .per_second(180) // 1 token every 180s
+        .burst_size(5) // bucket capacity
         .finish()
         .expect("valid governor config");
 
-    // Rate limit: register — 3 attempts per hour per IP (1 token / 1200s, burst 3)
+    // Rate limit: register — 3 attempts per hour per IP.
     let register_governor = GovernorConfigBuilder::default()
-        .per_second(1200)
-        .burst_size(3)
+        .per_second(1200) // 1 token every 1200s
+        .burst_size(3) // bucket capacity
         .finish()
         .expect("valid governor config");
 

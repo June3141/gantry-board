@@ -36,7 +36,7 @@ axum-extra = { workspace = true }
 git2 = { workspace = true }
 async-trait = { workspace = true }
 tokio-util = { workspace = true }
-tower_governor = "0.8.0"
+tower_governor = { workspace = true }
 
 [dev-dependencies]
 axum-test = "18"
