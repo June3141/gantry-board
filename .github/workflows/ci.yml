@@ -39,6 +39,7 @@ jobs:
             api:
               - 'backend/src/handlers/**'
               - 'backend/src/models/**'
+              - 'backend/src/openapi.rs'
               - 'backend/src/lib.rs'
               - 'backend/tests/export_openapi.rs'
               - 'frontend/orval.config.*'
