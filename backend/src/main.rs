@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use gantry_board::agent::executor::NoopExecutor;
+use gantry_board::agent::claude_code::ClaudeCodeExecutor;
 use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::db;
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_deref()
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
-    let executor = Arc::new(NoopExecutor);
+    let executor = Arc::new(ClaudeCodeExecutor);
     let orchestrator = Arc::new(AgentOrchestrator::new(
         executor,
         pool.clone(),

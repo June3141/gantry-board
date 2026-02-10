@@ -124,6 +124,7 @@ impl AgentOrchestrator {
             task_id: req.task_id,
             working_dir: worktree.path.clone(),
             prompt: req.prompt,
+            allowed_tools: vec![],
         };
 
         let handle = match self.executor.start(config).await {
