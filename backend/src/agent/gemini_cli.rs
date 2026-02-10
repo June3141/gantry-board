@@ -1,7 +1,14 @@
+use std::process::Stdio;
+
 use serde::Deserialize;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::Command;
+use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 use tracing::warn;
 
-use crate::agent::executor::AgentOutputEvent;
+use crate::agent::executor::{AgentConfig, AgentExecutor, AgentHandle, AgentOutputEvent};
+use crate::error::{AppError, AppResult};
 
 /// Gemini CLI stream-json event types.
 #[derive(Debug, Deserialize)]
@@ -76,6 +83,122 @@ pub fn parse_gemini_stream_line(line: &str) -> Option<AgentOutputEvent> {
             None
         }
         _ => None,
+    }
+}
+
+/// Agent executor that spawns `gemini` CLI as a subprocess.
+///
+/// Uses `--output-format stream-json` for real-time streaming of agent output.
+pub struct GeminiCliExecutor;
+
+#[async_trait::async_trait]
+impl AgentExecutor for GeminiCliExecutor {
+    async fn start(&self, config: AgentConfig) -> AppResult<AgentHandle> {
+        let mut cmd = Command::new("gemini");
+        cmd.args(["--output-format", "stream-json"]);
+
+        // NOTE: allowed_tools is not forwarded to Gemini CLI because the flag
+        // semantics differ from Claude Code's --allowedTools. Gemini CLI tool
+        // restrictions will be addressed when the flag mapping is confirmed.
+
+        // Prompt is written to stdin (not argv) to avoid leaking via ps/proc
+        // and to avoid OS argv length limits for large prompts.
+        cmd.current_dir(&config.working_dir);
+        cmd.stdin(Stdio::piped());
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::inherit());
+        cmd.kill_on_drop(true);
+
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| AppError::Internal(format!("failed to spawn gemini CLI: {e}")))?;
+
+        // Write prompt to stdin and close it so the CLI starts processing.
+        if let Some(mut stdin) = child.stdin.take() {
+            use tokio::io::AsyncWriteExt;
+            stdin
+                .write_all(config.prompt.as_bytes())
+                .await
+                .map_err(|e| {
+                    AppError::Internal(format!("failed to write prompt to gemini stdin: {e}"))
+                })?;
+            // stdin is dropped here, closing the pipe
+        }
+
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| AppError::Internal("gemini CLI stdout not captured".into()))?;
+
+        let cancel = CancellationToken::new();
+        let (tx, rx) = mpsc::channel(256);
+        let token = cancel.clone();
+
+        let join_handle = tokio::spawn(async move {
+            let reader = BufReader::new(stdout);
+            let mut lines = reader.lines();
+
+            loop {
+                tokio::select! {
+                    _ = token.cancelled() => {
+                        let _ = child.kill().await;
+                        let _ = child.wait().await; // reap to avoid zombie
+                        let _ = tx.send(AgentOutputEvent::Completed).await;
+                        break;
+                    }
+                    line = lines.next_line() => {
+                        match line {
+                            Ok(Some(line)) => {
+                                if let Some(event) = parse_gemini_stream_line(&line) {
+                                    let is_terminal = matches!(
+                                        event,
+                                        AgentOutputEvent::Completed | AgentOutputEvent::Failed { .. }
+                                    );
+                                    if tx.send(event).await.is_err() {
+                                        break;
+                                    }
+                                    if is_terminal {
+                                        break;
+                                    }
+                                }
+                            }
+                            Ok(None) => {
+                                // stdout closed — check process exit code
+                                let terminal = match child.wait().await {
+                                    Ok(status) if status.success() => AgentOutputEvent::Completed,
+                                    Ok(status) => AgentOutputEvent::Failed {
+                                        error: format!("gemini exited with {status}"),
+                                    },
+                                    Err(e) => AgentOutputEvent::Failed {
+                                        error: format!("failed to wait on gemini: {e}"),
+                                    },
+                                };
+                                let _ = tx.send(terminal).await;
+                                break;
+                            }
+                            Err(e) => {
+                                warn!("IO error reading gemini stdout: {e}");
+                                let _ = tx.send(AgentOutputEvent::Failed {
+                                    error: format!("IO error: {e}"),
+                                }).await;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            // Reap the child on all non-wait exit paths (terminal event, IO error,
+            // channel close) to prevent zombie processes.
+            // Ok(None) already calls wait(); double-wait is harmless.
+            let _ = child.wait().await;
+            Ok(())
+        });
+
+        Ok(AgentHandle {
+            cancel,
+            output_rx: rx,
+            join_handle,
+        })
     }
 }
 
@@ -185,5 +308,37 @@ mod tests {
     fn test_parse_unknown_type_ignored() {
         let line = r#"{"type":"unknown_future_event","data":"something","timestamp":"2025-10-10T12:00:00.000Z"}"#;
         assert!(parse_gemini_stream_line(line).is_none());
+    }
+
+    #[test]
+    fn test_gemini_cli_executor_implements_trait() {
+        let executor = GeminiCliExecutor;
+        let _: &dyn AgentExecutor = &executor;
+    }
+
+    #[tokio::test]
+    async fn test_gemini_cli_executor_spawn_failure() {
+        use std::path::PathBuf;
+
+        use uuid::Uuid;
+
+        use crate::models::agent_session::AgentType;
+
+        let executor = GeminiCliExecutor;
+        let config = AgentConfig {
+            agent_type: AgentType::GeminiCli,
+            session_id: Uuid::new_v4(),
+            task_id: Uuid::new_v4(),
+            working_dir: PathBuf::from("/nonexistent/path/that/does/not/exist"),
+            prompt: "test".to_string(),
+            allowed_tools: vec![],
+        };
+        match executor.start(config).await {
+            Err(e) => {
+                let msg = e.to_string();
+                assert!(msg.contains("gemini"), "error should mention gemini: {msg}");
+            }
+            Ok(_) => panic!("should fail with nonexistent working directory"),
+        }
     }
 }

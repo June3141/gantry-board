@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use gantry_board::agent::claude_code::ClaudeCodeExecutor;
 use gantry_board::agent::executor::AgentExecutor;
+use gantry_board::agent::gemini_cli::GeminiCliExecutor;
 use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::db;
@@ -47,6 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|| PathBuf::from("."));
     let mut executors: HashMap<AgentType, Arc<dyn AgentExecutor>> = HashMap::new();
     executors.insert(AgentType::ClaudeCode, Arc::new(ClaudeCodeExecutor));
+    executors.insert(AgentType::GeminiCli, Arc::new(GeminiCliExecutor));
     let orchestrator = Arc::new(AgentOrchestrator::new(
         executors,
         pool.clone(),
