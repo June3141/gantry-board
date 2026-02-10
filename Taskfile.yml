@@ -9,40 +9,50 @@ tasks:
   check:
     desc: Run all checks (fmt, lint, build, test)
     cmds:
-      - task: fmt:check
-      - task: lint
-      - task: build
-      - task: test
+      - task: check:static
+      - task: check:runtime
+
+  check:static:
+    desc: Format and lint checks (parallel)
+    deps:
+      - fmt:check
+      - lint
+
+  check:runtime:
+    desc: Build and test (parallel)
+    deps:
+      - build
+      - test
 
   fmt:
     desc: Format all code
-    cmds:
-      - task: backend:fmt
-      - task: frontend:fmt
+    deps:
+      - backend:fmt
+      - frontend:fmt
 
   fmt:check:
     desc: Check formatting without modifying files
-    cmds:
-      - task: backend:fmt:check
-      - task: frontend:fmt:check
+    deps:
+      - backend:fmt:check
+      - frontend:fmt:check
 
   lint:
     desc: Lint all code
-    cmds:
-      - task: backend:lint
-      - task: frontend:lint
+    deps:
+      - backend:lint
+      - frontend:lint
 
   build:
     desc: Build all
-    cmds:
-      - task: backend:build
-      - task: frontend:build
+    deps:
+      - backend:build
+      - frontend:build
 
   test:
     desc: Run all tests
-    cmds:
-      - task: backend:test
-      - task: frontend:test
+    deps:
+      - backend:test
+      - frontend:test
 
   # ── Backend (Rust) ────────────────────────────
   backend:fmt:
@@ -66,9 +76,19 @@ tasks:
     cmd: cargo build
 
   backend:test:
-    desc: Run Rust tests
+    desc: Run all Rust tests (unit + integration)
     dir: "{{.BACKEND_DIR}}"
-    cmd: cargo test
+    cmd: cargo nextest run
+
+  backend:test:unit:
+    desc: Run unit tests only (fast, no DB/HTTP)
+    dir: "{{.BACKEND_DIR}}"
+    cmd: cargo nextest run --lib
+
+  backend:test:integration:
+    desc: Run integration tests only (API endpoints)
+    dir: "{{.BACKEND_DIR}}"
+    cmd: cargo nextest run --test '*'
 
   backend:run:
     desc: Run backend server
