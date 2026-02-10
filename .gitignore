@@ -4,6 +4,9 @@ target/
 *.db-shm
 *.db-wal
 
+# Generated
+openapi.json
+
 # Node
 node_modules/
 dist/
