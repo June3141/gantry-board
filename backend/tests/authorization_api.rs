@@ -1,56 +1,9 @@
-use std::collections::HashMap;
-use std::net::SocketAddr;
-use std::sync::Arc;
+mod common;
 
 use axum::http::{header, StatusCode};
 use axum_test::TestServer;
-use gantry_board::agent::executor::{AgentExecutor, NoopExecutor};
-use gantry_board::agent::orchestrator::AgentOrchestrator;
-use gantry_board::config::Config;
-use gantry_board::models::agent_session::AgentType;
-use gantry_board::sse::hub::SseHub;
-use gantry_board::AppState;
+use common::create_auth_test_server as create_test_server;
 use serde_json::json;
-use sqlx::sqlite::SqlitePoolOptions;
-use std::path::PathBuf;
-
-async fn create_test_server() -> TestServer {
-    let pool = SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
-        .await
-        .expect("Failed to create test database");
-
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .expect("Failed to run migrations");
-
-    let config = Config {
-        bind_addr: "127.0.0.1:0".to_string(),
-        database_url: "sqlite::memory:".to_string(),
-        auth_disabled: false, // Enable auth for authorization tests
-        ..Default::default()
-    };
-
-    let sse_hub = Arc::new(SseHub::default());
-    let mut executors: HashMap<AgentType, Arc<dyn AgentExecutor>> = HashMap::new();
-    executors.insert(AgentType::ClaudeCode, Arc::new(NoopExecutor));
-    let orchestrator = Arc::new(AgentOrchestrator::new(
-        executors,
-        pool.clone(),
-        PathBuf::from("."),
-        Arc::clone(&sse_hub),
-    ));
-    let state = AppState {
-        pool,
-        sse_hub,
-        config: Arc::new(config),
-        orchestrator,
-    };
-
-    let app = gantry_board::app(state).into_make_service_with_connect_info::<SocketAddr>();
-    TestServer::new(app).expect("Failed to create test server")
-}
 
 /// Register a user and return (user_id, session_cookie_header_value)
 async fn register_user(server: &TestServer, email: &str, name: &str) -> (String, String) {
@@ -305,77 +258,7 @@ async fn create_task(server: &TestServer, cookie: &str, project_id: &str, title:
 }
 
 #[tokio::test]
-async fn test_list_tasks_forbidden_for_non_member() {
-    let server = create_test_server().await;
-    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
-    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
-
-    let project_id = create_project(&server, &cookie_a, "Project").await;
-
-    let response = server
-        .get(&format!("/api/tasks?project_id={}", project_id))
-        .add_header(header::COOKIE, &cookie_b)
-        .await;
-    response.assert_status(StatusCode::FORBIDDEN);
-}
-
-#[tokio::test]
-async fn test_list_tasks_allowed_for_member() {
-    let server = create_test_server().await;
-    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
-    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
-
-    let project_id = create_project(&server, &cookie_a, "Project").await;
-    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
-
-    let response = server
-        .get(&format!("/api/tasks?project_id={}", project_id))
-        .add_header(header::COOKIE, &cookie_b)
-        .await;
-    response.assert_status_ok();
-}
-
-#[tokio::test]
-async fn test_create_task_forbidden_for_non_member() {
-    let server = create_test_server().await;
-    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
-    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
-
-    let project_id = create_project(&server, &cookie_a, "Project").await;
-
-    let response = server
-        .post("/api/tasks")
-        .add_header(header::COOKIE, &cookie_b)
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Unauthorized Task"
-        }))
-        .await;
-    response.assert_status(StatusCode::FORBIDDEN);
-}
-
-#[tokio::test]
-async fn test_create_task_allowed_for_member() {
-    let server = create_test_server().await;
-    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
-    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
-
-    let project_id = create_project(&server, &cookie_a, "Project").await;
-    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
-
-    let response = server
-        .post("/api/tasks")
-        .add_header(header::COOKIE, &cookie_b)
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Member Task"
-        }))
-        .await;
-    response.assert_status(StatusCode::CREATED);
-}
-
-#[tokio::test]
-async fn test_get_task_forbidden_for_non_member() {
+async fn test_task_endpoints_forbidden_for_non_member() {
     let server = create_test_server().await;
     let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
     let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
@@ -383,44 +266,67 @@ async fn test_get_task_forbidden_for_non_member() {
     let project_id = create_project(&server, &cookie_a, "Project").await;
     let task_id = create_task(&server, &cookie_a, &project_id, "Task").await;
 
-    let response = server
+    // list
+    server
+        .get(&format!("/api/tasks?project_id={}", project_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await
+        .assert_status(StatusCode::FORBIDDEN);
+
+    // create
+    server
+        .post("/api/tasks")
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({ "project_id": project_id, "title": "Unauthorized" }))
+        .await
+        .assert_status(StatusCode::FORBIDDEN);
+
+    // get
+    server
         .get(&format!("/api/tasks/{}", task_id))
         .add_header(header::COOKIE, &cookie_b)
-        .await;
-    response.assert_status(StatusCode::FORBIDDEN);
-}
+        .await
+        .assert_status(StatusCode::FORBIDDEN);
 
-#[tokio::test]
-async fn test_update_task_forbidden_for_non_member() {
-    let server = create_test_server().await;
-    let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
-    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
-
-    let project_id = create_project(&server, &cookie_a, "Project").await;
-    let task_id = create_task(&server, &cookie_a, &project_id, "Task").await;
-
-    let response = server
+    // update
+    server
         .patch(&format!("/api/tasks/{}", task_id))
         .add_header(header::COOKIE, &cookie_b)
         .json(&json!({ "title": "Hacked" }))
-        .await;
-    response.assert_status(StatusCode::FORBIDDEN);
+        .await
+        .assert_status(StatusCode::FORBIDDEN);
+
+    // delete
+    server
+        .delete(&format!("/api/tasks/{}", task_id))
+        .add_header(header::COOKIE, &cookie_b)
+        .await
+        .assert_status(StatusCode::FORBIDDEN);
 }
 
 #[tokio::test]
-async fn test_delete_task_forbidden_for_non_member() {
+async fn test_task_endpoints_allowed_for_member() {
     let server = create_test_server().await;
     let (_user_a_id, cookie_a) = register_user(&server, "a@example.com", "User A").await;
-    let (_user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
+    let (user_b_id, cookie_b) = register_user(&server, "b@example.com", "User B").await;
 
     let project_id = create_project(&server, &cookie_a, "Project").await;
-    let task_id = create_task(&server, &cookie_a, &project_id, "Task").await;
+    add_member(&server, &cookie_a, &project_id, &user_b_id, "member").await;
 
-    let response = server
-        .delete(&format!("/api/tasks/{}", task_id))
+    // list
+    server
+        .get(&format!("/api/tasks?project_id={}", project_id))
         .add_header(header::COOKIE, &cookie_b)
-        .await;
-    response.assert_status(StatusCode::FORBIDDEN);
+        .await
+        .assert_status_ok();
+
+    // create
+    server
+        .post("/api/tasks")
+        .add_header(header::COOKIE, &cookie_b)
+        .json(&json!({ "project_id": project_id, "title": "Member Task" }))
+        .await
+        .assert_status(StatusCode::CREATED);
 }
 
 // =============================================================

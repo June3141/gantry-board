@@ -10,6 +10,43 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # ── 変更検出 ────────────────────────────────────
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      api: ${{ steps.filter.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '.config/nextest.toml'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+            api:
+              - 'backend/src/handlers/**'
+              - 'backend/src/models/**'
+              - 'backend/src/openapi.rs'
+              - 'backend/src/lib.rs'
+              - 'backend/tests/export_openapi.rs'
+              - 'frontend/orval.config.*'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+
+  # ── PR タイトル lint ─────────────────────────────
   pr-title:
     name: PR title lint
     if: github.event_name == 'pull_request'
@@ -42,46 +79,69 @@ jobs:
             exit 1
           fi
 
+  # ── Rust (fmt, clippy, nextest) ──────────────────
   rust:
-    name: Rust (build, test, clippy)
+    name: Rust (clippy, test)
     runs-on: ubuntu-latest
+    needs: changes
+    if: >-
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.api == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-nextest
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
-      - run: cargo build
-      - run: cargo test
+      - run: cargo nextest run --profile ci -E 'not binary(export_openapi)'
+        working-directory: backend
+      - run: cargo test --test export_openapi -- --nocapture
+        working-directory: backend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: openapi.json
+          retention-days: 1
 
+  # ── API (orval diff) ─────────────────────────────
   api:
-    name: API (openapi export, orval diff)
+    name: API (orval diff)
     runs-on: ubuntu-latest
-    needs: rust
+    needs: [changes, rust]
+    if: needs.changes.outputs.api == 'true'
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: openapi-spec
+          path: .
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: cargo test --test export_openapi -- --nocapture
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
       - run: cd frontend && npm ci
       - run: cd frontend && npx orval
       - run: cd frontend && npx biome check --write src/api/generated/
       - run: cd frontend && git diff --exit-code src/api/generated/
         name: Check generated API client is up to date
 
+  # ── Frontend (lint, test, build) ─────────────────
   frontend:
-    name: Frontend (lint, format, test, build)
+    name: Frontend (lint, test, build)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
       - run: cd frontend && npm ci
       - run: cd frontend && npx biome check src/
       - run: cd frontend && npx vitest run
