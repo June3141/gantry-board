@@ -126,12 +126,8 @@ pub async fn list_tasks(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<Ta
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
     let existing = get_task(pool, id).await?;
 
-    if req.assigned_to.is_some() {
-        validate_assigned_to(pool, req.assigned_to).await?;
-    }
-    if req.parent_id.is_some() {
-        validate_parent_project(pool, req.parent_id, existing.project_id).await?;
-    }
+    validate_assigned_to(pool, req.assigned_to).await?;
+    validate_parent_project(pool, req.parent_id, existing.project_id).await?;
 
     let now = Utc::now();
 
@@ -626,7 +622,7 @@ mod tests {
             },
         )
         .await
-        .unwrap();
+        .expect("parent task creation should succeed");
 
         let req = CreateTaskRequest {
             project_id: project2,
@@ -661,7 +657,7 @@ mod tests {
             },
         )
         .await
-        .unwrap();
+        .expect("task creation should succeed");
 
         let result = update_task(
             &pool,
@@ -673,6 +669,60 @@ mod tests {
                 priority: None,
                 parent_id: None,
                 assigned_to: Some(nonexistent_user),
+                position: None,
+            },
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_update_task_with_parent_in_different_project_returns_validation_error() {
+        let pool = setup_test_db().await;
+        let project1 = create_test_project(&pool).await;
+        let project2 = create_test_project(&pool).await;
+
+        let parent_in_p2 = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id: project2,
+                title: "Parent in project 2".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("parent task creation should succeed");
+
+        let child = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id: project1,
+                title: "Child in project 1".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("child task creation should succeed");
+
+        let result = update_task(
+            &pool,
+            child.id,
+            &UpdateTaskRequest {
+                title: None,
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: Some(parent_in_p2.id),
+                assigned_to: None,
                 position: None,
             },
         )
