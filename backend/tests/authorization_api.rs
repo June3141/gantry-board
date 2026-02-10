@@ -55,7 +55,7 @@ async fn register_user(server: &TestServer, email: &str, name: &str) -> (String,
         .json(&json!({
             "email": email,
             "name": name,
-            "password": "password123"
+            "password": "Tr0ub4dor&3-correct-horse"
         }))
         .await;
     response.assert_status(StatusCode::CREATED);
