@@ -93,8 +93,110 @@ pub struct GeminiCliExecutor;
 
 #[async_trait::async_trait]
 impl AgentExecutor for GeminiCliExecutor {
-    async fn start(&self, _config: AgentConfig) -> AppResult<AgentHandle> {
-        todo!()
+    async fn start(&self, config: AgentConfig) -> AppResult<AgentHandle> {
+        let mut cmd = Command::new("gemini");
+        cmd.args(["--output-format", "stream-json"]);
+
+        if !config.allowed_tools.is_empty() {
+            cmd.arg("--allowedTools");
+            for tool in &config.allowed_tools {
+                cmd.arg(tool);
+            }
+        }
+
+        // Prompt is written to stdin (not argv) to avoid leaking via ps/proc
+        // and to avoid OS argv length limits for large prompts.
+        cmd.current_dir(&config.working_dir);
+        cmd.stdin(Stdio::piped());
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::inherit());
+        cmd.kill_on_drop(true);
+
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| AppError::Internal(format!("failed to spawn gemini CLI: {e}")))?;
+
+        // Write prompt to stdin and close it so the CLI starts processing.
+        if let Some(mut stdin) = child.stdin.take() {
+            use tokio::io::AsyncWriteExt;
+            stdin
+                .write_all(config.prompt.as_bytes())
+                .await
+                .map_err(|e| {
+                    AppError::Internal(format!("failed to write prompt to gemini stdin: {e}"))
+                })?;
+            // stdin is dropped here, closing the pipe
+        }
+
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| AppError::Internal("gemini CLI stdout not captured".into()))?;
+
+        let cancel = CancellationToken::new();
+        let (tx, rx) = mpsc::channel(256);
+        let token = cancel.clone();
+
+        let join_handle = tokio::spawn(async move {
+            let reader = BufReader::new(stdout);
+            let mut lines = reader.lines();
+
+            loop {
+                tokio::select! {
+                    _ = token.cancelled() => {
+                        let _ = child.kill().await;
+                        let _ = tx.send(AgentOutputEvent::Completed).await;
+                        break;
+                    }
+                    line = lines.next_line() => {
+                        match line {
+                            Ok(Some(line)) => {
+                                if let Some(event) = parse_gemini_stream_line(&line) {
+                                    let is_terminal = matches!(
+                                        event,
+                                        AgentOutputEvent::Completed | AgentOutputEvent::Failed { .. }
+                                    );
+                                    if tx.send(event).await.is_err() {
+                                        break;
+                                    }
+                                    if is_terminal {
+                                        break;
+                                    }
+                                }
+                            }
+                            Ok(None) => {
+                                // stdout closed — check process exit code
+                                let terminal = match child.wait().await {
+                                    Ok(status) if status.success() => AgentOutputEvent::Completed,
+                                    Ok(status) => AgentOutputEvent::Failed {
+                                        error: format!("gemini exited with {status}"),
+                                    },
+                                    Err(e) => AgentOutputEvent::Failed {
+                                        error: format!("failed to wait on gemini: {e}"),
+                                    },
+                                };
+                                let _ = tx.send(terminal).await;
+                                break;
+                            }
+                            Err(e) => {
+                                warn!("IO error reading gemini stdout: {e}");
+                                let _ = tx.send(AgentOutputEvent::Failed {
+                                    error: format!("IO error: {e}"),
+                                }).await;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+
+        Ok(AgentHandle {
+            cancel,
+            output_rx: rx,
+            join_handle,
+        })
     }
 }
 
@@ -225,7 +327,7 @@ mod tests {
             agent_type: AgentType::GeminiCli,
             session_id: Uuid::new_v4(),
             task_id: Uuid::new_v4(),
-            working_dir: PathBuf::from("/tmp"),
+            working_dir: PathBuf::from("/nonexistent/path/that/does/not/exist"),
             prompt: "test".to_string(),
             allowed_tools: vec![],
         };
@@ -234,7 +336,7 @@ mod tests {
                 let msg = e.to_string();
                 assert!(msg.contains("gemini"), "error should mention gemini: {msg}");
             }
-            Ok(_) => panic!("should fail when gemini CLI is not found"),
+            Ok(_) => panic!("should fail with nonexistent working directory"),
         }
     }
 }
