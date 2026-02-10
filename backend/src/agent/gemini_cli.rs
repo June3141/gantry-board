@@ -31,9 +31,10 @@ enum GeminiStreamEvent {
 
 #[derive(Debug, Deserialize)]
 struct GeminiError {
-    #[serde(rename = "type")]
-    error_type: String,
-    message: String,
+    #[serde(rename = "type", default)]
+    error_type: Option<String>,
+    #[serde(default)]
+    message: Option<String>,
 }
 
 /// Parse a single NDJSON line from Gemini CLI's `--output-format stream-json` output.
@@ -59,8 +60,14 @@ pub fn parse_gemini_stream_line(line: &str) -> Option<AgentOutputEvent> {
                 Some(AgentOutputEvent::Completed)
             } else {
                 let error_msg = error
-                    .map(|e| format!("{}: {}", e.error_type, e.message))
-                    .unwrap_or_else(|| "unknown error".to_string());
+                    .map(|e| {
+                        format!(
+                            "{}: {}",
+                            e.error_type.as_deref().unwrap_or("unknown"),
+                            e.message.as_deref().unwrap_or("no message"),
+                        )
+                    })
+                    .unwrap_or_else(|| format!("unknown error (status: {status})"));
                 Some(AgentOutputEvent::Failed { error: error_msg })
             }
         }
@@ -127,10 +134,27 @@ mod tests {
     #[test]
     fn test_parse_result_error_without_details() {
         let line = r#"{"type":"result","status":"error","timestamp":"2025-10-10T12:00:00.000Z"}"#;
-        assert!(matches!(
-            parse_gemini_stream_line(line),
-            Some(AgentOutputEvent::Failed { .. })
-        ));
+        match parse_gemini_stream_line(line) {
+            Some(AgentOutputEvent::Failed { error }) => {
+                assert!(error.contains("error"), "should include status: {error}");
+            }
+            other => panic!("expected Failed, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_result_error_with_partial_details() {
+        let line = r#"{"type":"result","status":"error","error":{"message":"Something broke"},"timestamp":"2025-10-10T12:00:00.000Z"}"#;
+        match parse_gemini_stream_line(line) {
+            Some(AgentOutputEvent::Failed { error }) => {
+                assert!(error.contains("Something broke"));
+                assert!(
+                    error.contains("unknown"),
+                    "missing type should fall back: {error}"
+                );
+            }
+            other => panic!("expected Failed, got {other:?}"),
+        }
     }
 
     #[test]
