@@ -45,8 +45,27 @@ pub struct RegisterRequest {
     pub email: String,
     #[garde(length(min = 1, max = 100))]
     pub name: String,
-    #[garde(length(min = 8, max = 128))]
+    #[garde(length(min = 8, max = 128), custom(password_strength))]
     pub password: String,
+}
+
+fn password_strength(value: &str, _context: &()) -> garde::Result {
+    let estimate = zxcvbn::zxcvbn(value, &[]);
+    if estimate.score() < zxcvbn::Score::Three {
+        let warning = estimate
+            .feedback()
+            .as_ref()
+            .and_then(|f| f.warning())
+            .map(|w| format!("{w}"))
+            .unwrap_or_default();
+        let msg = if warning.is_empty() {
+            "password is too weak".to_string()
+        } else {
+            format!("password is too weak: {warning}")
+        };
+        return Err(garde::Error::new(msg));
+    }
+    Ok(())
 }
 
 /// Request to login
@@ -62,6 +81,50 @@ pub struct LoginRequest {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct AuthResponse {
     pub user: User,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use garde::Validate;
+
+    fn make_register(password: &str) -> RegisterRequest {
+        RegisterRequest {
+            email: "test@example.com".to_string(),
+            name: "Test".to_string(),
+            password: password.to_string(),
+        }
+    }
+
+    #[test]
+    fn test_weak_password_rejected() {
+        let req = make_register("password123");
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_common_password_rejected() {
+        let req = make_register("qwerty1234");
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_strong_password_accepted() {
+        let req = make_register("c0rr3ct-h0rse-b@ttery-st@ple!");
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_passphrase_accepted() {
+        let req = make_register("correct horse battery staple purple");
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_short_password_rejected() {
+        let req = make_register("Ab1!");
+        assert!(req.validate().is_err());
+    }
 }
 
 /// Session model
