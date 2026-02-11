@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config: Arc::new(config.clone()),
         orchestrator,
     };
-    let app = gantry_board::app(state);
+    let app = gantry_board::app(state)?;
 
     // Spawn background task for periodic session cleanup
     let cleanup_interval_secs = config.session_cleanup_interval_secs.max(1);

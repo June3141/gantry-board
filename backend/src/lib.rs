@@ -35,7 +35,7 @@ pub struct AppState {
     pub orchestrator: Arc<AgentOrchestrator>,
 }
 
-pub fn app(state: AppState) -> Router {
+pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
     // Rate limit: login — 5 attempts per 15 min per IP.
     // per_second(N) sets the replenishment *interval* to N seconds (NOT N req/sec).
     let login_governor = GovernorConfigBuilder::default()
@@ -149,37 +149,37 @@ pub fn app(state: AppState) -> Router {
         // General API rate limit applied to all routes
         .layer(GovernorLayer::new(general_governor));
 
-    Router::new()
+    Ok(Router::new()
         .route("/health", get(handlers::health::health_check))
         .nest("/api", api_routes)
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
         )
-        .layer(build_cors_layer(&state.config))
+        .layer(build_cors_layer(&state.config)?)
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .with_state(state))
 }
 
-fn build_cors_layer(config: &config::Config) -> CorsLayer {
-    match config.cors_origin_header() {
-        Some(origin) => CorsLayer::new()
+fn build_cors_layer(config: &config::Config) -> Result<CorsLayer, config::ConfigError> {
+    match config.cors_origin_header()? {
+        Some(origin) => Ok(CorsLayer::new()
             .allow_origin(AllowOrigin::exact(origin))
             .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
             .allow_headers([axum::http::header::CONTENT_TYPE])
-            .allow_credentials(true),
+            .allow_credentials(true)),
         None => {
             // Defense in depth: release builds must never reach this branch.
-            // Config::validate() already panics if cors_origin is None in release,
+            // Config::validate() already returns Err if cors_origin is None in release,
             // but we guard here too in case validate() is bypassed.
             #[cfg(not(debug_assertions))]
-            panic!("GANTRY_CORS_ORIGIN must be set in production");
+            return Err(config::ConfigError::MissingCorsOriginInRelease);
 
             #[cfg(debug_assertions)]
             {
                 tracing::warn!(
                     "GANTRY_CORS_ORIGIN is not set — CORS is permissive (debug build only)"
                 );
-                CorsLayer::permissive()
+                Ok(CorsLayer::permissive())
             }
         }
     }
