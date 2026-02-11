@@ -45,6 +45,14 @@ pub struct Config {
     /// Allowed CORS origin (e.g. "http://localhost:5173"). When unset, CORS is permissive.
     #[serde(default)]
     pub cors_origin: Option<String>,
+
+    /// Maximum database connection pool size (default: 20)
+    #[serde(default = "default_max_db_connections")]
+    pub max_db_connections: u32,
+
+    /// SSE broadcast channel capacity (default: 4096)
+    #[serde(default = "default_sse_broadcast_capacity")]
+    pub sse_broadcast_capacity: usize,
 }
 
 fn default_bind_addr() -> String {
@@ -65,6 +73,14 @@ fn default_cookie_secure() -> bool {
 
 fn default_session_cleanup_interval_secs() -> u64 {
     3600 // 1 hour
+}
+
+fn default_max_db_connections() -> u32 {
+    20
+}
+
+fn default_sse_broadcast_capacity() -> usize {
+    4096
 }
 
 impl Config {
@@ -132,6 +148,8 @@ impl Default for Config {
             repository_path: None,
             session_cleanup_interval_secs: default_session_cleanup_interval_secs(),
             cors_origin: None,
+            max_db_connections: default_max_db_connections(),
+            sse_broadcast_capacity: default_sse_broadcast_capacity(),
         }
     }
 }
@@ -214,5 +232,17 @@ mod tests {
             ..Default::default()
         };
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_max_db_connections_defaults_to_20() {
+        let config = Config::default();
+        assert_eq!(config.max_db_connections, 20);
+    }
+
+    #[test]
+    fn test_sse_broadcast_capacity_defaults_to_4096() {
+        let config = Config::default();
+        assert_eq!(config.sse_broadcast_capacity, 4096);
     }
 }

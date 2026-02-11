@@ -38,8 +38,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    let pool = db::init_pool(&config.database_url).await?;
-    let sse_hub = Arc::new(SseHub::default());
+    let pool = db::init_pool(&config.database_url, config.max_db_connections).await?;
+    let sse_hub = Arc::new(SseHub::new(config.sse_broadcast_capacity));
 
     let repo_path = config
         .repository_path
