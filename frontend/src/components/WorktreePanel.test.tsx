@@ -177,6 +177,18 @@ describe('WorktreePanel', () => {
     expect(screen.getByText(/no worktrees/i)).toBeInTheDocument();
   });
 
+  it('shows error state when fetch fails', () => {
+    vi.mocked(worktreesApi.useListWorktrees).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    } as unknown as ReturnType<typeof worktreesApi.useListWorktrees>);
+
+    renderWithProviders(<WorktreePanel />);
+
+    expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
+  });
+
   it('shows invalid badge for invalid worktrees', () => {
     vi.mocked(worktreesApi.useListWorktrees).mockReturnValue({
       data: [

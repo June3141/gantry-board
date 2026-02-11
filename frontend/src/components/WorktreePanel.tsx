@@ -1,5 +1,7 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
+  getListWorktreesQueryKey,
   useCreateWorktree,
   useDeleteWorktree,
   useListWorktrees,
@@ -10,15 +12,19 @@ export function WorktreePanel() {
   const [error, setError] = useState<string | null>(null);
   const [deletingName, setDeletingName] = useState<string | null>(null);
 
-  const { data: worktrees, isLoading } = useListWorktrees();
+  const queryClient = useQueryClient();
+  const { data: worktrees, isLoading, isError } = useListWorktrees();
   const createWorktree = useCreateWorktree();
   const deleteWorktree = useDeleteWorktree();
+
+  const invalidateList = () => queryClient.invalidateQueries({ queryKey: getListWorktreesQueryKey() });
 
   const handleCreate = async () => {
     setError(null);
     try {
       await createWorktree.mutateAsync({ data: { name: name.trim() } });
       setName('');
+      await invalidateList();
     } catch {
       setError('Failed to create worktree. Please try again.');
     }
@@ -29,6 +35,7 @@ export function WorktreePanel() {
     try {
       await deleteWorktree.mutateAsync({ name: worktreeName });
       setDeletingName(null);
+      await invalidateList();
     } catch {
       setError('Failed to delete worktree. Please try again.');
     }
@@ -36,6 +43,10 @@ export function WorktreePanel() {
 
   if (isLoading) {
     return <p className="text-sm text-gray-500">Loading worktrees...</p>;
+  }
+
+  if (isError) {
+    return <p className="text-sm text-red-500">Failed to load worktrees.</p>;
   }
 
   return (
@@ -64,14 +75,16 @@ export function WorktreePanel() {
                   <button
                     type="button"
                     onClick={() => setDeletingName(null)}
-                    className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
+                    disabled={deleteWorktree.isPending}
+                    className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(wt.name)}
-                    className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
+                    disabled={deleteWorktree.isPending}
+                    className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700 disabled:opacity-50"
                   >
                     Confirm
                   </button>
