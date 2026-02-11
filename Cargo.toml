@@ -13,7 +13,7 @@ repository = "https://github.com/June3141/gantry_board"
 tokio = { version = "1", features = ["full"] }
 axum = { version = "0.8", features = ["ws"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "compression-gzip", "trace"] }
+tower-http = { version = "0.6", features = ["cors", "compression-gzip", "trace", "timeout"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }

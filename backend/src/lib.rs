@@ -12,6 +12,7 @@ pub mod sse;
 pub mod test_helpers;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::http::Method;
 use axum::routing::{delete, get, patch, post};
@@ -20,6 +21,7 @@ use sqlx::SqlitePool;
 use tower_governor::governor::GovernorConfigBuilder;
 use tower_governor::GovernorLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -167,15 +169,20 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/worktrees/{name}",
             delete(handlers::worktrees::delete_worktree),
         )
-        // SSE for real-time updates (rate-limited)
-        .route(
-            "/events",
-            get(sse::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
-        )
         // CSRF protection: require X-Requested-With header on state-changing requests
         .layer(axum::middleware::from_fn(auth::csrf::csrf_check))
         // General API rate limit applied to all routes
-        .layer(GovernorLayer::new(general_governor));
+        .layer(GovernorLayer::new(general_governor))
+        // Request timeout (SSE excluded — it's merged after this layer)
+        .layer(TimeoutLayer::with_status_code(
+            axum::http::StatusCode::REQUEST_TIMEOUT,
+            Duration::from_secs(state.config.request_timeout_secs),
+        ))
+        // SSE route: no timeout (long-lived streaming), own rate limit only
+        .merge(Router::new().route(
+            "/events",
+            get(sse::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
+        ));
 
     Ok(Router::new()
         .route("/health", get(handlers::health::health_check))

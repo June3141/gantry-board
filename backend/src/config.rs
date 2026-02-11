@@ -53,6 +53,14 @@ pub struct Config {
     /// SSE broadcast channel capacity (default: 4096)
     #[serde(default = "default_sse_broadcast_capacity")]
     pub sse_broadcast_capacity: usize,
+
+    /// Retention period in days for agent session outputs (default: 30)
+    #[serde(default = "default_output_retention_days")]
+    pub output_retention_days: u64,
+
+    /// HTTP request timeout in seconds (default: 60)
+    #[serde(default = "default_request_timeout_secs")]
+    pub request_timeout_secs: u64,
 }
 
 fn default_bind_addr() -> String {
@@ -81,6 +89,14 @@ fn default_max_db_connections() -> u32 {
 
 fn default_sse_broadcast_capacity() -> usize {
     4096
+}
+
+fn default_output_retention_days() -> u64 {
+    30
+}
+
+fn default_request_timeout_secs() -> u64 {
+    60
 }
 
 impl Config {
@@ -150,6 +166,8 @@ impl Default for Config {
             cors_origin: None,
             max_db_connections: default_max_db_connections(),
             sse_broadcast_capacity: default_sse_broadcast_capacity(),
+            output_retention_days: default_output_retention_days(),
+            request_timeout_secs: default_request_timeout_secs(),
         }
     }
 }
@@ -244,5 +262,17 @@ mod tests {
     fn test_sse_broadcast_capacity_defaults_to_4096() {
         let config = Config::default();
         assert_eq!(config.sse_broadcast_capacity, 4096);
+    }
+
+    #[test]
+    fn test_output_retention_days_defaults_to_30() {
+        let config = Config::default();
+        assert_eq!(config.output_retention_days, 30);
+    }
+
+    #[test]
+    fn test_request_timeout_defaults_to_60() {
+        let config = Config::default();
+        assert_eq!(config.request_timeout_secs, 60);
     }
 }
