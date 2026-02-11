@@ -53,14 +53,16 @@ impl IntoResponse for AppError {
                 (StatusCode::UNAUTHORIZED, "invalid credentials".to_string())
             }
             AppError::Internal(msg) => {
-                tracing::error!(msg, "internal server error");
+                tracing::debug!(msg, "internal server error details");
+                tracing::error!("internal server error");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal server error".to_string(),
                 )
             }
             AppError::Database(err) => {
-                tracing::error!(%err, "database error");
+                tracing::debug!(%err, "database error details");
+                tracing::error!("database error");
                 // Check for constraint violations
                 let err_str = err.to_string();
                 if err_str.contains("UNIQUE constraint failed") {
@@ -88,12 +90,14 @@ impl IntoResponse for AppError {
                     return AppError::Validation(err.message().to_string()).into_response();
                 }
                 _ => {
-                    tracing::error!(%err, "git error");
+                    tracing::debug!(%err, "git error details");
+                    tracing::error!("git error");
                     (StatusCode::INTERNAL_SERVER_ERROR, "git error".to_string())
                 }
             },
             AppError::Anyhow(err) => {
-                tracing::error!(%err, "internal server error");
+                tracing::debug!(%err, "internal server error details");
+                tracing::error!("internal server error");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal server error".to_string(),
