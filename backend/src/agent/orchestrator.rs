@@ -12,7 +12,7 @@ use crate::error::{AppError, AppResult};
 use crate::models::agent_session::{
     AgentSessionStatus, AgentType, CreateAgentSessionRequest, UpdateAgentSessionRequest,
 };
-use crate::services::{agent_session_service, worktree_service};
+use crate::services::{agent_session_output_service, agent_session_service, worktree_service};
 use crate::sse::event::SseEvent;
 use crate::sse::hub::SseHub;
 
@@ -293,6 +293,7 @@ impl AgentOrchestrator {
         tokio::spawn(async move {
             // Track terminal event to determine final status
             let mut final_status = AgentSessionStatus::Completed;
+            let mut sequence: i64 = 0;
 
             // Drain output events until the channel closes
             while let Some(event) = output_rx.recv().await {
@@ -303,6 +304,15 @@ impl AgentOrchestrator {
                         break;
                     }
                     AgentOutputEvent::Output { text } => {
+                        // Best-effort persistence
+                        if let Err(e) = agent_session_output_service::append_output(
+                            &pool, session_id, sequence, &text,
+                        )
+                        .await
+                        {
+                            warn!("failed to persist output for session {session_id} seq {sequence}: {e}");
+                        }
+                        sequence += 1;
                         sse_hub.broadcast(SseEvent::agent_output(session_id, text));
                     }
                 }
