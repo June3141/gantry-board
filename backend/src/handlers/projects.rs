@@ -2,25 +2,22 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use garde::Validate;
-use serde::Deserialize;
 use uuid::Uuid;
+
+use serde::Deserialize;
 
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
-use crate::models::pagination::PaginatedResponse;
+use crate::models::pagination::{self, PaginatedResponse};
 use crate::models::project::{
     AddMemberRequest, CreateProjectRequest, MemberRole, Project, UpdateProjectRequest,
 };
 use crate::services::{authorization_service, member_service, project_service};
 use crate::AppState;
 
-fn default_limit() -> i64 {
-    50
-}
-
 #[derive(Debug, Deserialize)]
 pub struct ListProjectsQuery {
-    #[serde(default = "default_limit")]
+    #[serde(default = "pagination::default_limit")]
     pub limit: i64,
     #[serde(default)]
     pub offset: i64,
@@ -43,6 +40,7 @@ pub async fn list_projects(
     auth: AuthUser,
     Query(query): Query<ListProjectsQuery>,
 ) -> AppResult<Json<PaginatedResponse<Project>>> {
+    pagination::validate(query.limit, query.offset)?;
     let (projects, total) = {
         #[cfg(debug_assertions)]
         if auth.user_id.is_nil() {

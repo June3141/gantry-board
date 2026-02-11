@@ -7,20 +7,16 @@ use uuid::Uuid;
 
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
-use crate::models::pagination::PaginatedResponse;
+use crate::models::pagination::{self, PaginatedResponse};
 use crate::models::task::{CreateTaskRequest, Task, UpdateTaskRequest};
 use crate::services::{authorization_service, project_service, task_service};
 use crate::sse::event::SseEvent;
 use crate::AppState;
 
-fn default_limit() -> i64 {
-    50
-}
-
 #[derive(Debug, Deserialize)]
 pub struct ListTasksQuery {
     pub project_id: Uuid,
-    #[serde(default = "default_limit")]
+    #[serde(default = "pagination::default_limit")]
     pub limit: i64,
     #[serde(default)]
     pub offset: i64,
@@ -46,6 +42,7 @@ pub async fn list_tasks(
     auth: AuthUser,
     Query(query): Query<ListTasksQuery>,
 ) -> AppResult<Json<PaginatedResponse<Task>>> {
+    pagination::validate(query.limit, query.offset)?;
     project_service::get_project(&state.pool, query.project_id).await?;
     authorization_service::require_project_member(&state.pool, auth.user_id, query.project_id)
         .await?;
