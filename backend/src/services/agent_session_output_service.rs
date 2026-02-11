@@ -5,27 +5,72 @@ use crate::error::{AppError, AppResult};
 use crate::models::agent_session_output::{AgentSessionOutput, AgentSessionOutputRow};
 
 pub async fn append_output(
-    _pool: &SqlitePool,
-    _session_id: Uuid,
-    _sequence: i64,
-    _content: &str,
+    pool: &SqlitePool,
+    session_id: Uuid,
+    sequence: i64,
+    content: &str,
 ) -> AppResult<AgentSessionOutput> {
-    todo!()
+    let row = sqlx::query_as::<_, AgentSessionOutputRow>(
+        r#"
+        INSERT INTO agent_session_outputs (session_id, sequence, content)
+        VALUES ($1, $2, $3)
+        RETURNING id, session_id, sequence, content, created_at
+        "#,
+    )
+    .bind(session_id.to_string())
+    .bind(sequence)
+    .bind(content)
+    .fetch_one(pool)
+    .await?;
+
+    row.try_into()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
 pub async fn get_outputs(
-    _pool: &SqlitePool,
-    _session_id: Uuid,
+    pool: &SqlitePool,
+    session_id: Uuid,
 ) -> AppResult<Vec<AgentSessionOutput>> {
-    todo!()
+    let rows = sqlx::query_as::<_, AgentSessionOutputRow>(
+        r#"
+        SELECT id, session_id, sequence, content, created_at
+        FROM agent_session_outputs
+        WHERE session_id = $1
+        ORDER BY sequence ASC
+        "#,
+    )
+    .bind(session_id.to_string())
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
 pub async fn get_outputs_after(
-    _pool: &SqlitePool,
-    _session_id: Uuid,
-    _after_sequence: i64,
+    pool: &SqlitePool,
+    session_id: Uuid,
+    after_sequence: i64,
 ) -> AppResult<Vec<AgentSessionOutput>> {
-    todo!()
+    let rows = sqlx::query_as::<_, AgentSessionOutputRow>(
+        r#"
+        SELECT id, session_id, sequence, content, created_at
+        FROM agent_session_outputs
+        WHERE session_id = $1 AND sequence > $2
+        ORDER BY sequence ASC
+        "#,
+    )
+    .bind(session_id.to_string())
+    .bind(after_sequence)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
 #[cfg(test)]
