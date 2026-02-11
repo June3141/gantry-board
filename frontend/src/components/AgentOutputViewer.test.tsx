@@ -26,4 +26,11 @@ describe('AgentOutputViewer', () => {
     expect(container).toHaveClass('bg-gray-900');
     expect(container).toHaveClass('font-mono');
   });
+
+  it('shows loading state when isLoading is true', () => {
+    render(<AgentOutputViewer lines={[]} isLoading={true} />);
+    expect(screen.getByText(/loading output/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no output yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-output-container')).not.toBeInTheDocument();
+  });
 });
