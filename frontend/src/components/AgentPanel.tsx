@@ -138,14 +138,16 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
                 {activeSession.status}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={handleStop}
-              disabled={stopSession.isPending}
-              className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              Stop
-            </button>
+            {!TERMINAL_STATUSES.includes(activeSession.status) && (
+              <button
+                type="button"
+                onClick={handleStop}
+                disabled={stopSession.isPending}
+                className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                Stop
+              </button>
+            )}
           </div>
           <AgentOutputViewer lines={outputLines} isLoading={false} />
         </div>
