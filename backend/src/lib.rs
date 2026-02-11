@@ -35,7 +35,7 @@ pub struct AppState {
     pub orchestrator: Arc<AgentOrchestrator>,
 }
 
-pub fn app(state: AppState) -> Router {
+pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
     // Rate limit: login — 5 attempts per 15 min per IP.
     // per_second(N) sets the replenishment *interval* to N seconds (NOT N req/sec).
     let login_governor = GovernorConfigBuilder::default()
@@ -55,6 +55,27 @@ pub fn app(state: AppState) -> Router {
     let general_governor = GovernorConfigBuilder::default()
         .per_second(1) // refill 1 token per second
         .burst_size(60) // bucket capacity: allows initial burst up to 60
+        .finish()
+        .expect("valid governor config");
+
+    // Rate limit: agent start — 1 per 10 seconds, burst 3 per IP.
+    let agent_start_governor = GovernorConfigBuilder::default()
+        .per_second(10) // 1 token every 10s
+        .burst_size(3) // bucket capacity
+        .finish()
+        .expect("valid governor config");
+
+    // Rate limit: agent restart — same as start.
+    let agent_restart_governor = GovernorConfigBuilder::default()
+        .per_second(10)
+        .burst_size(3)
+        .finish()
+        .expect("valid governor config");
+
+    // Rate limit: SSE connections — 5 connections per 10 seconds per IP.
+    let sse_governor = GovernorConfigBuilder::default()
+        .per_second(10) // 1 token every 10s
+        .burst_size(5) // bucket capacity
         .finish()
         .expect("valid governor config");
 
@@ -122,7 +143,8 @@ pub fn app(state: AppState) -> Router {
         )
         .route(
             "/tasks/{task_id}/sessions/start",
-            post(handlers::agent_sessions::start_agent_session),
+            post(handlers::agent_sessions::start_agent_session)
+                .layer(GovernorLayer::new(agent_start_governor)),
         )
         .route(
             "/tasks/{task_id}/sessions/{session_id}/stop",
@@ -134,7 +156,8 @@ pub fn app(state: AppState) -> Router {
         )
         .route(
             "/tasks/{task_id}/sessions/{session_id}/restart",
-            post(handlers::agent_sessions::restart_agent_session),
+            post(handlers::agent_sessions::restart_agent_session)
+                .layer(GovernorLayer::new(agent_restart_governor)),
         )
         // Worktree endpoints
         .route("/worktrees", get(handlers::worktrees::list_worktrees))
@@ -144,42 +167,50 @@ pub fn app(state: AppState) -> Router {
             "/worktrees/{name}",
             delete(handlers::worktrees::delete_worktree),
         )
-        // SSE for real-time updates
-        .route("/events", get(sse::handler::sse_handler))
+        // SSE for real-time updates (rate-limited)
+        .route(
+            "/events",
+            get(sse::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
+        )
+        // CSRF protection: require X-Requested-With header on state-changing requests
+        .layer(axum::middleware::from_fn(auth::csrf::csrf_check))
         // General API rate limit applied to all routes
         .layer(GovernorLayer::new(general_governor));
 
-    Router::new()
+    Ok(Router::new()
         .route("/health", get(handlers::health::health_check))
         .nest("/api", api_routes)
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
         )
-        .layer(build_cors_layer(&state.config))
+        .layer(build_cors_layer(&state.config)?)
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .with_state(state))
 }
 
-fn build_cors_layer(config: &config::Config) -> CorsLayer {
-    match config.cors_origin_header() {
-        Some(origin) => CorsLayer::new()
+fn build_cors_layer(config: &config::Config) -> Result<CorsLayer, config::ConfigError> {
+    match config.cors_origin_header()? {
+        Some(origin) => Ok(CorsLayer::new()
             .allow_origin(AllowOrigin::exact(origin))
             .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-            .allow_headers([axum::http::header::CONTENT_TYPE])
-            .allow_credentials(true),
+            .allow_headers([
+                axum::http::header::CONTENT_TYPE,
+                axum::http::HeaderName::from_static("x-requested-with"),
+            ])
+            .allow_credentials(true)),
         None => {
             // Defense in depth: release builds must never reach this branch.
-            // Config::validate() already panics if cors_origin is None in release,
+            // Config::validate() already returns Err if cors_origin is None in release,
             // but we guard here too in case validate() is bypassed.
             #[cfg(not(debug_assertions))]
-            panic!("GANTRY_CORS_ORIGIN must be set in production");
+            return Err(config::ConfigError::MissingCorsOriginInRelease);
 
             #[cfg(debug_assertions)]
             {
                 tracing::warn!(
                     "GANTRY_CORS_ORIGIN is not set — CORS is permissive (debug build only)"
                 );
-                CorsLayer::permissive()
+                Ok(CorsLayer::permissive())
             }
         }
     }

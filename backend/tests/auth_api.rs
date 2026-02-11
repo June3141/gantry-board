@@ -65,7 +65,7 @@ async fn test_register_validates_password_length() {
 }
 
 #[tokio::test]
-async fn test_register_duplicate_email_fails() {
+async fn test_register_duplicate_email_returns_generic_error() {
     let server = create_test_server().await;
 
     let body = json!({
@@ -77,10 +77,22 @@ async fn test_register_duplicate_email_fails() {
     // First registration should succeed
     server.post("/api/auth/register").json(&body).await;
 
-    // Second registration should fail
+    // Second registration should fail with a generic message (not 409 Conflict)
+    // to prevent user enumeration via registration
     let response = server.post("/api/auth/register").json(&body).await;
 
-    response.assert_status(StatusCode::CONFLICT);
+    response.assert_status(StatusCode::BAD_REQUEST);
+
+    let error_body: serde_json::Value = response.json();
+    let error_msg = error_body["error"].as_str().unwrap_or("");
+    assert!(
+        !error_msg.contains("email"),
+        "error message should not reveal email exists: {error_msg}"
+    );
+    assert!(
+        !error_msg.contains("already exists"),
+        "error message should not reveal resource exists: {error_msg}"
+    );
 }
 
 #[tokio::test]
@@ -258,6 +270,49 @@ async fn test_logout_without_auth() {
     let response = server.post("/api/auth/logout").await;
 
     response.assert_status(StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_login_invalidates_previous_sessions() {
+    let server = create_test_server().await;
+
+    // Register user
+    let register_response = server
+        .post("/api/auth/register")
+        .json(&json!({
+            "email": "test@example.com",
+            "name": "Test User",
+            "password": "Tr0ub4dor&3-correct-horse"
+        }))
+        .await;
+
+    let old_cookie = register_response
+        .headers()
+        .get("set-cookie")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
+
+    // Login (creates new session, should invalidate old one)
+    let _login_response = server
+        .post("/api/auth/login")
+        .json(&json!({
+            "email": "test@example.com",
+            "password": "Tr0ub4dor&3-correct-horse"
+        }))
+        .await;
+
+    // Old session should now be invalid
+    let me_response = server
+        .get("/api/auth/me")
+        .add_header(header::COOKIE, &*old_cookie)
+        .await;
+
+    me_response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]

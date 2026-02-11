@@ -38,8 +38,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    let pool = db::init_pool(&config.database_url).await?;
-    let sse_hub = Arc::new(SseHub::default());
+    let pool = db::init_pool(&config.database_url, config.max_db_connections).await?;
+    let sse_hub = Arc::new(SseHub::new(config.sse_broadcast_capacity));
 
     let repo_path = config
         .repository_path
@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config: Arc::new(config.clone()),
         orchestrator,
     };
-    let app = gantry_board::app(state);
+    let app = gantry_board::app(state)?;
 
     // Spawn background task for periodic session cleanup
     let cleanup_interval_secs = config.session_cleanup_interval_secs.max(1);

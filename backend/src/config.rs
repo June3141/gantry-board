@@ -3,6 +3,16 @@ use figment::providers::{Env, Format, Toml};
 use figment::Figment;
 use serde::Deserialize;
 
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigError {
+    #[error("GANTRY_CORS_ORIGIN is not a valid HTTP header value: {0:?}")]
+    InvalidCorsOrigin(String),
+    #[error(
+        "GANTRY_CORS_ORIGIN must be set in production. Permissive CORS is only allowed in debug builds."
+    )]
+    MissingCorsOriginInRelease,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     #[serde(default = "default_bind_addr")]
@@ -35,6 +45,14 @@ pub struct Config {
     /// Allowed CORS origin (e.g. "http://localhost:5173"). When unset, CORS is permissive.
     #[serde(default)]
     pub cors_origin: Option<String>,
+
+    /// Maximum database connection pool size (default: 20)
+    #[serde(default = "default_max_db_connections")]
+    pub max_db_connections: u32,
+
+    /// SSE broadcast channel capacity (default: 4096)
+    #[serde(default = "default_sse_broadcast_capacity")]
+    pub sse_broadcast_capacity: usize,
 }
 
 fn default_bind_addr() -> String {
@@ -57,6 +75,14 @@ fn default_session_cleanup_interval_secs() -> u64 {
     3600 // 1 hour
 }
 
+fn default_max_db_connections() -> u32 {
+    20
+}
+
+fn default_sse_broadcast_capacity() -> usize {
+    4096
+}
+
 impl Config {
     pub fn load() -> Result<Self, Box<figment::Error>> {
         dotenvy::dotenv().ok();
@@ -66,27 +92,28 @@ impl Config {
             .merge(Env::prefixed("GANTRY_"))
             .extract()?;
 
-        config.validate();
+        config
+            .validate()
+            .map_err(|e| figment::Error::from(e.to_string()))?;
 
         Ok(config)
     }
 
     /// Validate config values that cannot be expressed via serde alone.
-    pub fn validate(&self) {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if let Some(origin) = &self.cors_origin {
-            origin.parse::<HeaderValue>().unwrap_or_else(|_| {
-                panic!("GANTRY_CORS_ORIGIN is not a valid HTTP header value: {origin:?}")
-            });
+            origin
+                .parse::<HeaderValue>()
+                .map_err(|_| ConfigError::InvalidCorsOrigin(origin.clone()))?;
         }
 
         // In release builds, CORS origin must be explicitly configured
         #[cfg(not(debug_assertions))]
         if self.cors_origin.is_none() {
-            panic!(
-                "GANTRY_CORS_ORIGIN must be set in production. \
-                 Permissive CORS is only allowed in debug builds."
-            );
+            return Err(ConfigError::MissingCorsOriginInRelease);
         }
+
+        Ok(())
     }
 
     /// Return the repository path for worktree management.
@@ -98,10 +125,14 @@ impl Config {
     }
 
     /// Parse `cors_origin` into an `HeaderValue`, returning `None` when unset.
-    pub fn cors_origin_header(&self) -> Option<HeaderValue> {
-        self.cors_origin
-            .as_ref()
-            .map(|o| o.parse().expect("cors_origin already validated"))
+    pub fn cors_origin_header(&self) -> Result<Option<HeaderValue>, ConfigError> {
+        match &self.cors_origin {
+            Some(o) => o
+                .parse()
+                .map(Some)
+                .map_err(|_| ConfigError::InvalidCorsOrigin(o.clone())),
+            None => Ok(None),
+        }
     }
 }
 
@@ -117,6 +148,8 @@ impl Default for Config {
             repository_path: None,
             session_cleanup_interval_secs: default_session_cleanup_interval_secs(),
             cors_origin: None,
+            max_db_connections: default_max_db_connections(),
+            sse_broadcast_capacity: default_sse_broadcast_capacity(),
         }
     }
 }
@@ -151,7 +184,7 @@ mod tests {
     #[test]
     fn test_cors_origin_header_returns_none_when_unset() {
         let config = Config::default();
-        assert!(config.cors_origin_header().is_none());
+        assert!(config.cors_origin_header().unwrap().is_none());
     }
 
     #[test]
@@ -160,18 +193,20 @@ mod tests {
             cors_origin: Some("http://localhost:5173".to_string()),
             ..Default::default()
         };
-        let header = config.cors_origin_header().expect("should return header");
+        let header = config
+            .cors_origin_header()
+            .expect("should not error")
+            .expect("should return Some");
         assert_eq!(header.to_str().unwrap(), "http://localhost:5173");
     }
 
     #[test]
-    #[should_panic(expected = "not a valid HTTP header value")]
     fn test_validate_rejects_invalid_cors_origin() {
         let config = Config {
             cors_origin: Some("not a valid \x00 header".to_string()),
             ..Default::default()
         };
-        config.validate();
+        assert!(config.validate().is_err());
     }
 
     #[test]
@@ -186,7 +221,7 @@ mod tests {
             cors_origin: Some("http://localhost:5173".to_string()),
             ..Default::default()
         };
-        config.validate(); // should not panic
+        assert!(config.validate().is_ok());
     }
 
     #[cfg(debug_assertions)]
@@ -196,6 +231,18 @@ mod tests {
             cors_origin: None,
             ..Default::default()
         };
-        config.validate(); // should not panic in debug builds
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_max_db_connections_defaults_to_20() {
+        let config = Config::default();
+        assert_eq!(config.max_db_connections, 20);
+    }
+
+    #[test]
+    fn test_sse_broadcast_capacity_defaults_to_4096() {
+        let config = Config::default();
+        assert_eq!(config.sse_broadcast_capacity, 4096);
     }
 }

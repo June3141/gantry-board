@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use sqlx::prelude::FromRow;
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
@@ -125,6 +125,89 @@ pub async fn save_prompt(pool: &SqlitePool, session_id: Uuid, prompt: &str) -> A
     .bind(prompt)
     .bind(session_id.to_string())
     .execute(pool)
+    .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!(
+            "Agent session {session_id} not found"
+        )));
+    }
+    Ok(())
+}
+
+/// Check that no active (pending/running) session exists for a task, using a connection (for transactions).
+pub async fn check_no_active_session_tx(
+    conn: &mut SqliteConnection,
+    task_id: Uuid,
+) -> AppResult<()> {
+    let row = sqlx::query_as::<_, AgentSessionRow>(
+        r#"
+        SELECT id, task_id, agent_type, status, prompt, started_at, finished_at, created_at, updated_at
+        FROM agent_sessions
+        WHERE task_id = $1 AND status IN ('pending', 'running')
+        LIMIT 1
+        "#,
+    )
+    .bind(task_id.to_string())
+    .fetch_optional(&mut *conn)
+    .await?;
+
+    if row.is_some() {
+        return Err(AppError::Conflict(format!(
+            "task {task_id} already has an active agent session"
+        )));
+    }
+    Ok(())
+}
+
+/// Create an agent session using a connection (for transactions).
+pub async fn create_agent_session_tx(
+    conn: &mut SqliteConnection,
+    task_id: Uuid,
+    req: &CreateAgentSessionRequest,
+) -> AppResult<AgentSession> {
+    let id = Uuid::new_v4();
+    let now = Utc::now();
+
+    sqlx::query(
+        r#"
+        INSERT INTO agent_sessions (id, task_id, agent_type, status, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        "#,
+    )
+    .bind(id.to_string())
+    .bind(task_id.to_string())
+    .bind(&req.agent_type)
+    .bind(&AgentSessionStatus::Pending)
+    .bind(now)
+    .bind(now)
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(AgentSession {
+        id,
+        task_id,
+        agent_type: req.agent_type.clone(),
+        status: AgentSessionStatus::Pending,
+        prompt: None,
+        started_at: None,
+        finished_at: None,
+        created_at: now,
+        updated_at: now,
+    })
+}
+
+/// Save prompt for a session using a connection (for transactions).
+pub async fn save_prompt_tx(
+    conn: &mut SqliteConnection,
+    session_id: Uuid,
+    prompt: &str,
+) -> AppResult<()> {
+    let result = sqlx::query(
+        "UPDATE agent_sessions SET prompt = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+    )
+    .bind(prompt)
+    .bind(session_id.to_string())
+    .execute(&mut *conn)
     .await?;
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound(format!(
