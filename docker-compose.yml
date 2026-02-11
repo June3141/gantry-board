@@ -12,8 +12,8 @@ services:
     working_dir: /workspace
     environment:
       - RUST_LOG=info
-      - BIND_ADDR=0.0.0.0:3000
-      - DATABASE_URL=sqlite:/workspace/backend/data/gantry_board.db?mode=rwc
+      - GANTRY_BIND_ADDR=0.0.0.0:3000
+      - GANTRY_DATABASE_URL=sqlite:/workspace/backend/data/gantry_board.db?mode=rwc
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s

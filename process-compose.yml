@@ -5,8 +5,8 @@ processes:
     command: cargo watch -w backend/src -x "run -p gantry-board"
     environment:
       - "RUST_LOG=info"
-      - "BIND_ADDR=0.0.0.0:3000"
-      - "DATABASE_URL=sqlite:backend/data/gantry_board.db?mode=rwc"
+      - "GANTRY_BIND_ADDR=0.0.0.0:3000"
+      - "GANTRY_DATABASE_URL=sqlite:backend/data/gantry_board.db?mode=rwc"
     readiness_probe:
       http_get:
         host: localhost
