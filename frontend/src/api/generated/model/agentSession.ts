@@ -7,6 +7,7 @@
  */
 
 import type { AgentSessionFinishedAt } from './agentSessionFinishedAt';
+import type { AgentSessionPrompt } from './agentSessionPrompt';
 import type { AgentSessionStartedAt } from './agentSessionStartedAt';
 import type { AgentSessionStatus } from './agentSessionStatus';
 import type { AgentType } from './agentType';
@@ -16,6 +17,7 @@ export interface AgentSession {
   created_at: string;
   finished_at?: AgentSessionFinishedAt;
   id: string;
+  prompt?: AgentSessionPrompt;
   started_at?: AgentSessionStartedAt;
   status: AgentSessionStatus;
   task_id: string;
