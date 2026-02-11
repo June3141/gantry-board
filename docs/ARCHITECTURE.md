@@ -272,7 +272,7 @@ POST /tasks/{id}/sessions/start
 
 ```
 Claude Code:
-  Command: claude -p --output-format=stream-json [--allowedTools ...]
+  Command: claude -p --output-format=stream-json --include-partial-messages [--allowedTools ...]
   stdin:   <prompt>
   stdout:  NDJSON stream → parse_stream_line()
            ├─ { type: "stream_event", event: { delta: { text } } } → Output
@@ -288,7 +288,7 @@ Gemini CLI:
 ### Concurrency Control
 
 1. **Memory lock**: per-task `Arc<Mutex<()>>` で start_session 呼び出しを直列化
-2. **DB constraint**: `UNIQUE INDEX ... WHERE status IN ('pending', 'running')` で同一タスク同時セッション防止
+2. **Runtime check**: orchestrator が DB 上のアクティブセッション有無を確認し、存在すれば 409 エラーを返す
 
 ## Database Schema
 
@@ -325,8 +325,8 @@ Gemini CLI:
                                              │ status          │
                                              │ started_at      │
                                              │ finished_at     │
-                                             │ (UQ: task_id    │
-                                             │  WHERE active)  │
+                                             │ (app-level:     │
+                                             │  1 active/task) │
                                              └────────┬────────┘
                                                       │
                                              ┌────────┴─────────────┐
@@ -389,7 +389,7 @@ Workflow: `task api:generate` で OpenAPI spec → TypeScript クライアント
 | **CORS** | `AllowOrigin::exact(origin)` in production | `GANTRY_CORS_ORIGIN` |
 | **Rate Limit (login)** | 5 req / 15 min per IP | tower_governor |
 | **Rate Limit (register)** | 3 req / hour per IP | tower_governor |
-| **Rate Limit (general)** | 60 req burst per IP | tower_governor |
+| **Rate Limit (general API)** | ~1 req/s, 60 burst per IP | tower_governor |
 | **Tracing** | HTTP request/response logging | `RUST_LOG` env |
 
 ## Development Commands
