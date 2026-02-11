@@ -29,7 +29,15 @@ pub async fn register(
     body.validate_with(&ctx)
         .map_err(|e| AppError::Validation(e.to_string()))?;
 
-    let user = user_service::create_user(&state.pool, &body).await?;
+    let user = match user_service::create_user(&state.pool, &body).await {
+        Ok(user) => user,
+        Err(AppError::Database(ref e)) if e.to_string().contains("UNIQUE constraint failed") => {
+            return Err(AppError::Validation(
+                "unable to complete registration".to_string(),
+            ));
+        }
+        Err(e) => return Err(e),
+    };
 
     // Create session for the new user
     let session =

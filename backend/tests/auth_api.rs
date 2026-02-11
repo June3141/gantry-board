@@ -65,7 +65,7 @@ async fn test_register_validates_password_length() {
 }
 
 #[tokio::test]
-async fn test_register_duplicate_email_fails() {
+async fn test_register_duplicate_email_returns_generic_error() {
     let server = create_test_server().await;
 
     let body = json!({
@@ -77,10 +77,22 @@ async fn test_register_duplicate_email_fails() {
     // First registration should succeed
     server.post("/api/auth/register").json(&body).await;
 
-    // Second registration should fail
+    // Second registration should fail with a generic message (not 409 Conflict)
+    // to prevent user enumeration via registration
     let response = server.post("/api/auth/register").json(&body).await;
 
-    response.assert_status(StatusCode::CONFLICT);
+    response.assert_status(StatusCode::BAD_REQUEST);
+
+    let error_body: serde_json::Value = response.json();
+    let error_msg = error_body["error"].as_str().unwrap_or("");
+    assert!(
+        !error_msg.contains("email"),
+        "error message should not reveal email exists: {error_msg}"
+    );
+    assert!(
+        !error_msg.contains("already exists"),
+        "error message should not reveal resource exists: {error_msg}"
+    );
 }
 
 #[tokio::test]
