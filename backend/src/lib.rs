@@ -147,9 +147,9 @@ fn build_cors_layer(config: &config::Config) -> CorsLayer {
             .allow_headers([axum::http::header::CONTENT_TYPE])
             .allow_credentials(true),
         None => {
-            tracing::warn!(
-                "GANTRY_CORS_ORIGIN is not set — CORS is permissive; set it in production"
-            );
+            // Permissive CORS is only available in debug builds.
+            // Release builds enforce CORS origin via Config::validate().
+            tracing::warn!("GANTRY_CORS_ORIGIN is not set — CORS is permissive (debug build only)");
             CorsLayer::permissive()
         }
     }
