@@ -51,10 +51,10 @@ pub fn app(state: AppState) -> Router {
         .finish()
         .expect("valid governor config");
 
-    // General API rate limit: 60 requests per minute per IP.
+    // General API rate limit: ~1 req/s sustained, 60-request burst capacity per IP.
     let general_governor = GovernorConfigBuilder::default()
-        .per_second(1) // 1 token every second
-        .burst_size(60) // bucket capacity: allows bursts up to 60
+        .per_second(1) // refill 1 token per second
+        .burst_size(60) // bucket capacity: allows initial burst up to 60
         .finish()
         .expect("valid governor config");
 
