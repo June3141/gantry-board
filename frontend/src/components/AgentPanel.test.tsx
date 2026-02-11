@@ -10,6 +10,7 @@ vi.mock('../api/generated/endpoints/agent-sessions/agent-sessions', () => ({
   useListAgentSessions: vi.fn(),
   useStartAgentSession: vi.fn(),
   useStopAgentSession: vi.fn(),
+  useGetAgentSessionOutputs: vi.fn(),
 }));
 
 vi.mock('../hooks/useAgentEvents', () => ({
@@ -144,6 +145,66 @@ describe('AgentPanel', () => {
     await user.click(screen.getByRole('button', { name: /start/i }));
 
     expect(screen.getByText(/failed to start/i)).toBeInTheDocument();
+  });
+
+  it('shows past sessions list', () => {
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [
+        {
+          id: 'session-1',
+          task_id: 'task-1',
+          agent_type: 'claude_code',
+          status: 'completed',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'session-2',
+          task_id: 'task-1',
+          agent_type: 'gemini_cli',
+          status: 'failed',
+          created_at: '2026-01-02T00:00:00Z',
+          updated_at: '2026-01-02T00:00:00Z',
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    renderWithProviders(<AgentPanel taskId="task-1" />);
+    expect(screen.getByText(/past sessions/i)).toBeInTheDocument();
+  });
+
+  it('loads historical output when clicking past session', async () => {
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [
+        {
+          id: 'session-1',
+          task_id: 'task-1',
+          agent_type: 'claude_code',
+          status: 'completed',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    vi.mocked(agentSessionsApi.useGetAgentSessionOutputs).mockReturnValue({
+      data: [
+        { id: 1, session_id: 'session-1', sequence: 0, content: 'output line 1', created_at: '2026-01-01T00:00:00Z' },
+        { id: 2, session_id: 'session-1', sequence: 1, content: 'output line 2', created_at: '2026-01-01T00:00:01Z' },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useGetAgentSessionOutputs>);
+
+    const user = userEvent.setup();
+    renderWithProviders(<AgentPanel taskId="task-1" />);
+
+    // Click the past session to view its output
+    await user.click(screen.getByText(/session-1/i).closest('button')!);
+
+    // Output viewer should be visible with loaded history
+    expect(screen.getByTestId('agent-output-container')).toBeInTheDocument();
   });
 
   it('displays session status badge', () => {
