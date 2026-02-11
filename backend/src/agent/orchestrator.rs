@@ -12,7 +12,7 @@ use crate::error::{AppError, AppResult};
 use crate::models::agent_session::{
     AgentSessionStatus, AgentType, CreateAgentSessionRequest, UpdateAgentSessionRequest,
 };
-use crate::services::{agent_session_service, worktree_service};
+use crate::services::{agent_session_output_service, agent_session_service, worktree_service};
 use crate::sse::event::SseEvent;
 use crate::sse::hub::SseHub;
 
@@ -293,6 +293,7 @@ impl AgentOrchestrator {
         tokio::spawn(async move {
             // Track terminal event to determine final status
             let mut final_status = AgentSessionStatus::Completed;
+            let mut sequence: i64 = 0;
 
             // Drain output events until the channel closes
             while let Some(event) = output_rx.recv().await {
@@ -303,7 +304,16 @@ impl AgentOrchestrator {
                         break;
                     }
                     AgentOutputEvent::Output { text } => {
-                        sse_hub.broadcast(SseEvent::agent_output(session_id, text));
+                        sse_hub.broadcast(SseEvent::agent_output(session_id, text.clone()));
+                        // Best-effort persistence (after broadcast to avoid delaying SSE)
+                        if let Err(e) = agent_session_output_service::append_output(
+                            &pool, session_id, sequence, &text,
+                        )
+                        .await
+                        {
+                            warn!("failed to persist output for session {session_id} seq {sequence}: {e}");
+                        }
+                        sequence += 1;
                     }
                 }
             }
@@ -740,6 +750,91 @@ mod tests {
             event_types.contains(&"agent_session_status_changed".to_string()),
             "expected agent_session_status_changed event, got: {event_types:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn test_agent_output_is_persisted_to_db() {
+        use crate::agent::executor::AgentHandle;
+        use crate::services::agent_session_output_service;
+
+        /// Mock executor that sends multiple output events before completing.
+        struct PersistingOutputExecutor;
+
+        #[async_trait::async_trait]
+        impl AgentExecutor for PersistingOutputExecutor {
+            async fn start(&self, _config: AgentConfig) -> AppResult<AgentHandle> {
+                let cancel = CancellationToken::new();
+                let (tx, rx) = mpsc::channel(16);
+                let join_handle = tokio::spawn(async move {
+                    let _ = tx
+                        .send(AgentOutputEvent::Output {
+                            text: "line one".to_string(),
+                        })
+                        .await;
+                    let _ = tx
+                        .send(AgentOutputEvent::Output {
+                            text: "line two".to_string(),
+                        })
+                        .await;
+                    let _ = tx.send(AgentOutputEvent::Completed).await;
+                    Ok(())
+                });
+                Ok(AgentHandle {
+                    cancel,
+                    output_rx: rx,
+                    join_handle,
+                })
+            }
+        }
+
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+        let tmp = tempfile::tempdir().unwrap();
+        let repo_path = init_test_repo(tmp.path());
+
+        let sse_hub = Arc::new(SseHub::new(16));
+        let mut rx = sse_hub.subscribe();
+
+        let executor = Arc::new(PersistingOutputExecutor);
+        let orchestrator =
+            create_orchestrator_with_hub(executor, pool.clone(), repo_path, Arc::clone(&sse_hub));
+
+        let result = orchestrator
+            .start_session(StartSessionRequest {
+                task_id,
+                agent_type: AgentType::ClaudeCode,
+                prompt: "test".to_string(),
+            })
+            .await
+            .expect("start should succeed");
+
+        // Wait for all events: Running status + 2 outputs + Completed status = 4
+        for _ in 0..4 {
+            tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv())
+                .await
+                .expect("timed out waiting for SSE event")
+                .expect("SSE sender dropped");
+        }
+
+        // Poll DB until outputs are persisted (deterministic wait)
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        let outputs = loop {
+            let outputs = agent_session_output_service::get_outputs(&pool, result.session_id)
+                .await
+                .expect("should get outputs");
+            if outputs.len() == 2 {
+                break outputs;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "timed out waiting for outputs to be persisted"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        };
+        assert_eq!(outputs[0].sequence, 0);
+        assert_eq!(outputs[0].content, "line one");
+        assert_eq!(outputs[1].sequence, 1);
+        assert_eq!(outputs[1].content, "line two");
     }
 
     #[tokio::test]
