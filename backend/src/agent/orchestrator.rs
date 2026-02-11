@@ -97,21 +97,35 @@ impl AgentOrchestrator {
             })?
             .clone();
 
-        // Step 3: Duplicate prevention (now atomic under task lock)
-        self.check_no_active_session(req.task_id).await?;
+        // Steps 3-4b: Wrapped in transaction for atomicity
+        let session = {
+            let mut tx = self
+                .pool
+                .begin()
+                .await
+                .map_err(|e| AppError::Internal(format!("failed to begin transaction: {e}")))?;
 
-        // Step 4: Create DB session (now safe: executor is validated)
-        let session = agent_session_service::create_agent_session(
-            &self.pool,
-            req.task_id,
-            &CreateAgentSessionRequest {
-                agent_type: req.agent_type.clone(),
-            },
-        )
-        .await?;
+            // Step 3: Duplicate prevention
+            agent_session_service::check_no_active_session_tx(&mut *tx, req.task_id).await?;
 
-        // Step 4b: Save prompt for restart support
-        agent_session_service::save_prompt(&self.pool, session.id, &req.prompt).await?;
+            // Step 4: Create DB session (Pending)
+            let session = agent_session_service::create_agent_session_tx(
+                &mut *tx,
+                req.task_id,
+                &CreateAgentSessionRequest {
+                    agent_type: req.agent_type.clone(),
+                },
+            )
+            .await?;
+
+            // Step 4b: Save prompt for restart support
+            agent_session_service::save_prompt_tx(&mut *tx, session.id, &req.prompt).await?;
+
+            tx.commit()
+                .await
+                .map_err(|e| AppError::Internal(format!("failed to commit transaction: {e}")))?;
+            session
+        };
 
         // Step 5: Create worktree (spawn_blocking for synchronous git2 operations)
         let worktree_name = format!("task-{}-session-{}", req.task_id, session.id);
@@ -240,22 +254,6 @@ impl AgentOrchestrator {
     pub async fn is_running(&self, session_id: Uuid) -> bool {
         let running = self.running.lock().await;
         running.contains_key(&session_id)
-    }
-
-    async fn check_no_active_session(&self, task_id: Uuid) -> AppResult<()> {
-        let sessions = agent_session_service::list_agent_sessions(&self.pool, task_id).await?;
-        let has_active = sessions.iter().any(|s| {
-            matches!(
-                s.status,
-                AgentSessionStatus::Pending | AgentSessionStatus::Running
-            )
-        });
-        if has_active {
-            return Err(AppError::Conflict(format!(
-                "task {task_id} already has an active agent session"
-            )));
-        }
-        Ok(())
     }
 
     async fn mark_session_cancelled(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
