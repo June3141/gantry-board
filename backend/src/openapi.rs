@@ -34,6 +34,7 @@ use crate::sse;
         handlers::agent_sessions::start_agent_session,
         handlers::agent_sessions::stop_agent_session,
         handlers::agent_sessions::get_agent_session_outputs,
+        handlers::agent_sessions::restart_agent_session,
     ),
     components(schemas(
         models::task::Task,

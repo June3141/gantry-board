@@ -15,6 +15,7 @@ struct AgentSessionRow {
     task_id: String,
     agent_type: AgentType,
     status: AgentSessionStatus,
+    prompt: Option<String>,
     started_at: Option<DateTime<Utc>>,
     finished_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
@@ -30,6 +31,7 @@ impl TryFrom<AgentSessionRow> for AgentSession {
             task_id: row.task_id.parse()?,
             agent_type: row.agent_type,
             status: row.status,
+            prompt: row.prompt,
             started_at: row.started_at,
             finished_at: row.finished_at,
             created_at: row.created_at,
@@ -66,6 +68,7 @@ pub async fn create_agent_session(
         task_id,
         agent_type: req.agent_type.clone(),
         status: AgentSessionStatus::Pending,
+        prompt: None,
         started_at: None,
         finished_at: None,
         created_at: now,
@@ -80,7 +83,7 @@ pub async fn get_agent_session(
 ) -> AppResult<AgentSession> {
     let row = sqlx::query_as::<_, AgentSessionRow>(
         r#"
-        SELECT id, task_id, agent_type, status, started_at, finished_at, created_at, updated_at
+        SELECT id, task_id, agent_type, status, prompt, started_at, finished_at, created_at, updated_at
         FROM agent_sessions
         WHERE id = $1 AND task_id = $2
         "#,
@@ -99,7 +102,7 @@ pub async fn get_agent_session(
 pub async fn list_agent_sessions(pool: &SqlitePool, task_id: Uuid) -> AppResult<Vec<AgentSession>> {
     let rows = sqlx::query_as::<_, AgentSessionRow>(
         r#"
-        SELECT id, task_id, agent_type, status, started_at, finished_at, created_at, updated_at
+        SELECT id, task_id, agent_type, status, prompt, started_at, finished_at, created_at, updated_at
         FROM agent_sessions
         WHERE task_id = $1
         ORDER BY created_at ASC
@@ -113,6 +116,15 @@ pub async fn list_agent_sessions(pool: &SqlitePool, task_id: Uuid) -> AppResult<
         .map(|r| r.try_into())
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+}
+
+pub async fn save_prompt(pool: &SqlitePool, session_id: Uuid, prompt: &str) -> AppResult<()> {
+    sqlx::query("UPDATE agent_sessions SET prompt = $1 WHERE id = $2")
+        .bind(prompt)
+        .bind(session_id.to_string())
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 fn validate_status_transition(from: &AgentSessionStatus, to: &AgentSessionStatus) -> AppResult<()> {
@@ -184,6 +196,7 @@ pub async fn update_agent_session(
         task_id: existing.task_id,
         agent_type: existing.agent_type,
         status: req.status.clone(),
+        prompt: existing.prompt,
         started_at,
         finished_at,
         created_at: existing.created_at,

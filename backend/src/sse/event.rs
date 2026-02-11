@@ -152,6 +152,7 @@ mod tests {
             task_id: Uuid::new_v4(),
             agent_type: AgentType::ClaudeCode,
             status: AgentSessionStatus::Running,
+            prompt: None,
             started_at: Some(Utc::now()),
             finished_at: None,
             created_at: Utc::now(),

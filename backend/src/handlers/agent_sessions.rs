@@ -201,6 +201,54 @@ pub async fn stop_agent_session(
     Ok(Json(session))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/tasks/{task_id}/sessions/{session_id}/restart",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID"),
+        ("session_id" = Uuid, Path, description = "Agent session ID to restart")
+    ),
+    responses(
+        (status = 201, description = "New agent session started", body = StartAgentSessionResponse),
+        (status = 400, description = "No prompt saved for session"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Task or session not found"),
+        (status = 409, description = "Active session already exists")
+    ),
+    tag = "agent-sessions"
+)]
+pub async fn restart_agent_session(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((task_id, session_id)): Path<(Uuid, Uuid)>,
+) -> AppResult<(StatusCode, Json<StartAgentSessionResponse>)> {
+    let task = task_service::get_task(&state.pool, task_id).await?;
+    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
+        .await?;
+
+    let old_session =
+        agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
+    let prompt = old_session.prompt.ok_or_else(|| {
+        AppError::Validation("no prompt saved for this session — cannot restart".to_string())
+    })?;
+
+    let result = state
+        .orchestrator
+        .start_session(StartSessionRequest {
+            task_id,
+            agent_type: old_session.agent_type,
+            prompt,
+        })
+        .await?;
+
+    let session =
+        agent_session_service::get_agent_session(&state.pool, task_id, result.session_id).await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(StartAgentSessionResponse { session }),
+    ))
+}
+
 #[derive(Debug, Deserialize)]
 pub struct GetOutputsQuery {
     pub after: Option<i64>,
