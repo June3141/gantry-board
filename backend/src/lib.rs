@@ -51,6 +51,13 @@ pub fn app(state: AppState) -> Router {
         .finish()
         .expect("valid governor config");
 
+    // General API rate limit: ~1 req/s sustained, 60-request burst capacity per IP.
+    let general_governor = GovernorConfigBuilder::default()
+        .per_second(1) // refill 1 token per second
+        .burst_size(60) // bucket capacity: allows initial burst up to 60
+        .finish()
+        .expect("valid governor config");
+
     let api_routes = Router::new()
         // Auth endpoints (rate-limited)
         .route(
@@ -126,7 +133,9 @@ pub fn app(state: AppState) -> Router {
             get(handlers::agent_sessions::get_agent_session_outputs),
         )
         // SSE for real-time updates
-        .route("/events", get(sse::handler::sse_handler));
+        .route("/events", get(sse::handler::sse_handler))
+        // General API rate limit applied to all routes
+        .layer(GovernorLayer::new(general_governor));
 
     Router::new()
         .route("/health", get(handlers::health::health_check))
