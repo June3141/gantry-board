@@ -106,11 +106,11 @@ impl AgentOrchestrator {
                 .map_err(|e| AppError::Internal(format!("failed to begin transaction: {e}")))?;
 
             // Step 3: Duplicate prevention
-            agent_session_service::check_no_active_session_tx(&mut *tx, req.task_id).await?;
+            agent_session_service::check_no_active_session_tx(&mut tx, req.task_id).await?;
 
             // Step 4: Create DB session (Pending)
             let session = agent_session_service::create_agent_session_tx(
-                &mut *tx,
+                &mut tx,
                 req.task_id,
                 &CreateAgentSessionRequest {
                     agent_type: req.agent_type.clone(),
@@ -119,7 +119,7 @@ impl AgentOrchestrator {
             .await?;
 
             // Step 4b: Save prompt for restart support
-            agent_session_service::save_prompt_tx(&mut *tx, session.id, &req.prompt).await?;
+            agent_session_service::save_prompt_tx(&mut tx, session.id, &req.prompt).await?;
 
             tx.commit()
                 .await
