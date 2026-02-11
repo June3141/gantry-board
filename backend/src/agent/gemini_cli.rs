@@ -7,7 +7,9 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
 
-use crate::agent::executor::{AgentConfig, AgentExecutor, AgentHandle, AgentOutputEvent};
+use crate::agent::executor::{
+    validate_config, AgentConfig, AgentExecutor, AgentHandle, AgentOutputEvent,
+};
 use crate::error::{AppError, AppResult};
 
 /// Gemini CLI stream-json event types.
@@ -94,6 +96,8 @@ pub struct GeminiCliExecutor;
 #[async_trait::async_trait]
 impl AgentExecutor for GeminiCliExecutor {
     async fn start(&self, config: AgentConfig) -> AppResult<AgentHandle> {
+        validate_config(&config)?;
+
         let mut cmd = Command::new("gemini");
         cmd.args(["--output-format", "stream-json"]);
 
