@@ -207,6 +207,9 @@ mod tests {
             .expect("First insert should succeed");
 
         let result = append_output(&pool, session_id, 0, "duplicate").await;
-        assert!(result.is_err(), "Duplicate sequence should fail");
+        assert!(
+            matches!(result, Err(AppError::Database(_))),
+            "Duplicate sequence should fail with database error, got: {result:?}"
+        );
     }
 }
