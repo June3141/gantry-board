@@ -17,7 +17,8 @@ export function WorktreePanel() {
   const createWorktree = useCreateWorktree();
   const deleteWorktree = useDeleteWorktree();
 
-  const invalidateList = () => queryClient.invalidateQueries({ queryKey: getListWorktreesQueryKey() });
+  const invalidateList = () =>
+    queryClient.invalidateQueries({ queryKey: getListWorktreesQueryKey() });
 
   const handleCreate = async () => {
     setError(null);

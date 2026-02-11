@@ -121,9 +121,7 @@ describe('WorktreePanel', () => {
     mockDeleteMutateAsync.mockResolvedValue(undefined);
 
     vi.mocked(worktreesApi.useListWorktrees).mockReturnValue({
-      data: [
-        { name: 'wt-task-1', path: '/tmp/wt-task-1', is_valid: true, branch: 'feat/task-1' },
-      ],
+      data: [{ name: 'wt-task-1', path: '/tmp/wt-task-1', is_valid: true, branch: 'feat/task-1' }],
       isLoading: false,
     } as unknown as ReturnType<typeof worktreesApi.useListWorktrees>);
 
@@ -144,9 +142,7 @@ describe('WorktreePanel', () => {
 
   it('cancels deletion when cancel is clicked', async () => {
     vi.mocked(worktreesApi.useListWorktrees).mockReturnValue({
-      data: [
-        { name: 'wt-task-1', path: '/tmp/wt-task-1', is_valid: true, branch: 'feat/task-1' },
-      ],
+      data: [{ name: 'wt-task-1', path: '/tmp/wt-task-1', is_valid: true, branch: 'feat/task-1' }],
       isLoading: false,
     } as unknown as ReturnType<typeof worktreesApi.useListWorktrees>);
 
@@ -191,9 +187,7 @@ describe('WorktreePanel', () => {
 
   it('shows invalid badge for invalid worktrees', () => {
     vi.mocked(worktreesApi.useListWorktrees).mockReturnValue({
-      data: [
-        { name: 'wt-broken', path: '/tmp/wt-broken', is_valid: false, branch: null },
-      ],
+      data: [{ name: 'wt-broken', path: '/tmp/wt-broken', is_valid: false, branch: null }],
       isLoading: false,
     } as unknown as ReturnType<typeof worktreesApi.useListWorktrees>);
 
