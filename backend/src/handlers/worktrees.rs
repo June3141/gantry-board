@@ -4,6 +4,7 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::auth::middleware::AuthUser;
 use crate::error::AppResult;
 use crate::services::worktree_service;
 use crate::AppState;
@@ -42,6 +43,7 @@ pub struct CreateWorktreeRequest {
 )]
 pub async fn list_worktrees(
     State(state): State<AppState>,
+    _auth: AuthUser,
 ) -> AppResult<Json<Vec<WorktreeResponse>>> {
     let repo_path = state.config.repo_path();
     let worktrees =
@@ -64,10 +66,16 @@ pub async fn list_worktrees(
 )]
 pub async fn create_worktree(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Json(body): Json<CreateWorktreeRequest>,
 ) -> AppResult<(StatusCode, Json<WorktreeResponse>)> {
     let repo_path = state.config.repo_path();
-    let name = body.name;
+    let name = body.name.trim().to_string();
+    if name.is_empty() || name.len() > 100 {
+        return Err(crate::error::AppError::Validation(
+            "Worktree name must be 1-100 characters".to_string(),
+        ));
+    }
     let info =
         tokio::task::spawn_blocking(move || worktree_service::create_worktree(&repo_path, &name))
             .await
@@ -87,6 +95,7 @@ pub async fn create_worktree(
 )]
 pub async fn get_worktree(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(name): Path<String>,
 ) -> AppResult<Json<WorktreeResponse>> {
     let repo_path = state.config.repo_path();
@@ -109,6 +118,7 @@ pub async fn get_worktree(
 )]
 pub async fn delete_worktree(
     State(state): State<AppState>,
+    _auth: AuthUser,
     Path(name): Path<String>,
 ) -> AppResult<StatusCode> {
     let repo_path = state.config.repo_path();
