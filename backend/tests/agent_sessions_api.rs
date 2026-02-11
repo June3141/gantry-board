@@ -345,6 +345,7 @@ async fn create_session_with_outputs(
         .post(&format!("/api/tasks/{}/sessions", task_id))
         .json(&json!({ "agent_type": "claude_code" }))
         .await;
+    response.assert_status(StatusCode::CREATED);
     let created: serde_json::Value = response.json();
     let session_id = created["id"].as_str().unwrap().to_string();
 
@@ -414,6 +415,7 @@ async fn test_get_session_outputs_empty_session() {
         .post(&format!("/api/tasks/{}/sessions", task_id))
         .json(&json!({ "agent_type": "claude_code" }))
         .await;
+    create_response.assert_status(StatusCode::CREATED);
     let created: serde_json::Value = create_response.json();
     let session_id = created["id"].as_str().unwrap();
 
