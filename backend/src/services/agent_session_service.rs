@@ -367,9 +367,32 @@ mod tests {
         let req = CreateAgentSessionRequest {
             agent_type: AgentType::ClaudeCode,
         };
-        create_agent_session(&pool, task_id, &req)
+        // Create first session and complete it so we can create another
+        let session1 = create_agent_session(&pool, task_id, &req)
             .await
             .expect("Failed to create 1");
+        update_agent_session(
+            &pool,
+            task_id,
+            session1.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Failed to update to running");
+        update_agent_session(
+            &pool,
+            task_id,
+            session1.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Completed,
+            },
+        )
+        .await
+        .expect("Failed to update to completed");
+
+        // Now create second session (allowed because first is completed)
         create_agent_session(&pool, task_id, &req)
             .await
             .expect("Failed to create 2");
@@ -566,6 +589,171 @@ mod tests {
         .await;
 
         assert!(matches!(result, Err(AppError::Validation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_pending_sessions_blocked_by_unique_constraint() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let req = CreateAgentSessionRequest {
+            agent_type: AgentType::ClaudeCode,
+        };
+
+        // First session: OK
+        create_agent_session(&pool, task_id, &req)
+            .await
+            .expect("First session should succeed");
+
+        // Second session on same task while first is still pending: should fail
+        let result = create_agent_session(&pool, task_id, &req).await;
+        assert!(result.is_err(), "Second pending session should be rejected");
+    }
+
+    #[tokio::test]
+    async fn test_new_session_allowed_after_previous_completed() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let req = CreateAgentSessionRequest {
+            agent_type: AgentType::ClaudeCode,
+        };
+
+        let session = create_agent_session(&pool, task_id, &req)
+            .await
+            .expect("First session should succeed");
+
+        // Complete the first session
+        update_agent_session(
+            &pool,
+            task_id,
+            session.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Transition to running");
+        update_agent_session(
+            &pool,
+            task_id,
+            session.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Completed,
+            },
+        )
+        .await
+        .expect("Transition to completed");
+
+        // New session should now succeed
+        let result = create_agent_session(&pool, task_id, &req).await;
+        assert!(
+            result.is_ok(),
+            "New session after completion should succeed"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_new_session_allowed_after_previous_cancelled() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let req = CreateAgentSessionRequest {
+            agent_type: AgentType::ClaudeCode,
+        };
+
+        let session = create_agent_session(&pool, task_id, &req)
+            .await
+            .expect("First session should succeed");
+
+        // Cancel the first session
+        update_agent_session(
+            &pool,
+            task_id,
+            session.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Cancelled,
+            },
+        )
+        .await
+        .expect("Transition to cancelled");
+
+        // New session should now succeed
+        let result = create_agent_session(&pool, task_id, &req).await;
+        assert!(
+            result.is_ok(),
+            "New session after cancellation should succeed"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_running_session_blocks_new_session_creation() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let req = CreateAgentSessionRequest {
+            agent_type: AgentType::ClaudeCode,
+        };
+
+        let session = create_agent_session(&pool, task_id, &req)
+            .await
+            .expect("First session should succeed");
+
+        // Transition to running
+        update_agent_session(
+            &pool,
+            task_id,
+            session.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Transition to running");
+
+        // Second session while first is running: should fail
+        let result = create_agent_session(&pool, task_id, &req).await;
+        assert!(result.is_err(), "Session during running should be rejected");
+    }
+
+    #[tokio::test]
+    async fn test_new_session_allowed_after_previous_failed() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let req = CreateAgentSessionRequest {
+            agent_type: AgentType::ClaudeCode,
+        };
+
+        let session = create_agent_session(&pool, task_id, &req)
+            .await
+            .expect("First session should succeed");
+
+        // Transition: pending -> running -> failed
+        update_agent_session(
+            &pool,
+            task_id,
+            session.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Transition to running");
+        update_agent_session(
+            &pool,
+            task_id,
+            session.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Failed,
+            },
+        )
+        .await
+        .expect("Transition to failed");
+
+        // New session should now succeed
+        let result = create_agent_session(&pool, task_id, &req).await;
+        assert!(result.is_ok(), "New session after failure should succeed");
     }
 
     #[tokio::test]

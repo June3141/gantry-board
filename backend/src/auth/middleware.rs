@@ -93,7 +93,7 @@ pub fn create_session_cookie(
 
     cookie.push_str("; Path=/");
     cookie.push_str("; HttpOnly");
-    cookie.push_str("; SameSite=Lax");
+    cookie.push_str("; SameSite=Strict");
 
     if secure {
         cookie.push_str("; Secure");
@@ -105,11 +105,15 @@ pub fn create_session_cookie(
 }
 
 /// Create an expired session cookie (for logout)
-pub fn delete_session_cookie() -> String {
-    format!(
-        "{}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
+pub fn delete_session_cookie(secure: bool) -> String {
+    let mut cookie = format!(
+        "{}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0",
         SESSION_COOKIE_NAME
-    )
+    );
+    if secure {
+        cookie.push_str("; Secure");
+    }
+    cookie
 }
 
 #[cfg(test)]
@@ -123,7 +127,7 @@ mod tests {
 
         assert!(cookie.contains(&session_id.to_string()));
         assert!(cookie.contains("HttpOnly"));
-        assert!(cookie.contains("SameSite=Lax"));
+        assert!(cookie.contains("SameSite=Strict"));
         assert!(!cookie.contains("Secure"));
         assert!(cookie.contains("Max-Age=604800")); // 168h * 3600
     }
@@ -134,6 +138,15 @@ mod tests {
         let cookie = create_session_cookie(session_id, true, 168);
 
         assert!(cookie.contains("Secure"));
+    }
+
+    #[test]
+    fn test_create_session_cookie_uses_samesite_strict() {
+        let session_id = Uuid::new_v4();
+        let cookie = create_session_cookie(session_id, false, 1);
+
+        assert!(cookie.contains("SameSite=Strict"));
+        assert!(!cookie.contains("SameSite=Lax"));
     }
 
     #[test]
@@ -149,10 +162,28 @@ mod tests {
     }
 
     #[test]
-    fn test_delete_session_cookie() {
-        let cookie = delete_session_cookie();
+    fn test_delete_session_cookie_includes_samesite_strict() {
+        let cookie = delete_session_cookie(false);
 
+        assert!(cookie.contains("SameSite=Strict"));
+        assert!(!cookie.contains("SameSite=Lax"));
         assert!(cookie.contains("Max-Age=0"));
         assert!(cookie.contains(SESSION_COOKIE_NAME));
+    }
+
+    #[test]
+    fn test_delete_session_cookie_includes_secure_flag_when_enabled() {
+        let cookie = delete_session_cookie(true);
+
+        assert!(cookie.contains("Secure"));
+        assert!(cookie.contains("SameSite=Strict"));
+        assert!(cookie.contains("Max-Age=0"));
+    }
+
+    #[test]
+    fn test_delete_session_cookie_excludes_secure_flag_when_disabled() {
+        let cookie = delete_session_cookie(false);
+
+        assert!(!cookie.contains("Secure"));
     }
 }

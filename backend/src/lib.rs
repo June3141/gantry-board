@@ -51,6 +51,13 @@ pub fn app(state: AppState) -> Router {
         .finish()
         .expect("valid governor config");
 
+    // General API rate limit: ~1 req/s sustained, 60-request burst capacity per IP.
+    let general_governor = GovernorConfigBuilder::default()
+        .per_second(1) // refill 1 token per second
+        .burst_size(60) // bucket capacity: allows initial burst up to 60
+        .finish()
+        .expect("valid governor config");
+
     let api_routes = Router::new()
         // Auth endpoints (rate-limited)
         .route(
@@ -129,8 +136,18 @@ pub fn app(state: AppState) -> Router {
             "/tasks/{task_id}/sessions/{session_id}/restart",
             post(handlers::agent_sessions::restart_agent_session),
         )
+        // Worktree endpoints
+        .route("/worktrees", get(handlers::worktrees::list_worktrees))
+        .route("/worktrees", post(handlers::worktrees::create_worktree))
+        .route("/worktrees/{name}", get(handlers::worktrees::get_worktree))
+        .route(
+            "/worktrees/{name}",
+            delete(handlers::worktrees::delete_worktree),
+        )
         // SSE for real-time updates
-        .route("/events", get(sse::handler::sse_handler));
+        .route("/events", get(sse::handler::sse_handler))
+        // General API rate limit applied to all routes
+        .layer(GovernorLayer::new(general_governor));
 
     Router::new()
         .route("/health", get(handlers::health::health_check))
@@ -151,10 +168,19 @@ fn build_cors_layer(config: &config::Config) -> CorsLayer {
             .allow_headers([axum::http::header::CONTENT_TYPE])
             .allow_credentials(true),
         None => {
-            tracing::warn!(
-                "GANTRY_CORS_ORIGIN is not set — CORS is permissive; set it in production"
-            );
-            CorsLayer::permissive()
+            // Defense in depth: release builds must never reach this branch.
+            // Config::validate() already panics if cors_origin is None in release,
+            // but we guard here too in case validate() is bypassed.
+            #[cfg(not(debug_assertions))]
+            panic!("GANTRY_CORS_ORIGIN must be set in production");
+
+            #[cfg(debug_assertions)]
+            {
+                tracing::warn!(
+                    "GANTRY_CORS_ORIGIN is not set — CORS is permissive (debug build only)"
+                );
+                CorsLayer::permissive()
+            }
         }
     }
 }

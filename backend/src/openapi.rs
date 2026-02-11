@@ -35,6 +35,10 @@ use crate::sse;
         handlers::agent_sessions::stop_agent_session,
         handlers::agent_sessions::get_agent_session_outputs,
         handlers::agent_sessions::restart_agent_session,
+        handlers::worktrees::list_worktrees,
+        handlers::worktrees::create_worktree,
+        handlers::worktrees::get_worktree,
+        handlers::worktrees::delete_worktree,
     ),
     components(schemas(
         models::task::Task,
@@ -62,6 +66,8 @@ use crate::sse;
         models::agent_session::StartAgentSessionResponse,
         models::agent_session_output::AgentSessionOutput,
         sse::event::SseEvent,
+        handlers::worktrees::WorktreeResponse,
+        handlers::worktrees::CreateWorktreeRequest,
     )),
     tags(
         (name = "health", description = "Health check"),
@@ -70,6 +76,7 @@ use crate::sse;
         (name = "projects", description = "Project management"),
         (name = "project-members", description = "Project member management"),
         (name = "agent-sessions", description = "Agent session management"),
+        (name = "worktrees", description = "Git worktree management"),
     ),
     info(
         title = "Gantry Board API",

@@ -7,7 +7,9 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
 
-use crate::agent::executor::{AgentConfig, AgentExecutor, AgentHandle, AgentOutputEvent};
+use crate::agent::executor::{
+    validate_config, AgentConfig, AgentExecutor, AgentHandle, AgentOutputEvent,
+};
 use crate::error::{AppError, AppResult};
 
 /// Top-level message types from Claude Code CLI's `--output-format=stream-json`.
@@ -79,6 +81,8 @@ pub struct ClaudeCodeExecutor;
 #[async_trait::async_trait]
 impl AgentExecutor for ClaudeCodeExecutor {
     async fn start(&self, config: AgentConfig) -> AppResult<AgentHandle> {
+        validate_config(&config)?;
+
         let mut cmd = Command::new("claude");
         cmd.args([
             "-p",
