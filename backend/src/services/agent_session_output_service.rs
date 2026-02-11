@@ -1,3 +1,4 @@
+use chrono::Utc;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
@@ -71,6 +72,26 @@ pub async fn get_outputs_after(
         .map(|r| r.try_into())
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+}
+
+/// Delete agent session outputs older than the given number of days.
+/// Only deletes outputs for completed/failed/cancelled sessions.
+pub async fn cleanup_old_outputs(pool: &SqlitePool, retention_days: u64) -> AppResult<u64> {
+    let cutoff = Utc::now() - chrono::Duration::days(retention_days as i64);
+    let result = sqlx::query(
+        r#"
+        DELETE FROM agent_session_outputs
+        WHERE created_at <= $1
+          AND session_id IN (
+            SELECT id FROM agent_sessions
+            WHERE status IN ('completed', 'failed', 'cancelled')
+          )
+        "#,
+    )
+    .bind(cutoff.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string())
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected())
 }
 
 #[cfg(test)]
@@ -195,6 +216,107 @@ mod tests {
         assert_eq!(outputs.len(), 2);
         assert_eq!(outputs[0].sequence, 3);
         assert_eq!(outputs[1].sequence, 4);
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_old_outputs_deletes_expired() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        // Add output
+        append_output(&pool, session_id, 0, "old output")
+            .await
+            .expect("Failed to append");
+
+        // Mark session as completed
+        agent_session_service::update_agent_session(
+            &pool,
+            get_task_id_for_session(&pool, session_id).await,
+            session_id,
+            &crate::models::agent_session::UpdateAgentSessionRequest {
+                status: crate::models::agent_session::AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Failed to update to running");
+        agent_session_service::update_agent_session(
+            &pool,
+            get_task_id_for_session(&pool, session_id).await,
+            session_id,
+            &crate::models::agent_session::UpdateAgentSessionRequest {
+                status: crate::models::agent_session::AgentSessionStatus::Completed,
+            },
+        )
+        .await
+        .expect("Failed to update to completed");
+
+        // Backdate the output's created_at
+        sqlx::query("UPDATE agent_session_outputs SET created_at = '2020-01-01T00:00:00.000Z' WHERE session_id = $1")
+            .bind(session_id.to_string())
+            .execute(&pool)
+            .await
+            .expect("Failed to backdate");
+
+        // Cleanup with 30-day retention — should delete the backdated output
+        let count = cleanup_old_outputs(&pool, 30)
+            .await
+            .expect("Failed to cleanup");
+        assert_eq!(count, 1);
+
+        let outputs = get_outputs(&pool, session_id).await.expect("Failed to get");
+        assert!(outputs.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_old_outputs_preserves_recent() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        // Add output (created_at is now, so it's recent)
+        append_output(&pool, session_id, 0, "recent output")
+            .await
+            .expect("Failed to append");
+
+        // Mark session as completed
+        agent_session_service::update_agent_session(
+            &pool,
+            get_task_id_for_session(&pool, session_id).await,
+            session_id,
+            &crate::models::agent_session::UpdateAgentSessionRequest {
+                status: crate::models::agent_session::AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Failed to update to running");
+        agent_session_service::update_agent_session(
+            &pool,
+            get_task_id_for_session(&pool, session_id).await,
+            session_id,
+            &crate::models::agent_session::UpdateAgentSessionRequest {
+                status: crate::models::agent_session::AgentSessionStatus::Completed,
+            },
+        )
+        .await
+        .expect("Failed to update to completed");
+
+        // Cleanup with 30-day retention — recent output should be preserved
+        let count = cleanup_old_outputs(&pool, 30)
+            .await
+            .expect("Failed to cleanup");
+        assert_eq!(count, 0);
+
+        let outputs = get_outputs(&pool, session_id).await.expect("Failed to get");
+        assert_eq!(outputs.len(), 1);
+    }
+
+    /// Helper to get task_id from a session_id (for tests only)
+    async fn get_task_id_for_session(pool: &SqlitePool, session_id: Uuid) -> Uuid {
+        let row: (String,) = sqlx::query_as("SELECT task_id FROM agent_sessions WHERE id = $1")
+            .bind(session_id.to_string())
+            .fetch_one(pool)
+            .await
+            .expect("Failed to get task_id");
+        row.0.parse().expect("Failed to parse task_id")
     }
 
     #[tokio::test]

@@ -10,7 +10,7 @@ use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::db;
 use gantry_board::models::agent_session::AgentType;
-use gantry_board::services::session_service;
+use gantry_board::services::{agent_session_output_service, session_service};
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
 use tracing_subscriber::EnvFilter;
@@ -57,6 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     let cleanup_pool = pool.clone();
+    let output_retention_days = config.output_retention_days;
 
     let state = AppState {
         pool,
@@ -81,6 +82,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(e) => {
                     tracing::error!(error = %e, "failed to cleanup expired sessions");
+                }
+                _ => {}
+            }
+            match agent_session_output_service::cleanup_old_outputs(
+                &cleanup_pool,
+                output_retention_days,
+            )
+            .await
+            {
+                Ok(count) if count > 0 => {
+                    tracing::info!(count, "cleaned up old agent outputs");
+                }
+                Err(e) => {
+                    tracing::error!(error = %e, "failed to cleanup old agent outputs");
                 }
                 _ => {}
             }
