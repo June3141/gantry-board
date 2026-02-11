@@ -584,6 +584,94 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_list_tasks_paginated_returns_total_and_data() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+
+        for i in 0..5 {
+            create_task(
+                &pool,
+                &CreateTaskRequest {
+                    project_id,
+                    title: format!("Task {}", i),
+                    description: None,
+                    status: None,
+                    priority: None,
+                    parent_id: None,
+                    assigned_to: None,
+                },
+            )
+            .await
+            .expect("Failed to create task");
+        }
+
+        let (tasks, total) = list_tasks_paginated(&pool, project_id, 2, 0)
+            .await
+            .expect("Failed to list tasks paginated");
+
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(total, 5);
+    }
+
+    #[tokio::test]
+    async fn test_list_tasks_paginated_respects_offset() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+
+        for i in 0..5 {
+            create_task(
+                &pool,
+                &CreateTaskRequest {
+                    project_id,
+                    title: format!("Task {}", i),
+                    description: None,
+                    status: None,
+                    priority: None,
+                    parent_id: None,
+                    assigned_to: None,
+                },
+            )
+            .await
+            .expect("Failed to create task");
+        }
+
+        let (tasks, total) = list_tasks_paginated(&pool, project_id, 2, 3)
+            .await
+            .expect("Failed to list tasks paginated");
+
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(total, 5);
+    }
+
+    #[tokio::test]
+    async fn test_list_tasks_paginated_offset_beyond_total() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+
+        create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id,
+                title: "Only Task".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("Failed to create task");
+
+        let (tasks, total) = list_tasks_paginated(&pool, project_id, 10, 100)
+            .await
+            .expect("Failed to list tasks paginated");
+
+        assert!(tasks.is_empty());
+        assert_eq!(total, 1);
+    }
+
+    #[tokio::test]
     async fn test_create_task_with_nonexistent_assigned_to_returns_validation_error() {
         let pool = setup_test_db().await;
         let project_id = create_test_project(&pool).await;

@@ -250,6 +250,54 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_list_projects_paginated_returns_total_and_data() {
+        let pool = setup_test_db().await;
+
+        for i in 0..5 {
+            create_project(
+                &pool,
+                &CreateProjectRequest {
+                    name: format!("Project {}", i),
+                    description: None,
+                },
+            )
+            .await
+            .expect("Failed to create project");
+        }
+
+        let (projects, total) = list_projects_paginated(&pool, 2, 0)
+            .await
+            .expect("Failed to list projects paginated");
+
+        assert_eq!(projects.len(), 2);
+        assert_eq!(total, 5);
+    }
+
+    #[tokio::test]
+    async fn test_list_projects_paginated_respects_offset() {
+        let pool = setup_test_db().await;
+
+        for i in 0..5 {
+            create_project(
+                &pool,
+                &CreateProjectRequest {
+                    name: format!("Project {}", i),
+                    description: None,
+                },
+            )
+            .await
+            .expect("Failed to create project");
+        }
+
+        let (projects, total) = list_projects_paginated(&pool, 2, 3)
+            .await
+            .expect("Failed to list projects paginated");
+
+        assert_eq!(projects.len(), 2);
+        assert_eq!(total, 5);
+    }
+
+    #[tokio::test]
     async fn test_update_project_changes_name() {
         let pool = setup_test_db().await;
         let req = CreateProjectRequest {
