@@ -28,5 +28,6 @@ export const useAgentStore = create<AgentState>((set) => ({
   setOutputLines: (lines) => set({ outputLines: lines.slice(-MAX_OUTPUT_LINES) }),
   setStarting: (value) => set({ isStarting: value }),
   setLoadingHistory: (value) => set({ isLoadingHistory: value }),
-  reset: () => set({ activeSessionId: null, outputLines: [], isStarting: false, isLoadingHistory: false }),
+  reset: () =>
+    set({ activeSessionId: null, outputLines: [], isStarting: false, isLoadingHistory: false }),
 }));

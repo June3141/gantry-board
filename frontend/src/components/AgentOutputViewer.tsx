@@ -18,9 +18,7 @@ export function AgentOutputViewer({ lines, isLoading = false }: AgentOutputViewe
   }, [lineCount]);
 
   if (isLoading) {
-    return (
-      <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">Loading output...</div>
-    );
+    return <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">Loading output...</div>;
   }
 
   if (lines.length === 0) {

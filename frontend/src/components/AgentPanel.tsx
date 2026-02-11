@@ -34,7 +34,16 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
   const startSession = useStartAgentSession();
   const stopSession = useStopAgentSession();
 
-  const { activeSessionId, outputLines, appendOutput, setActiveSession, setOutputLines, setLoadingHistory, isLoadingHistory, reset } = useAgentStore();
+  const {
+    activeSessionId,
+    outputLines,
+    appendOutput,
+    setActiveSession,
+    setOutputLines,
+    setLoadingHistory,
+    isLoadingHistory,
+    reset,
+  } = useAgentStore();
 
   // Derive active session from both store and server data
   const activeSession =

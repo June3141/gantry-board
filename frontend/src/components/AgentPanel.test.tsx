@@ -196,8 +196,20 @@ describe('AgentPanel', () => {
 
     vi.mocked(agentSessionsApi.useGetAgentSessionOutputs).mockReturnValue({
       data: [
-        { id: 1, session_id: 'session-1', sequence: 0, content: 'output line 1', created_at: '2026-01-01T00:00:00Z' },
-        { id: 2, session_id: 'session-1', sequence: 1, content: 'output line 2', created_at: '2026-01-01T00:00:01Z' },
+        {
+          id: 1,
+          session_id: 'session-1',
+          sequence: 0,
+          content: 'output line 1',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 2,
+          session_id: 'session-1',
+          sequence: 1,
+          content: 'output line 2',
+          created_at: '2026-01-01T00:00:01Z',
+        },
       ],
       isLoading: false,
     } as unknown as ReturnType<typeof agentSessionsApi.useGetAgentSessionOutputs>);
