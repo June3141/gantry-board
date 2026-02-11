@@ -45,6 +45,31 @@ describe('agentStore', () => {
     expect(useAgentStore.getState().isStarting).toBe(false);
   });
 
+  it('sets output lines (bulk load for history)', () => {
+    useAgentStore.getState().setOutputLines(['line 1', 'line 2', 'line 3']);
+    expect(useAgentStore.getState().outputLines).toEqual(['line 1', 'line 2', 'line 3']);
+  });
+
+  it('replaces existing output when setOutputLines is called', () => {
+    useAgentStore.getState().appendOutput('old line');
+    useAgentStore.getState().setOutputLines(['new line 1', 'new line 2']);
+    expect(useAgentStore.getState().outputLines).toEqual(['new line 1', 'new line 2']);
+  });
+
+  it('tracks isLoadingHistory state', () => {
+    expect(useAgentStore.getState().isLoadingHistory).toBe(false);
+    useAgentStore.getState().setLoadingHistory(true);
+    expect(useAgentStore.getState().isLoadingHistory).toBe(true);
+    useAgentStore.getState().setLoadingHistory(false);
+    expect(useAgentStore.getState().isLoadingHistory).toBe(false);
+  });
+
+  it('resets isLoadingHistory on reset', () => {
+    useAgentStore.getState().setLoadingHistory(true);
+    useAgentStore.getState().reset();
+    expect(useAgentStore.getState().isLoadingHistory).toBe(false);
+  });
+
   it('limits output to 1000 lines', () => {
     for (let i = 0; i < 1005; i++) {
       useAgentStore.getState().appendOutput(`line ${i}`);

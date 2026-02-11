@@ -20,6 +20,7 @@ vi.mock('../api/generated/endpoints/agent-sessions/agent-sessions', () => ({
   useListAgentSessions: vi.fn(),
   useStartAgentSession: vi.fn(),
   useStopAgentSession: vi.fn(),
+  useGetAgentSessionOutputs: vi.fn(),
 }));
 
 vi.mock('../api/generated/endpoints/worktrees/worktrees', () => ({
@@ -89,6 +90,11 @@ describe('TaskDetailModal', () => {
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof agentSessionsApi.useStopAgentSession>);
+
+    vi.mocked(agentSessionsApi.useGetAgentSessionOutputs).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useGetAgentSessionOutputs>);
 
     vi.mocked(worktreesApi.useListWorktrees).mockReturnValue({
       data: [],

@@ -37,6 +37,7 @@ pub struct AgentSession {
     pub task_id: Uuid,
     pub agent_type: AgentType,
     pub status: AgentSessionStatus,
+    pub prompt: Option<String>,
     pub started_at: Option<DateTime<Utc>>,
     pub finished_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,

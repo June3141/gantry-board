@@ -623,6 +623,75 @@ export function useGetAgentSessionOutputs<
   return query;
 }
 
+export const restartAgentSession = (taskId: string, sessionId: string, signal?: AbortSignal) => {
+  return customInstance<StartAgentSessionResponse>({
+    url: `/api/tasks/${taskId}/sessions/${sessionId}/restart`,
+    method: 'POST',
+    signal,
+  });
+};
+
+export const getRestartAgentSessionMutationOptions = <
+  TError = void | void | void | void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restartAgentSession>>,
+    TError,
+    { taskId: string; sessionId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restartAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationKey = ['restartAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof restartAgentSession>>,
+    { taskId: string; sessionId: string }
+  > = (props) => {
+    const { taskId, sessionId } = props ?? {};
+
+    return restartAgentSession(taskId, sessionId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RestartAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof restartAgentSession>>
+>;
+
+export type RestartAgentSessionMutationError = void | void | void | void;
+
+export const useRestartAgentSession = <TError = void | void | void | void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof restartAgentSession>>,
+      TError,
+      { taskId: string; sessionId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof restartAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationOptions = getRestartAgentSessionMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
 export const stopAgentSession = (taskId: string, sessionId: string, signal?: AbortSignal) => {
   return customInstance<AgentSession>({
     url: `/api/tasks/${taskId}/sessions/${sessionId}/stop`,
