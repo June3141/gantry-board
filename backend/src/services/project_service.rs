@@ -91,6 +91,41 @@ pub async fn list_projects(pool: &SqlitePool) -> AppResult<Vec<Project>> {
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
+pub async fn list_projects_paginated(
+    pool: &SqlitePool,
+    limit: i64,
+    offset: i64,
+) -> AppResult<(Vec<Project>, i64)> {
+    let total: (i64,) = sqlx::query_as(
+        r#"
+        SELECT COUNT(*) FROM projects
+        "#,
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let rows = sqlx::query_as::<_, ProjectRow>(
+        r#"
+        SELECT id, name, description, created_at, updated_at
+        FROM projects
+        ORDER BY created_at DESC
+        LIMIT $1 OFFSET $2
+        "#,
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+
+    let projects = rows
+        .into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?;
+
+    Ok((projects, total.0))
+}
+
 pub async fn list_projects_for_user(pool: &SqlitePool, user_id: Uuid) -> AppResult<Vec<Project>> {
     let rows = sqlx::query_as::<_, ProjectRow>(
         r#"
@@ -109,6 +144,49 @@ pub async fn list_projects_for_user(pool: &SqlitePool, user_id: Uuid) -> AppResu
         .map(|r| r.try_into())
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+}
+
+pub async fn list_projects_for_user_paginated(
+    pool: &SqlitePool,
+    user_id: Uuid,
+    limit: i64,
+    offset: i64,
+) -> AppResult<(Vec<Project>, i64)> {
+    let total: (i64,) = sqlx::query_as(
+        r#"
+        SELECT COUNT(*)
+        FROM projects p
+        INNER JOIN project_members pm ON p.id = pm.project_id
+        WHERE pm.user_id = $1
+        "#,
+    )
+    .bind(user_id.to_string())
+    .fetch_one(pool)
+    .await?;
+
+    let rows = sqlx::query_as::<_, ProjectRow>(
+        r#"
+        SELECT p.id, p.name, p.description, p.created_at, p.updated_at
+        FROM projects p
+        INNER JOIN project_members pm ON p.id = pm.project_id
+        WHERE pm.user_id = $1
+        ORDER BY p.created_at DESC
+        LIMIT $2 OFFSET $3
+        "#,
+    )
+    .bind(user_id.to_string())
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+
+    let projects = rows
+        .into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?;
+
+    Ok((projects, total.0))
 }
 
 pub async fn update_project(

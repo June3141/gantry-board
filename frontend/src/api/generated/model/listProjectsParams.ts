@@ -6,11 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListTasksParams = {
-  /**
-   * Filter by project ID
-   */
-  project_id: string;
+export type ListProjectsParams = {
   /**
    * Maximum number of items to return (default 50)
    */

@@ -68,6 +68,8 @@ use crate::sse;
         sse::event::SseEvent,
         handlers::worktrees::WorktreeResponse,
         handlers::worktrees::CreateWorktreeRequest,
+        models::pagination::PaginatedResponse<models::task::Task>,
+        models::pagination::PaginatedResponse<models::project::Project>,
     )),
     tags(
         (name = "health", description = "Health check"),

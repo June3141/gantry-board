@@ -1,40 +1,76 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use garde::Validate;
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
+use crate::models::pagination::PaginatedResponse;
 use crate::models::project::{
     AddMemberRequest, CreateProjectRequest, MemberRole, Project, UpdateProjectRequest,
 };
 use crate::services::{authorization_service, member_service, project_service};
 use crate::AppState;
 
+fn default_limit() -> i64 {
+    50
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListProjectsQuery {
+    #[serde(default = "default_limit")]
+    pub limit: i64,
+    #[serde(default)]
+    pub offset: i64,
+}
+
 #[utoipa::path(
     get,
     path = "/api/projects",
+    params(
+        ("limit" = Option<i64>, Query, description = "Maximum number of items to return (default 50)"),
+        ("offset" = Option<i64>, Query, description = "Number of items to skip (default 0)"),
+    ),
     responses(
-        (status = 200, description = "List all projects", body = Vec<Project>)
+        (status = 200, description = "List all projects", body = PaginatedResponse<Project>)
     ),
     tag = "projects"
 )]
 pub async fn list_projects(
     State(state): State<AppState>,
     auth: AuthUser,
-) -> AppResult<Json<Vec<Project>>> {
-    let projects = {
+    Query(query): Query<ListProjectsQuery>,
+) -> AppResult<Json<PaginatedResponse<Project>>> {
+    let (projects, total) = {
         #[cfg(debug_assertions)]
         if auth.user_id.is_nil() {
-            project_service::list_projects(&state.pool).await?
+            project_service::list_projects_paginated(&state.pool, query.limit, query.offset).await?
         } else {
-            project_service::list_projects_for_user(&state.pool, auth.user_id).await?
+            project_service::list_projects_for_user_paginated(
+                &state.pool,
+                auth.user_id,
+                query.limit,
+                query.offset,
+            )
+            .await?
         }
         #[cfg(not(debug_assertions))]
-        project_service::list_projects_for_user(&state.pool, auth.user_id).await?
+        project_service::list_projects_for_user_paginated(
+            &state.pool,
+            auth.user_id,
+            query.limit,
+            query.offset,
+        )
+        .await?
     };
-    Ok(Json(projects))
+    Ok(Json(PaginatedResponse {
+        data: projects,
+        total,
+        limit: query.limit,
+        offset: query.offset,
+    }))
 }
 
 #[utoipa::path(

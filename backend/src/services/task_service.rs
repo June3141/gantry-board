@@ -123,6 +123,45 @@ pub async fn list_tasks(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<Ta
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
+pub async fn list_tasks_paginated(
+    pool: &SqlitePool,
+    project_id: Uuid,
+    limit: i64,
+    offset: i64,
+) -> AppResult<(Vec<Task>, i64)> {
+    let total: (i64,) = sqlx::query_as(
+        r#"
+        SELECT COUNT(*) FROM tasks WHERE project_id = $1
+        "#,
+    )
+    .bind(project_id.to_string())
+    .fetch_one(pool)
+    .await?;
+
+    let rows = sqlx::query_as::<_, TaskRow>(
+        r#"
+        SELECT id, project_id, title, description, status, priority, parent_id, assigned_to, position, created_at, updated_at
+        FROM tasks
+        WHERE project_id = $1
+        ORDER BY position ASC, created_at ASC
+        LIMIT $2 OFFSET $3
+        "#,
+    )
+    .bind(project_id.to_string())
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+
+    let tasks = rows
+        .into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?;
+
+    Ok((tasks, total.0))
+}
+
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
     let existing = get_task(pool, id).await?;
 

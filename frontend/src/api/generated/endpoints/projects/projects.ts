@@ -22,28 +22,42 @@ import type {
 } from '@tanstack/react-query';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
-import type { CreateProjectRequest, Project, UpdateProjectRequest } from '../../model';
+import type {
+  CreateProjectRequest,
+  ListProjectsParams,
+  PaginatedResponseProject,
+  Project,
+  UpdateProjectRequest,
+} from '../../model';
 
-export const listProjects = (signal?: AbortSignal) => {
-  return customInstance<Project[]>({ url: `/api/projects`, method: 'GET', signal });
+export const listProjects = (params?: ListProjectsParams, signal?: AbortSignal) => {
+  return customInstance<PaginatedResponseProject>({
+    url: `/api/projects`,
+    method: 'GET',
+    params,
+    signal,
+  });
 };
 
-export const getListProjectsQueryKey = () => {
-  return [`/api/projects`] as const;
+export const getListProjectsQueryKey = (params?: ListProjectsParams) => {
+  return [`/api/projects`, ...(params ? [params] : [])] as const;
 };
 
 export const getListProjectsQueryOptions = <
   TData = Awaited<ReturnType<typeof listProjects>>,
   TError = unknown,
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
-}) => {
+>(
+  params?: ListProjectsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
+  },
+) => {
   const { query: queryOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListProjectsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListProjectsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjects>>> = ({ signal }) =>
-    listProjects(signal);
+    listProjects(params, signal);
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProjects>>,
@@ -56,6 +70,7 @@ export type ListProjectsQueryResult = NonNullable<Awaited<ReturnType<typeof list
 export type ListProjectsQueryError = unknown;
 
 export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+  params: undefined | ListProjectsParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>> &
       Pick<
@@ -70,6 +85,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+  params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>> &
       Pick<
@@ -84,6 +100,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+  params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
   },
@@ -91,12 +108,13 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
 export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = unknown>(
+  params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getListProjectsQueryOptions(options);
+  const queryOptions = getListProjectsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

@@ -108,7 +108,7 @@ describe('App', () => {
   describe('when not authenticated', () => {
     it('redirects to login page', () => {
       vi.mocked(projectsApi.useListProjects).mockReturnValue({
-        data: [],
+        data: { data: [], total: 0, limit: 50, offset: 0 },
         isLoading: false,
       } as ReturnType<typeof projectsApi.useListProjects>);
 
@@ -147,7 +147,7 @@ describe('App', () => {
 
     it('renders header with title', () => {
       vi.mocked(projectsApi.useListProjects).mockReturnValue({
-        data: [],
+        data: { data: [], total: 0, limit: 50, offset: 0 },
         isLoading: false,
       } as ReturnType<typeof projectsApi.useListProjects>);
 
@@ -158,10 +158,15 @@ describe('App', () => {
 
     it('renders project selector', () => {
       vi.mocked(projectsApi.useListProjects).mockReturnValue({
-        data: [
-          { id: 'project-1', name: 'Project One', created_at: '', updated_at: '' },
-          { id: 'project-2', name: 'Project Two', created_at: '', updated_at: '' },
-        ],
+        data: {
+          data: [
+            { id: 'project-1', name: 'Project One', created_at: '', updated_at: '' },
+            { id: 'project-2', name: 'Project Two', created_at: '', updated_at: '' },
+          ],
+          total: 2,
+          limit: 50,
+          offset: 0,
+        },
         isLoading: false,
       } as ReturnType<typeof projectsApi.useListProjects>);
 
@@ -174,7 +179,7 @@ describe('App', () => {
 
     it('shows placeholder when no project is selected', () => {
       vi.mocked(projectsApi.useListProjects).mockReturnValue({
-        data: [],
+        data: { data: [], total: 0, limit: 50, offset: 0 },
         isLoading: false,
       } as ReturnType<typeof projectsApi.useListProjects>);
 
@@ -185,7 +190,7 @@ describe('App', () => {
 
     it('shows user name and logout button', () => {
       vi.mocked(projectsApi.useListProjects).mockReturnValue({
-        data: [],
+        data: { data: [], total: 0, limit: 50, offset: 0 },
         isLoading: false,
       } as ReturnType<typeof projectsApi.useListProjects>);
 
@@ -197,7 +202,7 @@ describe('App', () => {
 
     it('renders new project button', () => {
       vi.mocked(projectsApi.useListProjects).mockReturnValue({
-        data: [],
+        data: { data: [], total: 0, limit: 50, offset: 0 },
         isLoading: false,
       } as ReturnType<typeof projectsApi.useListProjects>);
 
@@ -209,7 +214,7 @@ describe('App', () => {
     it('opens project modal on new project button click', async () => {
       const user = userEvent.setup();
       vi.mocked(projectsApi.useListProjects).mockReturnValue({
-        data: [],
+        data: { data: [], total: 0, limit: 50, offset: 0 },
         isLoading: false,
       } as ReturnType<typeof projectsApi.useListProjects>);
 
