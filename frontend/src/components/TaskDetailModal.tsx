@@ -3,6 +3,7 @@ import { useDeleteTask, useGetTask, useUpdateTask } from '../api/generated/endpo
 import type { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
 import { AgentPanel } from './AgentPanel';
+import { WorktreePanel } from './WorktreePanel';
 
 export function TaskDetailModal() {
   const selectedTaskId = useUiStore((s) => s.selectedTaskId);
@@ -203,6 +204,11 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
             <div className="border-t pt-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Agent</h3>
               <AgentPanel taskId={taskId} />
+            </div>
+
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Worktrees</h3>
+              <WorktreePanel />
             </div>
 
             <div className="border-t pt-4">
