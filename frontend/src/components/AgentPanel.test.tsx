@@ -208,8 +208,10 @@ describe('AgentPanel', () => {
     // Click the past session to view its output (session ID is truncated to 8 chars)
     await user.click(screen.getByText('session-').closest('button')!);
 
-    // Output viewer should be visible with loaded history
+    // Output viewer should be visible with loaded history content
     expect(screen.getByTestId('agent-output-container')).toBeInTheDocument();
+    expect(screen.getByText('output line 1')).toBeInTheDocument();
+    expect(screen.getByText('output line 2')).toBeInTheDocument();
   });
 
   it('displays session status badge', () => {
