@@ -121,6 +121,10 @@ pub fn app(state: AppState) -> Router {
             "/tasks/{task_id}/sessions/{session_id}/stop",
             post(handlers::agent_sessions::stop_agent_session),
         )
+        .route(
+            "/tasks/{task_id}/sessions/{session_id}/outputs",
+            get(handlers::agent_sessions::get_agent_session_outputs),
+        )
         // SSE for real-time updates
         .route("/events", get(sse::handler::sse_handler));
 
