@@ -110,6 +110,9 @@ impl AgentOrchestrator {
         )
         .await?;
 
+        // Step 4b: Save prompt for restart support
+        agent_session_service::save_prompt(&self.pool, session.id, &req.prompt).await?;
+
         // Step 5: Create worktree (spawn_blocking for synchronous git2 operations)
         let worktree_name = format!("task-{}-session-{}", req.task_id, session.id);
         let repo_path = self.repo_path.clone();

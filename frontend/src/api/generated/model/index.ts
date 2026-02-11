@@ -10,6 +10,7 @@ export * from './addMemberRequest';
 export * from './agentSession';
 export * from './agentSessionFinishedAt';
 export * from './agentSessionOutput';
+export * from './agentSessionPrompt';
 export * from './agentSessionStartedAt';
 export * from './agentSessionStatus';
 export * from './agentType';

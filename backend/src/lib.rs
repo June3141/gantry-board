@@ -132,6 +132,10 @@ pub fn app(state: AppState) -> Router {
             "/tasks/{task_id}/sessions/{session_id}/outputs",
             get(handlers::agent_sessions::get_agent_session_outputs),
         )
+        .route(
+            "/tasks/{task_id}/sessions/{session_id}/restart",
+            post(handlers::agent_sessions::restart_agent_session),
+        )
         // Worktree endpoints
         .route("/worktrees", get(handlers::worktrees::list_worktrees))
         .route("/worktrees", post(handlers::worktrees::create_worktree))
