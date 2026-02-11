@@ -13,8 +13,12 @@ use gantry_board::models::agent_session::AgentType;
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
 use sqlx::sqlite::SqlitePoolOptions;
+pub use sqlx::SqlitePool;
 
-async fn create_test_server_impl(auth_disabled: bool, repo_path: PathBuf) -> TestServer {
+async fn create_test_server_impl(
+    auth_disabled: bool,
+    repo_path: PathBuf,
+) -> (TestServer, SqlitePool) {
     let pool = SqlitePoolOptions::new()
         .connect("sqlite::memory:")
         .await
@@ -42,28 +46,28 @@ async fn create_test_server_impl(auth_disabled: bool, repo_path: PathBuf) -> Tes
         Arc::clone(&sse_hub),
     ));
     let state = AppState {
-        pool,
+        pool: pool.clone(),
         sse_hub,
         config: Arc::new(config),
         orchestrator,
     };
 
     let app = gantry_board::app(state).into_make_service_with_connect_info::<SocketAddr>();
-    TestServer::new(app).expect("Failed to create test server")
+    let server = TestServer::new(app).expect("Failed to create test server");
+    (server, pool)
 }
 
 /// Create a test server with auth disabled (for CRUD tests).
 pub async fn create_test_server() -> TestServer {
-    create_test_server_impl(true, PathBuf::from(".")).await
+    create_test_server_impl(true, PathBuf::from(".")).await.0
 }
 
 /// Create a test server with auth enabled (for auth/authorization tests).
 pub async fn create_auth_test_server() -> TestServer {
-    create_test_server_impl(false, PathBuf::from(".")).await
+    create_test_server_impl(false, PathBuf::from(".")).await.0
 }
 
-/// Create a test server with a temporary git repo (for agent session tests).
-pub async fn create_test_server_with_repo() -> (tempfile::TempDir, TestServer) {
+fn init_test_repo() -> (tempfile::TempDir, PathBuf) {
     let tmp = tempfile::TempDir::new().expect("Failed to create temp dir");
     let repo_path = tmp.path().join("repo");
     std::fs::create_dir(&repo_path).expect("Failed to create repo dir");
@@ -73,7 +77,20 @@ pub async fn create_test_server_with_repo() -> (tempfile::TempDir, TestServer) {
     let tree = repo.find_tree(tree_id).unwrap();
     repo.commit(Some("HEAD"), &sig, &sig, "initial", &tree, &[])
         .unwrap();
+    (tmp, repo_path)
+}
 
-    let server = create_test_server_impl(true, repo_path).await;
+/// Create a test server with a temporary git repo (for agent session tests).
+pub async fn create_test_server_with_repo() -> (tempfile::TempDir, TestServer) {
+    let (tmp, repo_path) = init_test_repo();
+    let (server, _pool) = create_test_server_impl(true, repo_path).await;
     (tmp, server)
+}
+
+/// Create a test server with a temporary git repo and DB pool access.
+pub async fn create_test_server_with_repo_and_pool() -> (tempfile::TempDir, TestServer, SqlitePool)
+{
+    let (tmp, repo_path) = init_test_repo();
+    let (server, pool) = create_test_server_impl(true, repo_path).await;
+    (tmp, server, pool)
 }
