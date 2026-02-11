@@ -56,7 +56,9 @@ async fn create_test_server_impl(
     let app = gantry_board::app(state)
         .expect("Failed to build app")
         .into_make_service_with_connect_info::<SocketAddr>();
-    let server = TestServer::new(app).expect("Failed to create test server");
+    let mut server = TestServer::new(app).expect("Failed to create test server");
+    // CSRF middleware requires X-Requested-With on state-changing requests
+    server.add_header("x-requested-with", "XMLHttpRequest");
     (server, pool)
 }
 

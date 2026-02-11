@@ -30,6 +30,7 @@ export const customInstance = async <T>({
     credentials: 'include', // Include cookies for session auth
     headers: {
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
       ...headers,
     },
     ...(data ? { body: JSON.stringify(data) } : {}),

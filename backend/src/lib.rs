@@ -172,6 +172,8 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/events",
             get(sse::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
         )
+        // CSRF protection: require X-Requested-With header on state-changing requests
+        .layer(axum::middleware::from_fn(auth::csrf::csrf_check))
         // General API rate limit applied to all routes
         .layer(GovernorLayer::new(general_governor));
 
@@ -191,7 +193,10 @@ fn build_cors_layer(config: &config::Config) -> Result<CorsLayer, config::Config
         Some(origin) => Ok(CorsLayer::new()
             .allow_origin(AllowOrigin::exact(origin))
             .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-            .allow_headers([axum::http::header::CONTENT_TYPE])
+            .allow_headers([
+                axum::http::header::CONTENT_TYPE,
+                axum::http::HeaderName::from_static("x-requested-with"),
+            ])
             .allow_credentials(true)),
         None => {
             // Defense in depth: release builds must never reach this branch.
