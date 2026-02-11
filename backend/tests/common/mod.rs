@@ -33,6 +33,7 @@ async fn create_test_server_impl(
         bind_addr: "127.0.0.1:0".to_string(),
         database_url: "sqlite::memory:".to_string(),
         auth_disabled,
+        repository_path: Some(repo_path.to_string_lossy().to_string()),
         ..Default::default()
     };
 
@@ -84,6 +85,13 @@ fn init_test_repo() -> (tempfile::TempDir, PathBuf) {
 pub async fn create_test_server_with_repo() -> (tempfile::TempDir, TestServer) {
     let (tmp, repo_path) = init_test_repo();
     let (server, _pool) = create_test_server_impl(true, repo_path).await;
+    (tmp, server)
+}
+
+/// Create a test server with a temporary git repo and auth enabled.
+pub async fn create_auth_test_server_with_repo() -> (tempfile::TempDir, TestServer) {
+    let (tmp, repo_path) = init_test_repo();
+    let (server, _pool) = create_test_server_impl(false, repo_path).await;
     (tmp, server)
 }
 

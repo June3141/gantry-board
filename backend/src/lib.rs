@@ -132,6 +132,14 @@ pub fn app(state: AppState) -> Router {
             "/tasks/{task_id}/sessions/{session_id}/outputs",
             get(handlers::agent_sessions::get_agent_session_outputs),
         )
+        // Worktree endpoints
+        .route("/worktrees", get(handlers::worktrees::list_worktrees))
+        .route("/worktrees", post(handlers::worktrees::create_worktree))
+        .route("/worktrees/{name}", get(handlers::worktrees::get_worktree))
+        .route(
+            "/worktrees/{name}",
+            delete(handlers::worktrees::delete_worktree),
+        )
         // SSE for real-time updates
         .route("/events", get(sse::handler::sse_handler))
         // General API rate limit applied to all routes
