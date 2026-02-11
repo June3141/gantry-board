@@ -273,6 +273,49 @@ async fn test_logout_without_auth() {
 }
 
 #[tokio::test]
+async fn test_login_invalidates_previous_sessions() {
+    let server = create_test_server().await;
+
+    // Register user
+    let register_response = server
+        .post("/api/auth/register")
+        .json(&json!({
+            "email": "test@example.com",
+            "name": "Test User",
+            "password": "Tr0ub4dor&3-correct-horse"
+        }))
+        .await;
+
+    let old_cookie = register_response
+        .headers()
+        .get("set-cookie")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
+
+    // Login (creates new session, should invalidate old one)
+    let _login_response = server
+        .post("/api/auth/login")
+        .json(&json!({
+            "email": "test@example.com",
+            "password": "Tr0ub4dor&3-correct-horse"
+        }))
+        .await;
+
+    // Old session should now be invalid
+    let me_response = server
+        .get("/api/auth/me")
+        .add_header(header::COOKIE, &*old_cookie)
+        .await;
+
+    me_response.assert_status(StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
 async fn test_login_rate_limit_returns_429_after_burst() {
     let server = create_test_server().await;
 
