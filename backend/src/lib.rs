@@ -58,6 +58,27 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         .finish()
         .expect("valid governor config");
 
+    // Rate limit: agent start — 1 per 10 seconds, burst 3 per IP.
+    let agent_start_governor = GovernorConfigBuilder::default()
+        .per_second(10) // 1 token every 10s
+        .burst_size(3) // bucket capacity
+        .finish()
+        .expect("valid governor config");
+
+    // Rate limit: agent restart — same as start.
+    let agent_restart_governor = GovernorConfigBuilder::default()
+        .per_second(10)
+        .burst_size(3)
+        .finish()
+        .expect("valid governor config");
+
+    // Rate limit: SSE connections — 5 connections per 10 seconds per IP.
+    let sse_governor = GovernorConfigBuilder::default()
+        .per_second(10) // 1 token every 10s
+        .burst_size(5) // bucket capacity
+        .finish()
+        .expect("valid governor config");
+
     let api_routes = Router::new()
         // Auth endpoints (rate-limited)
         .route(
@@ -122,7 +143,8 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         )
         .route(
             "/tasks/{task_id}/sessions/start",
-            post(handlers::agent_sessions::start_agent_session),
+            post(handlers::agent_sessions::start_agent_session)
+                .layer(GovernorLayer::new(agent_start_governor)),
         )
         .route(
             "/tasks/{task_id}/sessions/{session_id}/stop",
@@ -134,7 +156,8 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         )
         .route(
             "/tasks/{task_id}/sessions/{session_id}/restart",
-            post(handlers::agent_sessions::restart_agent_session),
+            post(handlers::agent_sessions::restart_agent_session)
+                .layer(GovernorLayer::new(agent_restart_governor)),
         )
         // Worktree endpoints
         .route("/worktrees", get(handlers::worktrees::list_worktrees))
@@ -144,8 +167,11 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/worktrees/{name}",
             delete(handlers::worktrees::delete_worktree),
         )
-        // SSE for real-time updates
-        .route("/events", get(sse::handler::sse_handler))
+        // SSE for real-time updates (rate-limited)
+        .route(
+            "/events",
+            get(sse::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
+        )
         // General API rate limit applied to all routes
         .layer(GovernorLayer::new(general_governor));
 
