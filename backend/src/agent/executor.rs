@@ -46,7 +46,7 @@ pub fn validate_config(config: &AgentConfig) -> AppResult<()> {
         if tool.is_empty()
             || !tool
                 .chars()
-                .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+                .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
         {
             return Err(AppError::Validation(format!(
                 "invalid tool name: {tool:?} — only alphanumeric, underscore, and hyphen allowed"
@@ -164,10 +164,8 @@ mod tests {
 
     #[test]
     fn test_validate_rejects_nonexistent_working_dir() {
-        let config = make_config(
-            PathBuf::from("/nonexistent/path/that/does/not/exist"),
-            vec![],
-        );
+        let nonexistent_dir = std::env::temp_dir().join(Uuid::new_v4().to_string());
+        let config = make_config(nonexistent_dir, vec![]);
         assert!(validate_config(&config).is_err());
     }
 
