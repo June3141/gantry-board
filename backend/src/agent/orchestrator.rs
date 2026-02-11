@@ -304,7 +304,8 @@ impl AgentOrchestrator {
                         break;
                     }
                     AgentOutputEvent::Output { text } => {
-                        // Best-effort persistence
+                        sse_hub.broadcast(SseEvent::agent_output(session_id, text.clone()));
+                        // Best-effort persistence (after broadcast to avoid delaying SSE)
                         if let Err(e) = agent_session_output_service::append_output(
                             &pool, session_id, sequence, &text,
                         )
@@ -313,7 +314,6 @@ impl AgentOrchestrator {
                             warn!("failed to persist output for session {session_id} seq {sequence}: {e}");
                         }
                         sequence += 1;
-                        sse_hub.broadcast(SseEvent::agent_output(session_id, text));
                     }
                 }
             }
@@ -810,17 +810,27 @@ mod tests {
 
         // Wait for all events: Running status + 2 outputs + Completed status = 4
         for _ in 0..4 {
-            let _ = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await;
+            tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv())
+                .await
+                .expect("timed out waiting for SSE event")
+                .expect("SSE sender dropped");
         }
 
-        // Small delay to ensure DB writes complete
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-        let outputs = agent_session_output_service::get_outputs(&pool, result.session_id)
-            .await
-            .expect("should get outputs");
-
-        assert_eq!(outputs.len(), 2);
+        // Poll DB until outputs are persisted (deterministic wait)
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        let outputs = loop {
+            let outputs = agent_session_output_service::get_outputs(&pool, result.session_id)
+                .await
+                .expect("should get outputs");
+            if outputs.len() == 2 {
+                break outputs;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "timed out waiting for outputs to be persisted"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        };
         assert_eq!(outputs[0].sequence, 0);
         assert_eq!(outputs[0].content, "line one");
         assert_eq!(outputs[1].sequence, 1);
