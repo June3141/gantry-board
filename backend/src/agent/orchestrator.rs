@@ -743,6 +743,81 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_agent_output_is_persisted_to_db() {
+        use crate::agent::executor::AgentHandle;
+        use crate::services::agent_session_output_service;
+
+        /// Mock executor that sends multiple output events before completing.
+        struct PersistingOutputExecutor;
+
+        #[async_trait::async_trait]
+        impl AgentExecutor for PersistingOutputExecutor {
+            async fn start(&self, _config: AgentConfig) -> AppResult<AgentHandle> {
+                let cancel = CancellationToken::new();
+                let (tx, rx) = mpsc::channel(16);
+                let join_handle = tokio::spawn(async move {
+                    let _ = tx
+                        .send(AgentOutputEvent::Output {
+                            text: "line one".to_string(),
+                        })
+                        .await;
+                    let _ = tx
+                        .send(AgentOutputEvent::Output {
+                            text: "line two".to_string(),
+                        })
+                        .await;
+                    let _ = tx.send(AgentOutputEvent::Completed).await;
+                    Ok(())
+                });
+                Ok(AgentHandle {
+                    cancel,
+                    output_rx: rx,
+                    join_handle,
+                })
+            }
+        }
+
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+        let tmp = tempfile::tempdir().unwrap();
+        let repo_path = init_test_repo(tmp.path());
+
+        let sse_hub = Arc::new(SseHub::new(16));
+        let mut rx = sse_hub.subscribe();
+
+        let executor = Arc::new(PersistingOutputExecutor);
+        let orchestrator =
+            create_orchestrator_with_hub(executor, pool.clone(), repo_path, Arc::clone(&sse_hub));
+
+        let result = orchestrator
+            .start_session(StartSessionRequest {
+                task_id,
+                agent_type: AgentType::ClaudeCode,
+                prompt: "test".to_string(),
+            })
+            .await
+            .expect("start should succeed");
+
+        // Wait for all events: Running status + 2 outputs + Completed status = 4
+        for _ in 0..4 {
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await;
+        }
+
+        // Small delay to ensure DB writes complete
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let outputs = agent_session_output_service::get_outputs(&pool, result.session_id)
+            .await
+            .expect("should get outputs");
+
+        assert_eq!(outputs.len(), 2);
+        assert_eq!(outputs[0].sequence, 0);
+        assert_eq!(outputs[0].content, "line one");
+        assert_eq!(outputs[1].sequence, 1);
+        assert_eq!(outputs[1].content, "line two");
+    }
+
+    #[tokio::test]
     async fn test_start_session_unsupported_agent_type() {
         let pool = setup_test_db().await;
         let (_project_id, task_id) = create_test_task(&pool).await;
