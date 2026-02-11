@@ -83,10 +83,25 @@ async fn test_list_agent_sessions_returns_created_sessions() {
     let (_tmp, server) = create_test_server().await;
     let (_project_id, task_id) = create_test_task(&server).await;
 
-    server
+    // Create first session and complete it so we can create another
+    let resp1 = server
         .post(&format!("/api/tasks/{}/sessions", task_id))
         .json(&json!({ "agent_type": "claude_code" }))
         .await;
+    let session1: serde_json::Value = resp1.json();
+    let session1_id = session1["id"].as_str().unwrap();
+
+    // Transition: pending -> running -> completed
+    server
+        .patch(&format!("/api/tasks/{}/sessions/{}", task_id, session1_id))
+        .json(&json!({ "status": "running" }))
+        .await;
+    server
+        .patch(&format!("/api/tasks/{}/sessions/{}", task_id, session1_id))
+        .json(&json!({ "status": "completed" }))
+        .await;
+
+    // Create second session (allowed because first is completed)
     server
         .post(&format!("/api/tasks/{}/sessions", task_id))
         .json(&json!({ "agent_type": "gemini_cli" }))
