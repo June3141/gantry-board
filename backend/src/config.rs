@@ -80,6 +80,14 @@ impl Config {
         }
     }
 
+    /// Return the repository path for worktree management.
+    pub fn repo_path(&self) -> std::path::PathBuf {
+        self.repository_path
+            .as_deref()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+    }
+
     /// Parse `cors_origin` into an `HeaderValue`, returning `None` when unset.
     pub fn cors_origin_header(&self) -> Option<HeaderValue> {
         self.cors_origin

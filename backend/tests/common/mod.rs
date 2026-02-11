@@ -33,6 +33,7 @@ async fn create_test_server_impl(
         bind_addr: "127.0.0.1:0".to_string(),
         database_url: "sqlite::memory:".to_string(),
         auth_disabled,
+        repository_path: Some(repo_path.to_string_lossy().to_string()),
         ..Default::default()
     };
 
