@@ -81,7 +81,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     tracing::info!(count, "cleaned up expired sessions");
                 }
                 Err(e) => {
-                    tracing::error!(error = %e, "failed to cleanup expired sessions");
+                    tracing::debug!(error = %e, "session cleanup error details");
+                    tracing::error!("failed to cleanup expired sessions");
                 }
                 _ => {}
             }
@@ -95,7 +96,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     tracing::info!(count, "cleaned up old agent outputs");
                 }
                 Err(e) => {
-                    tracing::error!(error = %e, "failed to cleanup old agent outputs");
+                    tracing::debug!(error = %e, "output cleanup error details");
+                    tracing::error!("failed to cleanup old agent outputs");
                 }
                 _ => {}
             }

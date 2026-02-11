@@ -77,7 +77,9 @@ pub async fn get_outputs_after(
 /// Delete agent session outputs older than the given number of days.
 /// Only deletes outputs for completed/failed/cancelled sessions.
 pub async fn cleanup_old_outputs(pool: &SqlitePool, retention_days: u64) -> AppResult<u64> {
-    let cutoff = Utc::now() - chrono::Duration::days(retention_days as i64);
+    let retention_days_i64 = i64::try_from(retention_days)
+        .map_err(|_| AppError::Internal("retention_days too large".to_string()))?;
+    let cutoff = Utc::now() - chrono::Duration::days(retention_days_i64);
     let result = sqlx::query(
         r#"
         DELETE FROM agent_session_outputs
