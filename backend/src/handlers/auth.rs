@@ -114,7 +114,7 @@ pub async fn logout(State(state): State<AppState>, auth: AuthUser) -> AppResult<
     session_service::delete_session(&state.pool, auth.session_id).await?;
 
     // Clear cookie
-    let cookie = delete_session_cookie();
+    let cookie = delete_session_cookie(state.config.cookie_secure);
 
     Ok((StatusCode::NO_CONTENT, [(header::SET_COOKIE, cookie)]))
 }

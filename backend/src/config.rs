@@ -78,6 +78,15 @@ impl Config {
                 panic!("GANTRY_CORS_ORIGIN is not a valid HTTP header value: {origin:?}")
             });
         }
+
+        // In release builds, CORS origin must be explicitly configured
+        #[cfg(not(debug_assertions))]
+        if self.cors_origin.is_none() {
+            panic!(
+                "GANTRY_CORS_ORIGIN must be set in production. \
+                 Permissive CORS is only allowed in debug builds."
+            );
+        }
     }
 
     /// Return the repository path for worktree management.
@@ -169,5 +178,24 @@ mod tests {
     fn test_cookie_secure_defaults_to_true() {
         let config = Config::default();
         assert!(config.cookie_secure);
+    }
+
+    #[test]
+    fn test_validate_accepts_cors_origin_set() {
+        let config = Config {
+            cors_origin: Some("http://localhost:5173".to_string()),
+            ..Default::default()
+        };
+        config.validate(); // should not panic
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn test_validate_accepts_missing_cors_in_debug_build() {
+        let config = Config {
+            cors_origin: None,
+            ..Default::default()
+        };
+        config.validate(); // should not panic in debug builds
     }
 }

@@ -88,6 +88,13 @@ pub async fn create_test_server_with_repo() -> (tempfile::TempDir, TestServer) {
     (tmp, server)
 }
 
+/// Create a test server with a temporary git repo and auth enabled.
+pub async fn create_auth_test_server_with_repo() -> (tempfile::TempDir, TestServer) {
+    let (tmp, repo_path) = init_test_repo();
+    let (server, _pool) = create_test_server_impl(false, repo_path).await;
+    (tmp, server)
+}
+
 /// Create a test server with a temporary git repo and DB pool access.
 pub async fn create_test_server_with_repo_and_pool() -> (tempfile::TempDir, TestServer, SqlitePool)
 {

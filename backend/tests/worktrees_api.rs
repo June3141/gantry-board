@@ -1,7 +1,7 @@
 mod common;
 
 use axum::http::StatusCode;
-use common::create_test_server_with_repo;
+use common::{create_auth_test_server_with_repo, create_test_server_with_repo};
 use serde_json::json;
 
 #[tokio::test]
@@ -145,9 +145,40 @@ async fn test_delete_then_list_removes_worktree() {
         .await
         .assert_status(StatusCode::CREATED);
 
-    server.delete("/api/worktrees/temp-wt").await;
+    server
+        .delete("/api/worktrees/temp-wt")
+        .await
+        .assert_status(StatusCode::NO_CONTENT);
 
     let response = server.get("/api/worktrees").await;
+    response.assert_status_ok();
     let worktrees: Vec<serde_json::Value> = response.json();
     assert!(worktrees.is_empty());
+}
+
+#[tokio::test]
+async fn test_worktree_endpoints_require_auth() {
+    let (_tmp, server) = create_auth_test_server_with_repo().await;
+
+    // All worktree endpoints should return 401 without auth
+    server
+        .get("/api/worktrees")
+        .await
+        .assert_status(StatusCode::UNAUTHORIZED);
+
+    server
+        .post("/api/worktrees")
+        .json(&json!({ "name": "test" }))
+        .await
+        .assert_status(StatusCode::UNAUTHORIZED);
+
+    server
+        .get("/api/worktrees/test")
+        .await
+        .assert_status(StatusCode::UNAUTHORIZED);
+
+    server
+        .delete("/api/worktrees/test")
+        .await
+        .assert_status(StatusCode::UNAUTHORIZED);
 }
