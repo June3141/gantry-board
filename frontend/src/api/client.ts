@@ -10,12 +10,19 @@ export const customInstance = async <T>({
 }: {
   url: string;
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  params?: Record<string, string>;
+  params?: Record<string, string | number | boolean | undefined>;
   data?: unknown;
   headers?: Record<string, string>;
   signal?: AbortSignal;
 }): Promise<T> => {
-  const searchParams = new URLSearchParams(params);
+  const searchParams = new URLSearchParams();
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) {
+        searchParams.set(key, String(value));
+      }
+    }
+  }
   const fullUrl = `${BASE_URL}${url}${searchParams.toString() ? `?${searchParams}` : ''}`;
 
   const response = await fetch(fullUrl, {

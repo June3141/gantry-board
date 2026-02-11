@@ -33,6 +33,7 @@ use crate::sse;
         handlers::agent_sessions::update_agent_session,
         handlers::agent_sessions::start_agent_session,
         handlers::agent_sessions::stop_agent_session,
+        handlers::agent_sessions::get_agent_session_outputs,
     ),
     components(schemas(
         models::task::Task,
@@ -58,6 +59,7 @@ use crate::sse;
         models::agent_session::UpdateAgentSessionRequest,
         models::agent_session::StartAgentSessionRequest,
         models::agent_session::StartAgentSessionResponse,
+        models::agent_session_output::AgentSessionOutput,
         sse::event::SseEvent,
     )),
     tags(

@@ -1,6 +1,7 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
+use serde::Deserialize;
 use uuid::Uuid;
 
 use garde::Validate;
@@ -12,7 +13,10 @@ use crate::models::agent_session::{
     AgentSession, CreateAgentSessionRequest, StartAgentSessionRequest, StartAgentSessionResponse,
     UpdateAgentSessionRequest,
 };
-use crate::services::{agent_session_service, authorization_service, task_service};
+use crate::models::agent_session_output::AgentSessionOutput;
+use crate::services::{
+    agent_session_output_service, agent_session_service, authorization_service, task_service,
+};
 use crate::AppState;
 
 #[utoipa::path(
@@ -195,4 +199,46 @@ pub async fn stop_agent_session(
     let session =
         agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
     Ok(Json(session))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetOutputsQuery {
+    pub after: Option<i64>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/tasks/{task_id}/sessions/{session_id}/outputs",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID"),
+        ("session_id" = Uuid, Path, description = "Agent session ID"),
+        ("after" = Option<i64>, Query, description = "Return outputs after this sequence number")
+    ),
+    responses(
+        (status = 200, description = "Session outputs", body = Vec<AgentSessionOutput>),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Task or session not found")
+    ),
+    tag = "agent-sessions"
+)]
+pub async fn get_agent_session_outputs(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((task_id, session_id)): Path<(Uuid, Uuid)>,
+    Query(query): Query<GetOutputsQuery>,
+) -> AppResult<Json<Vec<AgentSessionOutput>>> {
+    let task = task_service::get_task(&state.pool, task_id).await?;
+    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
+        .await?;
+    agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
+
+    let outputs = match query.after {
+        Some(after_seq) => {
+            agent_session_output_service::get_outputs_after(&state.pool, session_id, after_seq)
+                .await?
+        }
+        None => agent_session_output_service::get_outputs(&state.pool, session_id).await?,
+    };
+
+    Ok(Json(outputs))
 }

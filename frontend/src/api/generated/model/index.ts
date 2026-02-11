@@ -9,6 +9,7 @@
 export * from './addMemberRequest';
 export * from './agentSession';
 export * from './agentSessionFinishedAt';
+export * from './agentSessionOutput';
 export * from './agentSessionStartedAt';
 export * from './agentSessionStatus';
 export * from './agentType';
@@ -22,6 +23,7 @@ export * from './createTaskRequestDescription';
 export * from './createTaskRequestParentId';
 export * from './createTaskRequestPriority';
 export * from './createTaskRequestStatus';
+export * from './getAgentSessionOutputsParams';
 export * from './listTasksParams';
 export * from './loginRequest';
 export * from './memberRole';
