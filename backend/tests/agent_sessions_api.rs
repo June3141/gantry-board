@@ -334,6 +334,142 @@ async fn test_stop_agent_session_404_for_nonrunning_session() {
     response.assert_status(StatusCode::NOT_FOUND);
 }
 
+// ========== Start Session Saves Prompt ==========
+
+#[tokio::test]
+async fn test_start_session_saves_prompt() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_test_task(&server).await;
+
+    let response = server
+        .post(&format!("/api/tasks/{}/sessions/start", task_id))
+        .json(&json!({
+            "agent_type": "claude_code",
+            "prompt": "Fix the bug in main.rs"
+        }))
+        .await;
+
+    response.assert_status(StatusCode::CREATED);
+    let body: serde_json::Value = response.json();
+    assert_eq!(body["session"]["prompt"], "Fix the bug in main.rs");
+}
+
+// ========== Restart Session Tests ==========
+
+#[tokio::test]
+async fn test_restart_session_creates_new_session() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_test_task(&server).await;
+
+    // Start a session
+    let start_response = server
+        .post(&format!("/api/tasks/{}/sessions/start", task_id))
+        .json(&json!({
+            "agent_type": "claude_code",
+            "prompt": "Implement feature X"
+        }))
+        .await;
+    start_response.assert_status(StatusCode::CREATED);
+    let start_body: serde_json::Value = start_response.json();
+    let session_id = start_body["session"]["id"].as_str().unwrap();
+
+    // Stop it
+    server
+        .post(&format!(
+            "/api/tasks/{}/sessions/{}/stop",
+            task_id, session_id
+        ))
+        .await
+        .assert_status_ok();
+
+    // Restart it
+    let restart_response = server
+        .post(&format!(
+            "/api/tasks/{}/sessions/{}/restart",
+            task_id, session_id
+        ))
+        .await;
+
+    restart_response.assert_status(StatusCode::CREATED);
+    let restart_body: serde_json::Value = restart_response.json();
+    let new_session = &restart_body["session"];
+
+    // New session should have same prompt and agent_type
+    assert_ne!(new_session["id"].as_str().unwrap(), session_id);
+    assert_eq!(new_session["prompt"], "Implement feature X");
+    assert_eq!(new_session["agent_type"], "claude_code");
+    assert_eq!(new_session["status"], "running");
+}
+
+#[tokio::test]
+async fn test_restart_session_409_when_active_session_exists() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_test_task(&server).await;
+
+    // Start a session
+    let start_response = server
+        .post(&format!("/api/tasks/{}/sessions/start", task_id))
+        .json(&json!({
+            "agent_type": "claude_code",
+            "prompt": "Implement feature X"
+        }))
+        .await;
+    start_response.assert_status(StatusCode::CREATED);
+    let start_body: serde_json::Value = start_response.json();
+    let session_id = start_body["session"]["id"].as_str().unwrap();
+
+    // Try to restart while still running → should 409
+    let restart_response = server
+        .post(&format!(
+            "/api/tasks/{}/sessions/{}/restart",
+            task_id, session_id
+        ))
+        .await;
+
+    restart_response.assert_status(StatusCode::CONFLICT);
+}
+
+#[tokio::test]
+async fn test_restart_session_404_for_nonexistent_session() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_test_task(&server).await;
+    let fake_session_id = Uuid::new_v4();
+
+    let response = server
+        .post(&format!(
+            "/api/tasks/{}/sessions/{}/restart",
+            task_id, fake_session_id
+        ))
+        .await;
+
+    response.assert_status(StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn test_restart_session_400_when_no_prompt_saved() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_test_task(&server).await;
+
+    // Create session via create (not start — no prompt saved)
+    let create_response = server
+        .post(&format!("/api/tasks/{}/sessions", task_id))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+    create_response.assert_status(StatusCode::CREATED);
+    let created: serde_json::Value = create_response.json();
+    let session_id = created["id"].as_str().unwrap();
+
+    // Restart should fail — no prompt available
+    let response = server
+        .post(&format!(
+            "/api/tasks/{}/sessions/{}/restart",
+            task_id, session_id
+        ))
+        .await;
+
+    response.assert_status(StatusCode::BAD_REQUEST);
+}
+
 // ========== Session Outputs Tests ==========
 
 async fn create_session_with_outputs(
