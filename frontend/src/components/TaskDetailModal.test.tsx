@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as agentSessionsApi from '../api/generated/endpoints/agent-sessions/agent-sessions';
 import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
+import * as worktreesApi from '../api/generated/endpoints/worktrees/worktrees';
 import type { Task } from '../api/generated/model';
 import { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
@@ -19,6 +20,12 @@ vi.mock('../api/generated/endpoints/agent-sessions/agent-sessions', () => ({
   useListAgentSessions: vi.fn(),
   useStartAgentSession: vi.fn(),
   useStopAgentSession: vi.fn(),
+}));
+
+vi.mock('../api/generated/endpoints/worktrees/worktrees', () => ({
+  useListWorktrees: vi.fn(),
+  useCreateWorktree: vi.fn(),
+  useDeleteWorktree: vi.fn(),
 }));
 
 vi.mock('../hooks/useAgentEvents', () => ({
@@ -82,6 +89,21 @@ describe('TaskDetailModal', () => {
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof agentSessionsApi.useStopAgentSession>);
+
+    vi.mocked(worktreesApi.useListWorktrees).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof worktreesApi.useListWorktrees>);
+
+    vi.mocked(worktreesApi.useCreateWorktree).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof worktreesApi.useCreateWorktree>);
+
+    vi.mocked(worktreesApi.useDeleteWorktree).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof worktreesApi.useDeleteWorktree>);
   });
 
   it('does not render when modal is closed', () => {
@@ -296,6 +318,14 @@ describe('TaskDetailModal', () => {
       renderWithProviders(<TaskDetailModal />);
       expect(screen.getByText('Agent')).toBeInTheDocument();
       expect(screen.getByLabelText(/agent type/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('worktree panel', () => {
+    it('renders worktree panel section when modal is open', () => {
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+      expect(screen.getByText('Worktrees')).toBeInTheDocument();
     });
   });
 
