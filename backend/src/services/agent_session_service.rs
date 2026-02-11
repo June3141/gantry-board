@@ -119,11 +119,18 @@ pub async fn list_agent_sessions(pool: &SqlitePool, task_id: Uuid) -> AppResult<
 }
 
 pub async fn save_prompt(pool: &SqlitePool, session_id: Uuid, prompt: &str) -> AppResult<()> {
-    sqlx::query("UPDATE agent_sessions SET prompt = $1 WHERE id = $2")
-        .bind(prompt)
-        .bind(session_id.to_string())
-        .execute(pool)
-        .await?;
+    let result = sqlx::query(
+        "UPDATE agent_sessions SET prompt = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+    )
+    .bind(prompt)
+    .bind(session_id.to_string())
+    .execute(pool)
+    .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!(
+            "Agent session {session_id} not found"
+        )));
+    }
     Ok(())
 }
 
