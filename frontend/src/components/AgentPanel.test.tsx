@@ -46,6 +46,11 @@ describe('AgentPanel', () => {
       mutateAsync: mockStopMutateAsync,
       isPending: false,
     } as unknown as ReturnType<typeof agentSessionsApi.useStopAgentSession>);
+
+    vi.mocked(agentSessionsApi.useGetAgentSessionOutputs).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useGetAgentSessionOutputs>);
   });
 
   it('renders agent type selector', () => {
@@ -200,8 +205,8 @@ describe('AgentPanel', () => {
     const user = userEvent.setup();
     renderWithProviders(<AgentPanel taskId="task-1" />);
 
-    // Click the past session to view its output
-    await user.click(screen.getByText(/session-1/i).closest('button')!);
+    // Click the past session to view its output (session ID is truncated to 8 chars)
+    await user.click(screen.getByText('session-').closest('button')!);
 
     // Output viewer should be visible with loaded history
     expect(screen.getByTestId('agent-output-container')).toBeInTheDocument();

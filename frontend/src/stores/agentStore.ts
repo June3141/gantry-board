@@ -4,9 +4,12 @@ interface AgentState {
   activeSessionId: string | null;
   outputLines: string[];
   isStarting: boolean;
+  isLoadingHistory: boolean;
   setActiveSession: (sessionId: string | null) => void;
   appendOutput: (text: string) => void;
+  setOutputLines: (lines: string[]) => void;
   setStarting: (value: boolean) => void;
+  setLoadingHistory: (value: boolean) => void;
   reset: () => void;
 }
 
@@ -16,11 +19,14 @@ export const useAgentStore = create<AgentState>((set) => ({
   activeSessionId: null,
   outputLines: [],
   isStarting: false,
+  isLoadingHistory: false,
   setActiveSession: (sessionId) => set({ activeSessionId: sessionId }),
   appendOutput: (text) =>
     set((state) => ({
       outputLines: [...state.outputLines.slice(-(MAX_OUTPUT_LINES - 1)), text],
     })),
+  setOutputLines: (lines) => set({ outputLines: lines }),
   setStarting: (value) => set({ isStarting: value }),
-  reset: () => set({ activeSessionId: null, outputLines: [], isStarting: false }),
+  setLoadingHistory: (value) => set({ isLoadingHistory: value }),
+  reset: () => set({ activeSessionId: null, outputLines: [], isStarting: false, isLoadingHistory: false }),
 }));
