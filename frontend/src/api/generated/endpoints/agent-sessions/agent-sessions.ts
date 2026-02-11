@@ -24,7 +24,9 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
 import type {
   AgentSession,
+  AgentSessionOutput,
   CreateAgentSessionRequest,
+  GetAgentSessionOutputsParams,
   StartAgentSessionRequest,
   StartAgentSessionResponse,
   UpdateAgentSessionRequest,
@@ -476,6 +478,151 @@ export const useUpdateAgentSession = <TError = void | void | void, TContext = un
 
   return useMutation(mutationOptions, queryClient);
 };
+export const getAgentSessionOutputs = (
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AgentSessionOutput[]>({
+    url: `/api/tasks/${taskId}/sessions/${sessionId}/outputs`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getGetAgentSessionOutputsQueryKey = (
+  taskId?: string,
+  sessionId?: string,
+  params?: GetAgentSessionOutputsParams,
+) => {
+  return [
+    `/api/tasks/${taskId}/sessions/${sessionId}/outputs`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetAgentSessionOutputsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void | void,
+>(
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAgentSessionOutputsQueryKey(taskId, sessionId, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentSessionOutputs>>> = ({ signal }) =>
+    getAgentSessionOutputs(taskId, sessionId, params, signal);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(taskId && sessionId),
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetAgentSessionOutputsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAgentSessionOutputs>>
+>;
+export type GetAgentSessionOutputsQueryError = void | void;
+
+export function useGetAgentSessionOutputs<
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void | void,
+>(
+  taskId: string,
+  sessionId: string,
+  params: undefined | GetAgentSessionOutputsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+          TError,
+          Awaited<ReturnType<typeof getAgentSessionOutputs>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAgentSessionOutputs<
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void | void,
+>(
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+          TError,
+          Awaited<ReturnType<typeof getAgentSessionOutputs>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAgentSessionOutputs<
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void | void,
+>(
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useGetAgentSessionOutputs<
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void | void,
+>(
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetAgentSessionOutputsQueryOptions(taskId, sessionId, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
 export const stopAgentSession = (taskId: string, sessionId: string, signal?: AbortSignal) => {
   return customInstance<AgentSession>({
     url: `/api/tasks/${taskId}/sessions/${sessionId}/stop`,
