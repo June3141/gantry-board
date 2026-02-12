@@ -12,16 +12,27 @@ interface ToastState {
   removeToast: (id: string) => void;
 }
 
-export const useToastStore = create<ToastState>((set) => ({
-  toasts: [],
-  addToast: (type, message) => {
-    const id = crypto.randomUUID();
-    set((state) => ({ toasts: [...state.toasts, { id, type, message }] }));
-    setTimeout(() => {
+export const useToastStore = create<ToastState>((set) => {
+  const timeouts = new Map<string, number>();
+
+  return {
+    toasts: [],
+    addToast: (type, message) => {
+      const id = crypto.randomUUID();
+      set((state) => ({ toasts: [...state.toasts, { id, type, message }] }));
+      const timeoutId = window.setTimeout(() => {
+        set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
+        timeouts.delete(id);
+      }, 5000);
+      timeouts.set(id, timeoutId);
+    },
+    removeToast: (id) => {
+      const timeoutId = timeouts.get(id);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+        timeouts.delete(id);
+      }
       set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
-    }, 5000);
-  },
-  removeToast: (id) => {
-    set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
-  },
-}));
+    },
+  };
+});

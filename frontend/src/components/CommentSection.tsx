@@ -1,5 +1,7 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
+  getListCommentsQueryKey,
   useCreateComment,
   useDeleteComment,
   useListComments,
@@ -33,9 +35,14 @@ function CommentItem({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const queryClient = useQueryClient();
   const updateComment = useUpdateComment();
   const deleteComment = useDeleteComment();
   const addToast = useToastStore((s) => s.addToast);
+
+  const invalidateComments = () => {
+    queryClient.invalidateQueries({ queryKey: getListCommentsQueryKey(taskId) });
+  };
 
   const handleEdit = () => {
     setEditing(true);
@@ -52,6 +59,7 @@ function CommentItem({
         data: { content: trimmed },
       });
       setEditing(false);
+      invalidateComments();
     } catch {
       addToast('error', 'Failed to update comment.');
     }
@@ -61,6 +69,7 @@ function CommentItem({
     try {
       await deleteComment.mutateAsync({ taskId, commentId: comment.id });
       setShowDeleteConfirm(false);
+      invalidateComments();
     } catch {
       addToast('error', 'Failed to delete comment.');
     }
@@ -157,6 +166,7 @@ function CommentItem({
 export function CommentSection({ taskId }: { taskId: string }) {
   const { data: comments, isLoading } = useListComments(taskId);
   const createComment = useCreateComment();
+  const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState('');
   const currentUser = useAuthStore((s) => s.user);
   const addToast = useToastStore((s) => s.addToast);
@@ -167,6 +177,7 @@ export function CommentSection({ taskId }: { taskId: string }) {
     try {
       await createComment.mutateAsync({ taskId, data: { content: trimmed } });
       setNewComment('');
+      queryClient.invalidateQueries({ queryKey: getListCommentsQueryKey(taskId) });
     } catch {
       addToast('error', 'Failed to post comment.');
     }
