@@ -5,10 +5,15 @@ export type TimelineItem =
   | { type: 'agent_session'; data: AgentSession };
 
 export function mergeTimeline(
-  _comments: TaskComment[],
-  _sessions: AgentSession[],
+  comments: TaskComment[],
+  sessions: AgentSession[],
 ): TimelineItem[] {
-  return [];
+  const items: TimelineItem[] = [
+    ...comments.map((c) => ({ type: 'comment' as const, data: c })),
+    ...sessions.map((s) => ({ type: 'agent_session' as const, data: s })),
+  ];
+  items.sort((a, b) => new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime());
+  return items;
 }
 
 export function TaskTimeline(_props: { taskId: string }) {
