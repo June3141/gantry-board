@@ -188,7 +188,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           />
         ))}
       </div>
-      <DragOverlay>{activeTask ? <TaskCard task={activeTask} members={members} /> : null}</DragOverlay>
+      <DragOverlay>
+        {activeTask ? <TaskCard task={activeTask} members={members} /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }

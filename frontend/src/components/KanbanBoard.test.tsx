@@ -127,9 +127,26 @@ describe('KanbanBoard', () => {
 
   describe('filtering', () => {
     const allTasks = [
-      createMockTask({ id: 't1', title: 'Fix login bug', status: TaskStatus.todo, priority: TaskPriority.high, assigned_to: 'user-1' }),
-      createMockTask({ id: 't2', title: 'Add dashboard', status: TaskStatus.todo, priority: TaskPriority.medium, assigned_to: 'user-2' }),
-      createMockTask({ id: 't3', title: 'Setup CI', status: TaskStatus.in_progress, priority: TaskPriority.low }),
+      createMockTask({
+        id: 't1',
+        title: 'Fix login bug',
+        status: TaskStatus.todo,
+        priority: TaskPriority.high,
+        assigned_to: 'user-1',
+      }),
+      createMockTask({
+        id: 't2',
+        title: 'Add dashboard',
+        status: TaskStatus.todo,
+        priority: TaskPriority.medium,
+        assigned_to: 'user-2',
+      }),
+      createMockTask({
+        id: 't3',
+        title: 'Setup CI',
+        status: TaskStatus.in_progress,
+        priority: TaskPriority.low,
+      }),
     ];
 
     beforeEach(() => {

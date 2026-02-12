@@ -92,21 +92,22 @@ export function TaskCard({ task, isDragging, members }: TaskCardProps) {
           {task.description}
         </p>
       )}
-      {task.assigned_to && (() => {
-        const member = members?.find((m) => m.user_id === task.assigned_to);
-        const initials = member ? getInitials(member.user_name) : '?';
-        return (
-          <div className="mt-2 flex justify-end">
-            <div
-              data-testid="assignee-avatar"
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-800"
-              title={member?.user_name}
-            >
-              {initials}
+      {task.assigned_to &&
+        (() => {
+          const member = members?.find((m) => m.user_id === task.assigned_to);
+          const initials = member ? getInitials(member.user_name) : '?';
+          return (
+            <div className="mt-2 flex justify-end">
+              <div
+                data-testid="assignee-avatar"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-800"
+                title={member?.user_name}
+              >
+                {initials}
+              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </div>
   );
 }

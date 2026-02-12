@@ -7,7 +7,7 @@ import * as commentsApi from '../api/generated/endpoints/task-comments/task-comm
 import type { AgentSession, TaskComment } from '../api/generated/model';
 import { AgentSessionStatus, AgentType } from '../api/generated/model';
 import { useAuthStore } from '../stores/authStore';
-import { type TimelineItem, TaskTimeline, mergeTimeline } from './TaskTimeline';
+import { mergeTimeline, TaskTimeline, type TimelineItem } from './TaskTimeline';
 
 vi.mock('../api/generated/endpoints/task-comments/task-comments', () => ({
   useListComments: vi.fn(),
@@ -103,8 +103,7 @@ describe('mergeTimeline', () => {
   });
 });
 
-const createQueryClient = () =>
-  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 const renderWithProviders = (ui: React.ReactElement) => {
   const queryClient = createQueryClient();
@@ -165,7 +164,13 @@ describe('TaskTimeline component', () => {
       isLoading: false,
     } as unknown as ReturnType<typeof commentsApi.useListComments>);
     vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
-      data: [createSession({ id: 's1', agent_type: AgentType.claude_code, status: AgentSessionStatus.completed })],
+      data: [
+        createSession({
+          id: 's1',
+          agent_type: AgentType.claude_code,
+          status: AgentSessionStatus.completed,
+        }),
+      ],
       isLoading: false,
     } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
 

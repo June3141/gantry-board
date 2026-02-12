@@ -37,9 +37,7 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
 
   const togglePriority = (p: TaskPriority) => {
     setPriorityFilter(
-      priorityFilter.includes(p)
-        ? priorityFilter.filter((x) => x !== p)
-        : [...priorityFilter, p],
+      priorityFilter.includes(p) ? priorityFilter.filter((x) => x !== p) : [...priorityFilter, p],
     );
   };
 

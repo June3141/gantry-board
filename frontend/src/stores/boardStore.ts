@@ -28,9 +28,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   hasActiveFilters: () => {
     const state = get();
     return (
-      state.searchText !== '' ||
-      state.assigneeFilter.length > 0 ||
-      state.priorityFilter.length > 0
+      state.searchText !== '' || state.assigneeFilter.length > 0 || state.priorityFilter.length > 0
     );
   },
 }));

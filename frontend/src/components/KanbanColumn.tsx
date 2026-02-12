@@ -47,7 +47,12 @@ export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanCol
           </div>
         ) : (
           tasks.map((task) => (
-            <TaskCard key={task.id} task={task} isDragging={activeTaskId === task.id} members={members} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              isDragging={activeTaskId === task.id}
+              members={members}
+            />
           ))
         )}
       </div>

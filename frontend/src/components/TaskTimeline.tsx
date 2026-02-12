@@ -13,7 +13,12 @@ import {
   useListComments,
   useUpdateComment,
 } from '../api/generated/endpoints/task-comments/task-comments';
-import type { AgentSession, AgentSessionStatus, AgentType, TaskComment } from '../api/generated/model';
+import type {
+  AgentSession,
+  AgentSessionStatus,
+  AgentType,
+  TaskComment,
+} from '../api/generated/model';
 import { useAgentEvents } from '../hooks/useAgentEvents';
 import { useAgentStore } from '../stores/agentStore';
 import { useAuthStore } from '../stores/authStore';
@@ -24,10 +29,7 @@ export type TimelineItem =
   | { type: 'comment'; data: TaskComment }
   | { type: 'agent_session'; data: AgentSession };
 
-export function mergeTimeline(
-  comments: TaskComment[],
-  sessions: AgentSession[],
-): TimelineItem[] {
+export function mergeTimeline(comments: TaskComment[], sessions: AgentSession[]): TimelineItem[] {
   const items: TimelineItem[] = [
     ...comments.map((c) => ({ type: 'comment' as const, data: c })),
     ...sessions.map((s) => ({ type: 'agent_session' as const, data: s })),
@@ -209,7 +211,10 @@ function TimelineCommentItem({
 
 function TimelineAgentSessionItem({ session }: { session: AgentSession }) {
   return (
-    <div data-testid="timeline-session" className="flex items-center gap-3 rounded-md bg-gray-50 px-3 py-2">
+    <div
+      data-testid="timeline-session"
+      className="flex items-center gap-3 rounded-md bg-gray-50 px-3 py-2"
+    >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-800">
         AI
       </div>
@@ -364,35 +369,36 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
       )}
 
       {/* Viewing historical session */}
-      {viewingSessionId && (() => {
-        const viewingSession = sessions?.find((s) => s.id === viewingSessionId);
-        if (!viewingSession) return null;
-        return (
-          <div className="space-y-2 rounded-md border border-gray-200 p-3">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setViewingSessionId(null);
-                  reset();
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                Back
-              </button>
-              <span className="text-sm text-gray-600">
-                {AGENT_LABELS[viewingSession.agent_type] ?? viewingSession.agent_type}
-              </span>
-              <span
-                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[viewingSession.status]}`}
-              >
-                {viewingSession.status}
-              </span>
+      {viewingSessionId &&
+        (() => {
+          const viewingSession = sessions?.find((s) => s.id === viewingSessionId);
+          if (!viewingSession) return null;
+          return (
+            <div className="space-y-2 rounded-md border border-gray-200 p-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewingSessionId(null);
+                    reset();
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Back
+                </button>
+                <span className="text-sm text-gray-600">
+                  {AGENT_LABELS[viewingSession.agent_type] ?? viewingSession.agent_type}
+                </span>
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[viewingSession.status]}`}
+                >
+                  {viewingSession.status}
+                </span>
+              </div>
+              <AgentOutputViewer lines={outputLines} isLoading={isLoadingHistory} />
             </div>
-            <AgentOutputViewer lines={outputLines} isLoading={isLoadingHistory} />
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Agent start section */}
       {!activeSession && !viewingSessionId && (
@@ -474,10 +480,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
                 isOwner={currentUser?.id === item.data.user_id}
               />
             ) : (
-              <TimelineAgentSessionItem
-                key={item.data.id}
-                session={item.data}
-              />
+              <TimelineAgentSessionItem key={item.data.id} session={item.data} />
             ),
           )}
         </div>
