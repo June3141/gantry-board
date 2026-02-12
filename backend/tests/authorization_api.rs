@@ -120,7 +120,8 @@ async fn test_list_projects_only_returns_member_projects() {
         .add_header(header::COOKIE, &cookie_a)
         .await;
     response.assert_status_ok();
-    let projects: Vec<serde_json::Value> = response.json();
+    let body: serde_json::Value = response.json();
+    let projects = body["data"].as_array().unwrap();
     assert_eq!(projects.len(), 2);
 
     // User B should see only their 1 project
@@ -129,7 +130,8 @@ async fn test_list_projects_only_returns_member_projects() {
         .add_header(header::COOKIE, &cookie_b)
         .await;
     response.assert_status_ok();
-    let projects: Vec<serde_json::Value> = response.json();
+    let body: serde_json::Value = response.json();
+    let projects = body["data"].as_array().unwrap();
     assert_eq!(projects.len(), 1);
 }
 

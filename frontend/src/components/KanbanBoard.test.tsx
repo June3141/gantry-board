@@ -44,7 +44,7 @@ describe('KanbanBoard', () => {
 
   it('renders all status columns', () => {
     vi.mocked(tasksApi.useListTasks).mockReturnValue({
-      data: [],
+      data: { data: [], total: 0, limit: 50, offset: 0 },
       isLoading: false,
       error: null,
     } as ReturnType<typeof tasksApi.useListTasks>);
@@ -84,7 +84,7 @@ describe('KanbanBoard', () => {
     ];
 
     vi.mocked(tasksApi.useListTasks).mockReturnValue({
-      data: tasks,
+      data: { data: tasks, total: tasks.length, limit: 50, offset: 0 },
       isLoading: false,
       error: null,
     } as ReturnType<typeof tasksApi.useListTasks>);

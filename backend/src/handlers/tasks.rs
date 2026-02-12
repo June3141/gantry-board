@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
+use crate::models::pagination::{self, PaginatedResponse};
 use crate::models::task::{CreateTaskRequest, Task, UpdateTaskRequest};
 use crate::services::{authorization_service, project_service, task_service};
 use crate::sse::event::SseEvent;
@@ -15,14 +16,22 @@ use crate::AppState;
 #[derive(Debug, Deserialize)]
 pub struct ListTasksQuery {
     pub project_id: Uuid,
+    #[serde(default = "pagination::default_limit")]
+    pub limit: i64,
+    #[serde(default)]
+    pub offset: i64,
 }
 
 #[utoipa::path(
     get,
     path = "/api/tasks",
-    params(("project_id" = Uuid, Query, description = "Filter by project ID")),
+    params(
+        ("project_id" = Uuid, Query, description = "Filter by project ID"),
+        ("limit" = Option<i64>, Query, description = "Maximum number of items to return (default 50)"),
+        ("offset" = Option<i64>, Query, description = "Number of items to skip (default 0)"),
+    ),
     responses(
-        (status = 200, description = "List tasks for project", body = Vec<Task>),
+        (status = 200, description = "List tasks for project", body = PaginatedResponse<Task>),
         (status = 403, description = "Forbidden"),
         (status = 404, description = "Project not found")
     ),
@@ -32,12 +41,24 @@ pub async fn list_tasks(
     State(state): State<AppState>,
     auth: AuthUser,
     Query(query): Query<ListTasksQuery>,
-) -> AppResult<Json<Vec<Task>>> {
+) -> AppResult<Json<PaginatedResponse<Task>>> {
+    pagination::validate(query.limit, query.offset)?;
     project_service::get_project(&state.pool, query.project_id).await?;
     authorization_service::require_project_member(&state.pool, auth.user_id, query.project_id)
         .await?;
-    let tasks = task_service::list_tasks(&state.pool, query.project_id).await?;
-    Ok(Json(tasks))
+    let (tasks, total) = task_service::list_tasks_paginated(
+        &state.pool,
+        query.project_id,
+        query.limit,
+        query.offset,
+    )
+    .await?;
+    Ok(Json(PaginatedResponse {
+        data: tasks,
+        total,
+        limit: query.limit,
+        offset: query.offset,
+    }))
 }
 
 #[utoipa::path(

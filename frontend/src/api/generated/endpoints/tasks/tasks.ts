@@ -22,10 +22,21 @@ import type {
 } from '@tanstack/react-query';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
-import type { CreateTaskRequest, ListTasksParams, Task, UpdateTaskRequest } from '../../model';
+import type {
+  CreateTaskRequest,
+  ListTasksParams,
+  PaginatedResponseTask,
+  Task,
+  UpdateTaskRequest,
+} from '../../model';
 
 export const listTasks = (params: ListTasksParams, signal?: AbortSignal) => {
-  return customInstance<Task[]>({ url: `/api/tasks`, method: 'GET', params, signal });
+  return customInstance<PaginatedResponseTask>({
+    url: `/api/tasks`,
+    method: 'GET',
+    params,
+    signal,
+  });
 };
 
 export const getListTasksQueryKey = (params?: ListTasksParams) => {

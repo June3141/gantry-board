@@ -57,7 +57,7 @@ function KanbanApp() {
               disabled={projectsLoading}
             >
               <option value="">Select a project...</option>
-              {projects?.map((project) => (
+              {projects?.data?.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
                 </option>

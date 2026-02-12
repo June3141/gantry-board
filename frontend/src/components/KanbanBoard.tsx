@@ -14,7 +14,7 @@ import {
   useListTasks,
   useUpdateTask,
 } from '../api/generated/endpoints/tasks/tasks';
-import type { Task } from '../api/generated/model';
+import type { PaginatedResponseTask, Task } from '../api/generated/model';
 import { TaskStatus } from '../api/generated/model';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
@@ -34,7 +34,8 @@ const COLUMN_ORDER: TaskStatus[] = [
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const queryClient = useQueryClient();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const { data: tasks, isLoading, error } = useListTasks({ project_id: projectId });
+  const { data: tasksResponse, isLoading, error } = useListTasks({ project_id: projectId });
+  const tasks = tasksResponse?.data;
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
@@ -47,22 +48,29 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         });
 
         // Snapshot previous value
-        const previousTasks = queryClient.getQueryData<Task[]>(
+        const previousTasks = queryClient.getQueryData<PaginatedResponseTask>(
           getListTasksQueryKey({ project_id: projectId }),
         );
 
         // Optimistically update - only update status since that's what we change on drag
-        queryClient.setQueryData<Task[]>(getListTasksQueryKey({ project_id: projectId }), (old) =>
-          old?.map((task) =>
-            task.id === id && data.status ? { ...task, status: data.status } : task,
-          ),
+        queryClient.setQueryData<PaginatedResponseTask>(
+          getListTasksQueryKey({ project_id: projectId }),
+          (old) =>
+            old
+              ? {
+                  ...old,
+                  data: old.data.map((task) =>
+                    task.id === id && data.status ? { ...task, status: data.status } : task,
+                  ),
+                }
+              : old,
         );
 
         return { previousTasks };
       },
       onError: (_err, _variables, context) => {
         // Rollback on error
-        if (context?.previousTasks) {
+        if (context?.previousTasks != null) {
           queryClient.setQueryData(
             getListTasksQueryKey({ project_id: projectId }),
             context.previousTasks,

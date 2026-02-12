@@ -29,8 +29,12 @@ async fn test_list_tasks_returns_empty_initially() {
         .await;
 
     response.assert_status_ok();
-    let tasks: Vec<serde_json::Value> = response.json();
+    let body: serde_json::Value = response.json();
+    let tasks = body["data"].as_array().unwrap();
     assert!(tasks.is_empty());
+    assert_eq!(body["total"], 0);
+    assert_eq!(body["limit"], 50);
+    assert_eq!(body["offset"], 0);
 }
 
 #[tokio::test]
@@ -233,8 +237,41 @@ async fn test_list_tasks_returns_created_tasks() {
         .await;
 
     response.assert_status_ok();
-    let tasks: Vec<serde_json::Value> = response.json();
+    let body: serde_json::Value = response.json();
+    let tasks = body["data"].as_array().unwrap();
     assert_eq!(tasks.len(), 2);
+    assert_eq!(body["total"], 2);
+}
+
+#[tokio::test]
+async fn test_list_tasks_respects_limit_and_offset() {
+    let server = create_test_server().await;
+    let project_id = create_test_project(&server).await;
+
+    for i in 0..5 {
+        server
+            .post("/api/tasks")
+            .json(&json!({
+                "project_id": project_id,
+                "title": format!("Task {}", i)
+            }))
+            .await;
+    }
+
+    let response = server
+        .get(&format!(
+            "/api/tasks?project_id={}&limit=2&offset=1",
+            project_id
+        ))
+        .await;
+
+    response.assert_status_ok();
+    let body: serde_json::Value = response.json();
+    let tasks = body["data"].as_array().unwrap();
+    assert_eq!(tasks.len(), 2);
+    assert_eq!(body["total"], 5);
+    assert_eq!(body["limit"], 2);
+    assert_eq!(body["offset"], 1);
 }
 
 #[tokio::test]

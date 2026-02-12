@@ -47,7 +47,9 @@ pub fn create_worktree(repo_path: &Path, name: &str) -> AppResult<WorktreeInfo> 
     let mut opts = WorktreeAddOptions::new();
     opts.reference(Some(branch.get()));
     if let Err(e) = repo.worktree(name, &wt_path, Some(&opts)) {
-        let _ = branch.delete();
+        if let Err(cleanup_err) = branch.delete() {
+            warn!(%cleanup_err, name, "failed to delete branch after worktree creation failure");
+        }
         return Err(e.into());
     }
 

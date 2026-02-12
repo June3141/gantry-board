@@ -10,7 +10,12 @@ async fn test_list_projects_returns_empty_initially() {
     let response = server.get("/api/projects").await;
 
     response.assert_status_ok();
-    response.assert_json(&json!([]));
+    let body: serde_json::Value = response.json();
+    let projects = body["data"].as_array().unwrap();
+    assert!(projects.is_empty());
+    assert_eq!(body["total"], 0);
+    assert_eq!(body["limit"], 50);
+    assert_eq!(body["offset"], 0);
 }
 
 #[tokio::test]
@@ -139,6 +144,30 @@ async fn test_list_projects_returns_created_projects() {
     let response = server.get("/api/projects").await;
 
     response.assert_status_ok();
-    let body: Vec<serde_json::Value> = response.json();
-    assert_eq!(body.len(), 2);
+    let body: serde_json::Value = response.json();
+    let projects = body["data"].as_array().unwrap();
+    assert_eq!(projects.len(), 2);
+    assert_eq!(body["total"], 2);
+}
+
+#[tokio::test]
+async fn test_list_projects_respects_limit_and_offset() {
+    let server = create_test_server().await;
+
+    for i in 0..5 {
+        server
+            .post("/api/projects")
+            .json(&json!({ "name": format!("Project {}", i) }))
+            .await;
+    }
+
+    let response = server.get("/api/projects?limit=2&offset=1").await;
+
+    response.assert_status_ok();
+    let body: serde_json::Value = response.json();
+    let projects = body["data"].as_array().unwrap();
+    assert_eq!(projects.len(), 2);
+    assert_eq!(body["total"], 5);
+    assert_eq!(body["limit"], 2);
+    assert_eq!(body["offset"], 1);
 }

@@ -123,6 +123,45 @@ pub async fn list_tasks(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<Ta
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
+pub async fn list_tasks_paginated(
+    pool: &SqlitePool,
+    project_id: Uuid,
+    limit: i64,
+    offset: i64,
+) -> AppResult<(Vec<Task>, i64)> {
+    let total: (i64,) = sqlx::query_as(
+        r#"
+        SELECT COUNT(*) FROM tasks WHERE project_id = $1
+        "#,
+    )
+    .bind(project_id.to_string())
+    .fetch_one(pool)
+    .await?;
+
+    let rows = sqlx::query_as::<_, TaskRow>(
+        r#"
+        SELECT id, project_id, title, description, status, priority, parent_id, assigned_to, position, created_at, updated_at
+        FROM tasks
+        WHERE project_id = $1
+        ORDER BY position ASC, created_at ASC
+        LIMIT $2 OFFSET $3
+        "#,
+    )
+    .bind(project_id.to_string())
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+
+    let tasks = rows
+        .into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?;
+
+    Ok((tasks, total.0))
+}
+
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
     let existing = get_task(pool, id).await?;
 
@@ -581,6 +620,94 @@ mod tests {
         let result = delete_task(&pool, random_id).await;
 
         assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_list_tasks_paginated_returns_total_and_data() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+
+        for i in 0..5 {
+            create_task(
+                &pool,
+                &CreateTaskRequest {
+                    project_id,
+                    title: format!("Task {}", i),
+                    description: None,
+                    status: None,
+                    priority: None,
+                    parent_id: None,
+                    assigned_to: None,
+                },
+            )
+            .await
+            .expect("Failed to create task");
+        }
+
+        let (tasks, total) = list_tasks_paginated(&pool, project_id, 2, 0)
+            .await
+            .expect("Failed to list tasks paginated");
+
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(total, 5);
+    }
+
+    #[tokio::test]
+    async fn test_list_tasks_paginated_respects_offset() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+
+        for i in 0..5 {
+            create_task(
+                &pool,
+                &CreateTaskRequest {
+                    project_id,
+                    title: format!("Task {}", i),
+                    description: None,
+                    status: None,
+                    priority: None,
+                    parent_id: None,
+                    assigned_to: None,
+                },
+            )
+            .await
+            .expect("Failed to create task");
+        }
+
+        let (tasks, total) = list_tasks_paginated(&pool, project_id, 2, 3)
+            .await
+            .expect("Failed to list tasks paginated");
+
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(total, 5);
+    }
+
+    #[tokio::test]
+    async fn test_list_tasks_paginated_offset_beyond_total() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+
+        create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id,
+                title: "Only Task".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("Failed to create task");
+
+        let (tasks, total) = list_tasks_paginated(&pool, project_id, 10, 100)
+            .await
+            .expect("Failed to list tasks paginated");
+
+        assert!(tasks.is_empty());
+        assert_eq!(total, 1);
     }
 
     #[tokio::test]

@@ -195,6 +195,8 @@ impl AgentOrchestrator {
             handle.cancel.clone(),
             req.task_id,
             session.id,
+            self.repo_path.clone(),
+            worktree_name,
         );
 
         // Step 9: Register in running sessions map
@@ -280,6 +282,7 @@ impl AgentOrchestrator {
 
     /// Spawn a background task that drains `output_rx` and updates DB status
     /// when the agent completes or fails naturally (not via stop_session).
+    #[allow(clippy::too_many_arguments)]
     fn spawn_session_monitor(
         &self,
         mut output_rx: tokio::sync::mpsc::Receiver<AgentOutputEvent>,
@@ -287,6 +290,8 @@ impl AgentOrchestrator {
         cancel: tokio_util::sync::CancellationToken,
         task_id: Uuid,
         session_id: Uuid,
+        repo_path: PathBuf,
+        worktree_name: String,
     ) -> tokio::task::JoinHandle<()> {
         let pool = self.pool.clone();
         let running = Arc::clone(&self.running);
@@ -344,6 +349,13 @@ impl AgentOrchestrator {
                 Err(e) => {
                     warn!("failed to update session {session_id} status: {e}");
                 }
+            }
+
+            // Cleanup worktree after session completion
+            let rp = repo_path;
+            let wn = worktree_name;
+            if let Err(e) = Self::delete_worktree_blocking(&rp, &wn).await {
+                warn!("failed to cleanup worktree {wn} after session completion: {e}");
             }
 
             // Remove from running map
