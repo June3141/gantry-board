@@ -11,6 +11,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { RegisterPage } from './components/RegisterPage';
 import { TaskCreateDialog } from './components/TaskCreateDialog';
 import { TaskDetailModal } from './components/TaskDetailModal';
+import { ToastContainer } from './components/ToastContainer';
 import { connectEventSource } from './hooks/useEventSource';
 import { useAuthStore } from './stores/authStore';
 import { useUiStore } from './stores/uiStore';
@@ -166,6 +167,7 @@ function App() {
       <ErrorBoundary>
         <AppRoutes />
       </ErrorBoundary>
+      <ToastContainer />
     </BrowserRouter>
   );
 }

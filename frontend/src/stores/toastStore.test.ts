@@ -8,8 +8,9 @@ describe('toastStore', () => {
   });
 
   afterEach(() => {
-    vi.restoreAllTimers();
+    vi.clearAllTimers();
     useToastStore.setState({ toasts: [] });
+    vi.useRealTimers();
   });
 
   it('has correct initial state', () => {
