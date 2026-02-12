@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useLogout, useMe } from './api/generated/endpoints/auth/auth';
 import { useListProjects } from './api/generated/endpoints/projects/projects';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { KanbanBoard } from './components/KanbanBoard';
 import { LoginPage } from './components/LoginPage';
 import { ProjectCreateDialog } from './components/ProjectCreateDialog';
@@ -162,7 +163,9 @@ export function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <ErrorBoundary>
+        <AppRoutes />
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
