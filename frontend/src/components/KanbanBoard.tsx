@@ -17,8 +17,10 @@ import {
 } from '../api/generated/endpoints/tasks/tasks';
 import type { PaginatedResponseTask, Task } from '../api/generated/model';
 import { TaskStatus } from '../api/generated/model';
+import { useBoardStore } from '../stores/boardStore';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
+import { TaskFilterBar } from './TaskFilterBar';
 
 interface KanbanBoardProps {
   projectId: string;
@@ -38,6 +40,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const { data: tasksResponse, isLoading, error } = useListTasks({ project_id: projectId });
   const { data: members } = useListMembers(projectId);
   const tasks = tasksResponse?.data;
+  const searchText = useBoardStore((s) => s.searchText);
+  const assigneeFilter = useBoardStore((s) => s.assigneeFilter);
+  const priorityFilter = useBoardStore((s) => s.priorityFilter);
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
@@ -88,6 +93,25 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     },
   });
 
+  const filteredTasks = useMemo(() => {
+    if (!tasks) return [];
+    return tasks.filter((task) => {
+      if (searchText && !task.title.toLowerCase().includes(searchText.toLowerCase())) {
+        return false;
+      }
+      if (assigneeFilter.length > 0) {
+        const isUnassigned = !task.assigned_to;
+        const matchesAssignee = assigneeFilter.includes(task.assigned_to ?? '');
+        const matchesUnassigned = assigneeFilter.includes('unassigned') && isUnassigned;
+        if (!matchesAssignee && !matchesUnassigned) return false;
+      }
+      if (priorityFilter.length > 0 && !priorityFilter.includes(task.priority)) {
+        return false;
+      }
+      return true;
+    });
+  }, [tasks, searchText, assigneeFilter, priorityFilter]);
+
   const tasksByStatus = useMemo(() => {
     const grouped: Record<TaskStatus, Task[]> = {
       [TaskStatus.backlog]: [],
@@ -97,14 +121,12 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
       [TaskStatus.done]: [],
     };
 
-    if (tasks) {
-      for (const task of tasks) {
-        grouped[task.status].push(task);
-      }
+    for (const task of filteredTasks) {
+      grouped[task.status].push(task);
     }
 
     return grouped;
-  }, [tasks]);
+  }, [filteredTasks]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = event.active.data.current?.task as Task | undefined;
@@ -152,6 +174,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="px-4 pt-4">
+        <TaskFilterBar members={members} />
+      </div>
       <div className="flex gap-4 overflow-x-auto p-4">
         {COLUMN_ORDER.map((status) => (
           <KanbanColumn
