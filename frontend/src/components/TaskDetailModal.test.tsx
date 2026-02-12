@@ -3,11 +3,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as agentSessionsApi from '../api/generated/endpoints/agent-sessions/agent-sessions';
+import * as membersApi from '../api/generated/endpoints/project-members/project-members';
 import * as commentsApi from '../api/generated/endpoints/task-comments/task-comments';
 import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
 import * as worktreesApi from '../api/generated/endpoints/worktrees/worktrees';
-import type { Task } from '../api/generated/model';
-import { TaskPriority, TaskStatus } from '../api/generated/model';
+import type { ProjectMember, Task } from '../api/generated/model';
+import { MemberRole, TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
 import { TaskDetailModal } from './TaskDetailModal';
 
@@ -30,6 +31,10 @@ vi.mock('../api/generated/endpoints/worktrees/worktrees', () => ({
   useDeleteWorktree: vi.fn(),
 }));
 
+vi.mock('../api/generated/endpoints/project-members/project-members', () => ({
+  useListMembers: vi.fn(),
+}));
+
 vi.mock('../api/generated/endpoints/task-comments/task-comments', () => ({
   useListComments: vi.fn(),
   useCreateComment: vi.fn(),
@@ -40,6 +45,25 @@ vi.mock('../api/generated/endpoints/task-comments/task-comments', () => ({
 vi.mock('../hooks/useAgentEvents', () => ({
   useAgentEvents: vi.fn(),
 }));
+
+const mockMembers: ProjectMember[] = [
+  {
+    user_id: 'user-1',
+    user_name: 'Alice',
+    user_email: 'alice@test.com',
+    role: MemberRole.owner,
+    project_id: 'project-1',
+    created_at: '2026-01-01T00:00:00Z',
+  },
+  {
+    user_id: 'user-2',
+    user_name: 'Bob',
+    user_email: 'bob@test.com',
+    role: MemberRole.member,
+    project_id: 'project-1',
+    created_at: '2026-01-01T00:00:00Z',
+  },
+];
 
 const mockTask: Task = {
   id: 'task-1',
@@ -138,6 +162,11 @@ describe('TaskDetailModal', () => {
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof commentsApi.useDeleteComment>);
+
+    vi.mocked(membersApi.useListMembers).mockReturnValue({
+      data: mockMembers,
+      isLoading: false,
+    } as unknown as ReturnType<typeof membersApi.useListMembers>);
   });
 
   it('does not render when modal is closed', () => {
@@ -360,6 +389,86 @@ describe('TaskDetailModal', () => {
       useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
       renderWithProviders(<TaskDetailModal />);
       expect(screen.getByText('Worktrees')).toBeInTheDocument();
+    });
+  });
+
+  describe('assignee', () => {
+    it('displays assignee select', () => {
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+      expect(screen.getByLabelText(/assignee/i)).toBeInTheDocument();
+    });
+
+    it('shows current assignee in select', () => {
+      vi.mocked(tasksApi.useGetTask).mockReturnValue({
+        data: { ...mockTask, assigned_to: 'user-1' },
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof tasksApi.useGetTask>);
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+      const select = screen.getByLabelText(/assignee/i) as HTMLSelectElement;
+      expect(select.value).toBe('user-1');
+    });
+
+    it('has Unassigned option', () => {
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+      const select = screen.getByLabelText(/assignee/i) as HTMLSelectElement;
+      const options = Array.from(select.options);
+      expect(options.some((o) => o.text === 'Unassigned')).toBe(true);
+    });
+
+    it('lists all project members', () => {
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+      const select = screen.getByLabelText(/assignee/i) as HTMLSelectElement;
+      const options = Array.from(select.options);
+      expect(options.some((o) => o.text === 'Alice')).toBe(true);
+      expect(options.some((o) => o.text === 'Bob')).toBe(true);
+    });
+
+    it('calls updateTask when assignee is changed', async () => {
+      const mockMutateAsync = vi.fn().mockResolvedValue({});
+      vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+      } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.selectOptions(screen.getByLabelText(/assignee/i), 'user-2');
+
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        id: 'task-1',
+        data: { assigned_to: 'user-2' },
+      });
+    });
+
+    it('sends null when Unassigned is selected', async () => {
+      const mockMutateAsync = vi.fn().mockResolvedValue({});
+      vi.mocked(tasksApi.useUpdateTask).mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+      } as unknown as ReturnType<typeof tasksApi.useUpdateTask>);
+      vi.mocked(tasksApi.useGetTask).mockReturnValue({
+        data: { ...mockTask, assigned_to: 'user-1' },
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof tasksApi.useGetTask>);
+
+      const user = userEvent.setup();
+      useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
+      renderWithProviders(<TaskDetailModal />);
+
+      await user.selectOptions(screen.getByLabelText(/assignee/i), '');
+
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        id: 'task-1',
+        data: { assigned_to: null },
+      });
     });
   });
 
