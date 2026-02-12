@@ -14,6 +14,12 @@ interface UiState {
   isProjectModalOpen: boolean;
   openProjectModal: () => void;
   closeProjectModal: () => void;
+  isProjectSettingsOpen: boolean;
+  openProjectSettings: () => void;
+  closeProjectSettings: () => void;
+  isProjectMembersOpen: boolean;
+  openProjectMembers: () => void;
+  closeProjectMembers: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -29,4 +35,10 @@ export const useUiStore = create<UiState>((set) => ({
   isProjectModalOpen: false,
   openProjectModal: () => set({ isProjectModalOpen: true }),
   closeProjectModal: () => set({ isProjectModalOpen: false }),
+  isProjectSettingsOpen: false,
+  openProjectSettings: () => set({ isProjectSettingsOpen: true }),
+  closeProjectSettings: () => set({ isProjectSettingsOpen: false }),
+  isProjectMembersOpen: false,
+  openProjectMembers: () => set({ isProjectMembersOpen: true }),
+  closeProjectMembers: () => set({ isProjectMembersOpen: false }),
 }));

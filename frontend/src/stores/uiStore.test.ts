@@ -12,6 +12,8 @@ describe('uiStore', () => {
       isProjectModalOpen: false,
       selectedTaskId: null,
       isTaskDetailOpen: false,
+      isProjectSettingsOpen: false,
+      isProjectMembersOpen: false,
     });
   });
 
@@ -83,6 +85,40 @@ describe('uiStore', () => {
       useUiStore.getState().openProjectModal();
       useUiStore.getState().closeProjectModal();
       expect(useUiStore.getState().isProjectModalOpen).toBe(false);
+    });
+  });
+
+  describe('project settings modal', () => {
+    it('has correct initial state', () => {
+      expect(useUiStore.getState().isProjectSettingsOpen).toBe(false);
+    });
+
+    it('opens project settings modal', () => {
+      useUiStore.getState().openProjectSettings();
+      expect(useUiStore.getState().isProjectSettingsOpen).toBe(true);
+    });
+
+    it('closes project settings modal', () => {
+      useUiStore.getState().openProjectSettings();
+      useUiStore.getState().closeProjectSettings();
+      expect(useUiStore.getState().isProjectSettingsOpen).toBe(false);
+    });
+  });
+
+  describe('project members panel', () => {
+    it('has correct initial state', () => {
+      expect(useUiStore.getState().isProjectMembersOpen).toBe(false);
+    });
+
+    it('opens project members panel', () => {
+      useUiStore.getState().openProjectMembers();
+      expect(useUiStore.getState().isProjectMembersOpen).toBe(true);
+    });
+
+    it('closes project members panel', () => {
+      useUiStore.getState().openProjectMembers();
+      useUiStore.getState().closeProjectMembers();
+      expect(useUiStore.getState().isProjectMembersOpen).toBe(false);
     });
   });
 });

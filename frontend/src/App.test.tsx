@@ -5,8 +5,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from './App';
 import * as authApi from './api/generated/endpoints/auth/auth';
+import * as membersApi from './api/generated/endpoints/project-members/project-members';
 import * as projectsApi from './api/generated/endpoints/projects/projects';
 import * as tasksApi from './api/generated/endpoints/tasks/tasks';
+import * as usersApi from './api/generated/endpoints/users/users';
 import { useAuthStore } from './stores/authStore';
 import { useUiStore } from './stores/uiStore';
 
@@ -22,6 +24,22 @@ vi.stubGlobal('EventSource', MockEventSource);
 vi.mock('./api/generated/endpoints/projects/projects', () => ({
   useListProjects: vi.fn(),
   useCreateProject: vi.fn(),
+  useGetProject: vi.fn(),
+  useUpdateProject: vi.fn(),
+  useDeleteProject: vi.fn(),
+  getListProjectsQueryKey: vi.fn(() => ['/api/projects']),
+}));
+
+vi.mock('./api/generated/endpoints/project-members/project-members', () => ({
+  useListMembers: vi.fn(),
+  useAddMember: vi.fn(),
+  useUpdateMember: vi.fn(),
+  useRemoveMember: vi.fn(),
+  getListMembersQueryKey: vi.fn(() => ['/api/projects/members']),
+}));
+
+vi.mock('./api/generated/endpoints/users/users', () => ({
+  useSearchUsers: vi.fn(),
 }));
 
 vi.mock('./api/generated/endpoints/tasks/tasks', () => ({
@@ -97,11 +115,49 @@ describe('App', () => {
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof tasksApi.useCreateTask>);
+    // Mock project detail hooks
+    vi.mocked(projectsApi.useGetProject).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof projectsApi.useGetProject>);
+    vi.mocked(projectsApi.useUpdateProject).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof projectsApi.useUpdateProject>);
+    vi.mocked(projectsApi.useDeleteProject).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof projectsApi.useDeleteProject>);
+    // Mock member hooks
+    vi.mocked(membersApi.useListMembers).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof membersApi.useListMembers>);
+    vi.mocked(membersApi.useAddMember).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof membersApi.useAddMember>);
+    vi.mocked(membersApi.useUpdateMember).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof membersApi.useUpdateMember>);
+    vi.mocked(membersApi.useRemoveMember).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof membersApi.useRemoveMember>);
+    // Mock user search
+    vi.mocked(usersApi.useSearchUsers).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as unknown as ReturnType<typeof usersApi.useSearchUsers>);
     // Reset ui store
     useUiStore.setState({
       isTaskModalOpen: false,
       defaultStatus: null,
       isProjectModalOpen: false,
+      isProjectSettingsOpen: false,
+      isProjectMembersOpen: false,
     });
   });
 
