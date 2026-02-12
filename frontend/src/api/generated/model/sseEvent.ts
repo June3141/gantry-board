@@ -8,6 +8,9 @@
 import type { SseEventOneOf } from './sseEventOneOf';
 import type { SseEventOneOfFive } from './sseEventOneOfFive';
 import type { SseEventOneOfNine } from './sseEventOneOfNine';
+import type { SseEventOneOfOnefive } from './sseEventOneOfOnefive';
+import type { SseEventOneOfOneone } from './sseEventOneOfOneone';
+import type { SseEventOneOfOnethree } from './sseEventOneOfOnethree';
 import type { SseEventOneOfSeven } from './sseEventOneOfSeven';
 import type { SseEventOneOfThree } from './sseEventOneOfThree';
 
@@ -19,4 +22,7 @@ export type SseEvent =
   | SseEventOneOfThree
   | SseEventOneOfFive
   | SseEventOneOfSeven
-  | SseEventOneOfNine;
+  | SseEventOneOfNine
+  | SseEventOneOfOneone
+  | SseEventOneOfOnethree
+  | SseEventOneOfOnefive;
