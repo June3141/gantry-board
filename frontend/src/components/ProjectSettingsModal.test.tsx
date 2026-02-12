@@ -15,6 +15,7 @@ vi.mock('../api/generated/endpoints/projects/projects', () => ({
   useUpdateProject: vi.fn(),
   useDeleteProject: vi.fn(),
   getListProjectsQueryKey: vi.fn(() => ['/api/projects']),
+  getGetProjectQueryKey: vi.fn((id: string) => ['/api/projects', id]),
 }));
 
 vi.mock('../api/generated/endpoints/project-members/project-members', () => ({
@@ -236,6 +237,34 @@ describe('ProjectSettingsModal', () => {
     await user.click(screen.getByRole('button', { name: /cancel/i }));
 
     expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
+  });
+
+  describe('member permissions (read-only)', () => {
+    beforeEach(() => {
+      vi.mocked(membersApi.useListMembers).mockReturnValue({
+        data: [{ ...mockMembers[0], role: MemberRole.member }],
+        isLoading: false,
+      } as unknown as ReturnType<typeof membersApi.useListMembers>);
+    });
+
+    it('does not allow editing name for member role', () => {
+      useUiStore.setState({ isProjectSettingsOpen: true });
+      renderWithProviders(
+        <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
+      );
+      // Name should be displayed as static text, not a clickable button
+      expect(screen.getByText('Test Project')).toBeInTheDocument();
+      expect(screen.getByText('Test Project').tagName).toBe('P');
+    });
+
+    it('does not allow editing description for member role', () => {
+      useUiStore.setState({ isProjectSettingsOpen: true });
+      renderWithProviders(
+        <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
+      );
+      expect(screen.getByText('Test description')).toBeInTheDocument();
+      expect(screen.getByText('Test description').tagName).toBe('P');
+    });
   });
 
   it('closes on Escape key', async () => {

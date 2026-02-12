@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
 import {
+  getGetProjectQueryKey,
   getListProjectsQueryKey,
   useDeleteProject,
   useGetProject,
@@ -45,6 +46,7 @@ function ProjectSettingsContent({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const currentUserRole = members?.find((m) => m.user_id === currentUser?.id)?.role;
+  const canEdit = currentUserRole === MemberRole.owner || currentUserRole === MemberRole.admin;
   const isOwner = currentUserRole === MemberRole.owner;
 
   useEffect(() => {
@@ -81,6 +83,9 @@ function ProjectSettingsContent({
         });
         queryClient.invalidateQueries({
           queryKey: getListProjectsQueryKey(),
+        });
+        queryClient.invalidateQueries({
+          queryKey: getGetProjectQueryKey(projectId),
         });
         addToast('success', `Project ${field} updated.`);
       }
@@ -147,7 +152,7 @@ function ProjectSettingsContent({
                   className="mt-1 block w-full rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 />
-              ) : (
+              ) : canEdit ? (
                 <button
                   type="button"
                   className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-900 hover:bg-gray-100"
@@ -155,6 +160,8 @@ function ProjectSettingsContent({
                 >
                   {project.name}
                 </button>
+              ) : (
+                <p className="mt-1 px-1 text-sm text-gray-900">{project.name}</p>
               )}
             </div>
 
@@ -169,7 +176,7 @@ function ProjectSettingsContent({
                   className="mt-1 block w-full rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 />
-              ) : (
+              ) : canEdit ? (
                 <button
                   type="button"
                   className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-600 hover:bg-gray-100"
@@ -177,6 +184,10 @@ function ProjectSettingsContent({
                 >
                   {project.description || 'No description'}
                 </button>
+              ) : (
+                <p className="mt-1 px-1 text-sm text-gray-600">
+                  {project.description || 'No description'}
+                </p>
               )}
             </div>
 

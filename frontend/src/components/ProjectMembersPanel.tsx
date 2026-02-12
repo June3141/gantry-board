@@ -22,7 +22,7 @@ export function ProjectMembersPanel({ projectId }: { projectId: string }) {
 
 function ProjectMembersContent({ projectId }: { projectId: string }) {
   const closeProjectMembers = useUiStore((s) => s.closeProjectMembers);
-  const { data: members, isLoading } = useListMembers(projectId);
+  const { data: members, isLoading, isError } = useListMembers(projectId);
   const addMember = useAddMember();
   const updateMember = useUpdateMember();
   const removeMember = useRemoveMember();
@@ -135,6 +135,8 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
 
         {isLoading ? (
           <p className="text-sm text-gray-500">Loading...</p>
+        ) : isError ? (
+          <p className="text-sm text-red-500">Failed to load members.</p>
         ) : (
           <div className="space-y-3">
             {members?.map((m) => (
