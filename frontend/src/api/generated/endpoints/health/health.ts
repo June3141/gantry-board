@@ -18,11 +18,11 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
-
 import { customInstance } from '../../../client';
+import type { HealthResponse } from '../../model';
 
 export const healthCheck = (signal?: AbortSignal) => {
-  return customInstance<string>({ url: `/health`, method: 'GET', signal });
+  return customInstance<HealthResponse>({ url: `/health`, method: 'GET', signal });
 };
 
 export const getHealthCheckQueryKey = () => {

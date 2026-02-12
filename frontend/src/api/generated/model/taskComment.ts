@@ -5,13 +5,13 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import type { MemberRole } from './memberRole';
 
-export interface ProjectMember {
+export interface TaskComment {
+  content: string;
   created_at: string;
-  project_id: string;
-  role: MemberRole;
-  user_email: string;
+  id: string;
+  task_id: string;
+  updated_at: string;
   user_id: string;
   user_name: string;
 }
