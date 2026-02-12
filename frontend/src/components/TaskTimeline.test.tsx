@@ -22,6 +22,7 @@ vi.mock('../api/generated/endpoints/agent-sessions/agent-sessions', () => ({
   useStartAgentSession: vi.fn(),
   useStopAgentSession: vi.fn(),
   useGetAgentSessionOutputs: vi.fn(),
+  getListAgentSessionsQueryKey: vi.fn(() => ['agent-sessions']),
 }));
 
 vi.mock('../hooks/useAgentEvents', () => ({
@@ -293,5 +294,60 @@ describe('TaskTimeline component', () => {
       taskId: 'task-1',
       data: { content: 'New comment' },
     });
+  });
+
+  it('starts agent session when Start is clicked', async () => {
+    const mockStart = vi.fn().mockResolvedValue({ session: { id: 'new-session' } });
+    vi.mocked(agentSessionsApi.useStartAgentSession).mockReturnValue({
+      mutateAsync: mockStart,
+      isPending: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useStartAgentSession>);
+    vi.mocked(commentsApi.useListComments).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof commentsApi.useListComments>);
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    const user = userEvent.setup();
+    renderWithProviders(<TaskTimeline taskId="task-1" />);
+
+    await user.type(screen.getByPlaceholderText(/enter prompt/i), 'Fix the bug');
+    await user.click(screen.getByRole('button', { name: /start/i }));
+
+    expect(mockStart).toHaveBeenCalledWith({
+      taskId: 'task-1',
+      data: { agent_type: 'claude_code', prompt: 'Fix the bug' },
+    });
+  });
+
+  it('session items are clickable to view outputs', async () => {
+    vi.mocked(commentsApi.useListComments).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof commentsApi.useListComments>);
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [
+        createSession({
+          id: 's1',
+          agent_type: AgentType.claude_code,
+          status: AgentSessionStatus.completed,
+        }),
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    const user = userEvent.setup();
+    renderWithProviders(<TaskTimeline taskId="task-1" />);
+
+    const sessionItem = screen.getByTestId('timeline-session');
+    expect(sessionItem.tagName).toBe('BUTTON');
+
+    await user.click(sessionItem);
+
+    // After clicking, the historical viewer should be shown with a Back button
+    expect(screen.getByText('Back')).toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  getListAgentSessionsQueryKey,
   useGetAgentSessionOutputs,
   useListAgentSessions,
   useStartAgentSession,
@@ -209,11 +210,19 @@ function TimelineCommentItem({
   );
 }
 
-function TimelineAgentSessionItem({ session }: { session: AgentSession }) {
+function TimelineAgentSessionItem({
+  session,
+  onView,
+}: {
+  session: AgentSession;
+  onView: (session: AgentSession) => void;
+}) {
   return (
-    <div
+    <button
+      type="button"
       data-testid="timeline-session"
-      className="flex items-center gap-3 rounded-md bg-gray-50 px-3 py-2"
+      className="flex w-full items-center gap-3 rounded-md bg-gray-50 px-3 py-2 text-left hover:bg-gray-100"
+      onClick={() => onView(session)}
     >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-800">
         AI
@@ -229,7 +238,7 @@ function TimelineAgentSessionItem({ session }: { session: AgentSession }) {
         </span>
         <span className="text-xs text-gray-500">{timeAgo(session.created_at)}</span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -261,6 +270,8 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
     reset,
   } = useAgentStore();
 
+  const isStartingRef = useRef(false);
+
   const activeSession =
     sessions?.find((s) => s.id === activeSessionId) ??
     sessions?.find((s) => s.status === 'running' || s.status === 'pending');
@@ -268,7 +279,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
   useEffect(() => {
     if (activeSession && !activeSessionId) {
       setActiveSession(activeSession.id);
-    } else if (!activeSession && activeSessionId) {
+    } else if (!activeSession && activeSessionId && !isStartingRef.current) {
       reset();
     }
   }, [activeSession, activeSessionId, setActiveSession, reset]);
@@ -297,9 +308,14 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
     setLoadingHistory(isLoadingOutputs);
   }, [isLoadingOutputs, setLoadingHistory]);
 
+  const invalidateSessions = () => {
+    queryClient.invalidateQueries({ queryKey: getListAgentSessionsQueryKey(taskId) });
+  };
+
   const handleStartAgent = async () => {
     setAgentError(null);
     setViewingSessionId(null);
+    isStartingRef.current = true;
     try {
       reset();
       const result = await startSession.mutateAsync({
@@ -308,8 +324,11 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
       });
       setActiveSession(result.session.id);
       setPrompt('');
+      invalidateSessions();
     } catch {
       setAgentError('Failed to start agent session.');
+    } finally {
+      isStartingRef.current = false;
     }
   };
 
@@ -318,6 +337,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
     try {
       await stopSession.mutateAsync({ taskId, sessionId: activeSession.id });
       reset();
+      invalidateSessions();
     } catch {
       setAgentError('Failed to stop agent session.');
     }
@@ -333,6 +353,13 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
     } catch {
       addToast('error', 'Failed to post comment.');
     }
+  };
+
+  const handleViewSession = (session: AgentSession) => {
+    setViewingSessionId(session.id);
+    setActiveSession(null);
+    setLoadingHistory(true);
+    setOutputLines([]);
   };
 
   const isLoading = commentsLoading || sessionsLoading;
@@ -480,7 +507,11 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
                 isOwner={currentUser?.id === item.data.user_id}
               />
             ) : (
-              <TimelineAgentSessionItem key={item.data.id} session={item.data} />
+              <TimelineAgentSessionItem
+                key={item.data.id}
+                session={item.data}
+                onView={handleViewSession}
+              />
             ),
           )}
         </div>
