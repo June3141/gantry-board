@@ -4,7 +4,20 @@ use axum::http::StatusCode;
 use axum_test::TestServer;
 use common::create_test_server;
 use serde_json::json;
-use uuid::Uuid;
+
+async fn register_user(server: &TestServer, email: &str, name: &str) -> String {
+    let response = server
+        .post("/api/auth/register")
+        .json(&json!({
+            "email": email,
+            "name": name,
+            "password": "Tr0ub4dor&3-correct-horse"
+        }))
+        .await;
+    response.assert_status(StatusCode::CREATED);
+    let body: serde_json::Value = response.json();
+    body["user"]["id"].as_str().unwrap().to_string()
+}
 
 async fn create_test_project(server: &TestServer) -> String {
     let response = server
@@ -38,7 +51,7 @@ async fn test_list_members_returns_empty_initially() {
 async fn test_add_member_returns_created() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user_id = Uuid::new_v4();
+    let user_id = uuid::Uuid::new_v4();
 
     let response = server
         .post(&format!("/api/projects/{}/members", project_id))
@@ -59,7 +72,7 @@ async fn test_add_member_returns_created() {
 async fn test_get_member_returns_existing() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user_id = Uuid::new_v4();
+    let user_id = uuid::Uuid::new_v4();
 
     server
         .post(&format!("/api/projects/{}/members", project_id))
@@ -84,7 +97,7 @@ async fn test_get_member_returns_existing() {
 async fn test_get_member_returns_not_found() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let random_user_id = Uuid::new_v4();
+    let random_user_id = uuid::Uuid::new_v4();
 
     let response = server
         .get(&format!(
@@ -100,7 +113,7 @@ async fn test_get_member_returns_not_found() {
 async fn test_update_member_changes_role() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user_id = Uuid::new_v4();
+    let user_id = uuid::Uuid::new_v4();
 
     server
         .post(&format!("/api/projects/{}/members", project_id))
@@ -127,7 +140,7 @@ async fn test_update_member_changes_role() {
 async fn test_remove_member_returns_no_content() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user_id = Uuid::new_v4();
+    let user_id = uuid::Uuid::new_v4();
 
     server
         .post(&format!("/api/projects/{}/members", project_id))
@@ -155,8 +168,8 @@ async fn test_remove_member_returns_no_content() {
 async fn test_list_members_returns_all_members() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user1 = Uuid::new_v4();
-    let user2 = Uuid::new_v4();
+    let user1 = uuid::Uuid::new_v4();
+    let user2 = uuid::Uuid::new_v4();
 
     server
         .post(&format!("/api/projects/{}/members", project_id))
@@ -188,7 +201,7 @@ async fn test_list_members_returns_all_members() {
 #[tokio::test]
 async fn test_list_members_returns_not_found_for_nonexistent_project() {
     let server = create_test_server().await;
-    let nonexistent_project_id = Uuid::new_v4();
+    let nonexistent_project_id = uuid::Uuid::new_v4();
 
     let response = server
         .get(&format!("/api/projects/{}/members", nonexistent_project_id))
@@ -200,8 +213,8 @@ async fn test_list_members_returns_not_found_for_nonexistent_project() {
 #[tokio::test]
 async fn test_add_member_returns_not_found_for_nonexistent_project() {
     let server = create_test_server().await;
-    let nonexistent_project_id = Uuid::new_v4();
-    let user_id = Uuid::new_v4();
+    let nonexistent_project_id = uuid::Uuid::new_v4();
+    let user_id = uuid::Uuid::new_v4();
 
     let response = server
         .post(&format!("/api/projects/{}/members", nonexistent_project_id))
@@ -212,4 +225,30 @@ async fn test_add_member_returns_not_found_for_nonexistent_project() {
         .await;
 
     response.assert_status(StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn test_list_members_includes_user_details() {
+    let server = create_test_server().await;
+    let project_id = create_test_project(&server).await;
+    let user_id = register_user(&server, "alice@example.com", "Alice Smith").await;
+
+    server
+        .post(&format!("/api/projects/{}/members", project_id))
+        .json(&json!({
+            "user_id": user_id,
+            "role": "member"
+        }))
+        .await
+        .assert_status(StatusCode::CREATED);
+
+    let response = server
+        .get(&format!("/api/projects/{}/members", project_id))
+        .await;
+
+    response.assert_status_ok();
+    let members: Vec<serde_json::Value> = response.json();
+    assert_eq!(members.len(), 1);
+    assert_eq!(members[0]["user_name"], "Alice Smith");
+    assert_eq!(members[0]["user_email"], "alice@example.com");
 }
