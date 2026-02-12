@@ -171,8 +171,9 @@ describe('TaskTimeline component', () => {
 
     renderWithProviders(<TaskTimeline taskId="task-1" />);
 
-    expect(screen.getByText('Claude Code')).toBeInTheDocument();
-    expect(screen.getByText('completed')).toBeInTheDocument();
+    const sessionItem = screen.getByTestId('timeline-session');
+    expect(sessionItem).toHaveTextContent('Claude Code');
+    expect(sessionItem).toHaveTextContent('completed');
   });
 
   it('shows edit/delete for own comments', () => {
