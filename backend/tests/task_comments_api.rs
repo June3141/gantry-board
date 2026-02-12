@@ -2,8 +2,24 @@ mod common;
 
 use axum::http::StatusCode;
 use axum_test::TestServer;
-use common::create_test_server;
+use common::{create_test_server_with_pool, SqlitePool};
 use serde_json::json;
+
+/// Seed a user with nil UUID so auth-disabled mode (user_id = Uuid::nil()) can
+/// JOIN against the users table when creating comments.
+async fn seed_nil_user(pool: &SqlitePool) {
+    sqlx::query(
+        "INSERT INTO users (id, email, name, password_hash, created_at, updated_at) \
+         VALUES ($1, $2, $3, $4, datetime('now'), datetime('now'))",
+    )
+    .bind(uuid::Uuid::nil().to_string())
+    .bind("test@nil.local")
+    .bind("Test User")
+    .bind("not-a-real-hash")
+    .execute(pool)
+    .await
+    .unwrap();
+}
 
 async fn create_test_project(server: &TestServer) -> String {
     let response = server
@@ -33,7 +49,8 @@ async fn create_test_task(server: &TestServer, project_id: &str) -> String {
 
 #[tokio::test]
 async fn test_create_comment_returns_created() {
-    let server = create_test_server().await;
+    let (server, pool) = create_test_server_with_pool().await;
+    seed_nil_user(&pool).await;
     let project_id = create_test_project(&server).await;
     let task_id = create_test_task(&server, &project_id).await;
 
@@ -47,13 +64,14 @@ async fn test_create_comment_returns_created() {
     assert_eq!(comment["task_id"], task_id);
     assert_eq!(comment["content"], "Hello, world!");
     assert!(comment["id"].as_str().is_some());
-    assert!(comment["user_name"].as_str().is_some());
+    assert_eq!(comment["user_name"], "Test User");
     assert!(comment["created_at"].as_str().is_some());
 }
 
 #[tokio::test]
 async fn test_list_comments_returns_all() {
-    let server = create_test_server().await;
+    let (server, pool) = create_test_server_with_pool().await;
+    seed_nil_user(&pool).await;
     let project_id = create_test_project(&server).await;
     let task_id = create_test_task(&server, &project_id).await;
 
@@ -82,7 +100,8 @@ async fn test_list_comments_returns_all() {
 
 #[tokio::test]
 async fn test_update_comment_by_author() {
-    let server = create_test_server().await;
+    let (server, pool) = create_test_server_with_pool().await;
+    seed_nil_user(&pool).await;
     let project_id = create_test_project(&server).await;
     let task_id = create_test_task(&server, &project_id).await;
 
@@ -106,7 +125,8 @@ async fn test_update_comment_by_author() {
 
 #[tokio::test]
 async fn test_delete_comment_by_author() {
-    let server = create_test_server().await;
+    let (server, pool) = create_test_server_with_pool().await;
+    seed_nil_user(&pool).await;
     let project_id = create_test_project(&server).await;
     let task_id = create_test_task(&server, &project_id).await;
 
@@ -127,7 +147,7 @@ async fn test_delete_comment_by_author() {
 
 #[tokio::test]
 async fn test_create_comment_on_nonexistent_task_returns_not_found() {
-    let server = create_test_server().await;
+    let (server, _pool) = create_test_server_with_pool().await;
     let fake_task_id = uuid::Uuid::new_v4();
 
     let response = server
@@ -140,7 +160,8 @@ async fn test_create_comment_on_nonexistent_task_returns_not_found() {
 
 #[tokio::test]
 async fn test_create_comment_empty_content_returns_validation_error() {
-    let server = create_test_server().await;
+    let (server, pool) = create_test_server_with_pool().await;
+    seed_nil_user(&pool).await;
     let project_id = create_test_project(&server).await;
     let task_id = create_test_task(&server, &project_id).await;
 
@@ -149,5 +170,5 @@ async fn test_create_comment_empty_content_returns_validation_error() {
         .json(&json!({ "content": "" }))
         .await;
 
-    response.assert_status(StatusCode::UNPROCESSABLE_ENTITY);
+    response.assert_status(StatusCode::BAD_REQUEST);
 }

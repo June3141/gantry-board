@@ -129,6 +129,23 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/projects/{project_id}/members/{user_id}",
             delete(handlers::project_members::remove_member),
         )
+        // Task comment endpoints
+        .route(
+            "/tasks/{task_id}/comments",
+            get(handlers::task_comments::list_comments),
+        )
+        .route(
+            "/tasks/{task_id}/comments",
+            post(handlers::task_comments::create_comment),
+        )
+        .route(
+            "/tasks/{task_id}/comments/{comment_id}",
+            patch(handlers::task_comments::update_comment),
+        )
+        .route(
+            "/tasks/{task_id}/comments/{comment_id}",
+            delete(handlers::task_comments::delete_comment),
+        )
         // Agent session endpoints
         .route(
             "/tasks/{task_id}/sessions",
