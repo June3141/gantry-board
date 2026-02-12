@@ -127,9 +127,7 @@ function KanbanApp() {
           onProjectDeleted={() => setSelectedProjectId(null)}
         />
       )}
-      {selectedProjectId && (
-        <ProjectMembersPanel projectId={selectedProjectId} />
-      )}
+      {selectedProjectId && <ProjectMembersPanel projectId={selectedProjectId} />}
     </div>
   );
 }

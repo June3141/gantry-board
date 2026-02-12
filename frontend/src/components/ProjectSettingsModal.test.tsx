@@ -40,14 +40,11 @@ const mockMembers: ProjectMember[] = [
   },
 ];
 
-const createQueryClient = () =>
-  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 const renderWithProviders = (ui: React.ReactElement) => {
   const queryClient = createQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
 
 describe('ProjectSettingsModal', () => {
@@ -98,10 +95,7 @@ describe('ProjectSettingsModal', () => {
 
   it('does not render when modal is closed', () => {
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -109,10 +103,7 @@ describe('ProjectSettingsModal', () => {
   it('renders when modal is open', () => {
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
@@ -120,10 +111,7 @@ describe('ProjectSettingsModal', () => {
   it('displays project name', () => {
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
     expect(screen.getByText('Test Project')).toBeInTheDocument();
   });
@@ -131,10 +119,7 @@ describe('ProjectSettingsModal', () => {
   it('displays project description', () => {
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
     expect(screen.getByText('Test description')).toBeInTheDocument();
   });
@@ -143,10 +128,7 @@ describe('ProjectSettingsModal', () => {
     const user = userEvent.setup();
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
 
     await user.click(screen.getByText('Test Project'));
@@ -158,10 +140,7 @@ describe('ProjectSettingsModal', () => {
     mockUpdateMutateAsync.mockResolvedValue({});
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
 
     await user.click(screen.getByText('Test Project'));
@@ -180,10 +159,7 @@ describe('ProjectSettingsModal', () => {
     const user = userEvent.setup();
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
 
     await user.click(screen.getByText('Test Project'));
@@ -199,10 +175,7 @@ describe('ProjectSettingsModal', () => {
     mockUpdateMutateAsync.mockResolvedValue({});
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
 
     await user.click(screen.getByText('Test description'));
@@ -220,14 +193,9 @@ describe('ProjectSettingsModal', () => {
   it('shows delete button for owner', () => {
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
-    expect(
-      screen.getByRole('button', { name: /delete project/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /delete project/i })).toBeInTheDocument();
   });
 
   it('does not show delete button for non-owner', () => {
@@ -237,14 +205,9 @@ describe('ProjectSettingsModal', () => {
     } as unknown as ReturnType<typeof membersApi.useListMembers>);
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
-    expect(
-      screen.queryByRole('button', { name: /delete project/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /delete project/i })).not.toBeInTheDocument();
   });
 
   it('deletes project on confirm', async () => {
@@ -252,10 +215,7 @@ describe('ProjectSettingsModal', () => {
     mockDeleteMutateAsync.mockResolvedValue({});
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
 
     await user.click(screen.getByRole('button', { name: /delete project/i }));
@@ -269,10 +229,7 @@ describe('ProjectSettingsModal', () => {
     const user = userEvent.setup();
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
 
     await user.click(screen.getByRole('button', { name: /delete project/i }));
@@ -285,10 +242,7 @@ describe('ProjectSettingsModal', () => {
     const user = userEvent.setup();
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
 
     await user.keyboard('{Escape}');
@@ -299,10 +253,7 @@ describe('ProjectSettingsModal', () => {
     const user = userEvent.setup();
     useUiStore.setState({ isProjectSettingsOpen: true });
     renderWithProviders(
-      <ProjectSettingsModal
-        projectId="project-1"
-        onProjectDeleted={mockOnProjectDeleted}
-      />,
+      <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
 
     await user.click(screen.getByRole('dialog'));

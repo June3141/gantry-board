@@ -51,14 +51,11 @@ const mockSearchResults: User[] = [
   },
 ];
 
-const createQueryClient = () =>
-  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 const renderWithProviders = (ui: React.ReactElement) => {
   const queryClient = createQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
 
 describe('ProjectMembersPanel', () => {
@@ -141,9 +138,7 @@ describe('ProjectMembersPanel', () => {
     it('shows invite section for owner', () => {
       useUiStore.setState({ isProjectMembersOpen: true });
       renderWithProviders(<ProjectMembersPanel projectId="project-1" />);
-      expect(
-        screen.getByPlaceholderText(/search users/i),
-      ).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/search users/i)).toBeInTheDocument();
     });
 
     it('shows remove button for other members', () => {
@@ -183,17 +178,13 @@ describe('ProjectMembersPanel', () => {
     it('does not show invite section for member role', () => {
       useUiStore.setState({ isProjectMembersOpen: true });
       renderWithProviders(<ProjectMembersPanel projectId="project-1" />);
-      expect(
-        screen.queryByPlaceholderText(/search users/i),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/search users/i)).not.toBeInTheDocument();
     });
 
     it('does not show remove buttons for member role', () => {
       useUiStore.setState({ isProjectMembersOpen: true });
       renderWithProviders(<ProjectMembersPanel projectId="project-1" />);
-      expect(
-        screen.queryByRole('button', { name: /remove/i }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument();
     });
 
     it('does not show role selects for member role', () => {

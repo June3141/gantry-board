@@ -14,11 +14,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useToastStore } from '../stores/toastStore';
 import { useUiStore } from '../stores/uiStore';
 
-export function ProjectMembersPanel({
-  projectId,
-}: {
-  projectId: string;
-}) {
+export function ProjectMembersPanel({ projectId }: { projectId: string }) {
   const isOpen = useUiStore((s) => s.isProjectMembersOpen);
   if (!isOpen) return null;
   return <ProjectMembersContent projectId={projectId} />;
@@ -39,9 +35,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
     id: string;
     name: string;
   } | null>(null);
-  const [inviteRole, setInviteRole] = useState<MemberRoleType>(
-    MemberRole.member,
-  );
+  const [inviteRole, setInviteRole] = useState<MemberRoleType>(MemberRole.member);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
   const { data: searchResults } = useSearchUsers(
@@ -49,16 +43,10 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
     { query: { enabled: searchQuery.length >= 2 } },
   );
 
-  const currentUserRole = members?.find(
-    (m) => m.user_id === currentUser?.id,
-  )?.role;
-  const canManage =
-    currentUserRole === MemberRole.owner ||
-    currentUserRole === MemberRole.admin;
+  const currentUserRole = members?.find((m) => m.user_id === currentUser?.id)?.role;
+  const canManage = currentUserRole === MemberRole.owner || currentUserRole === MemberRole.admin;
 
-  const filteredResults = searchResults?.filter(
-    (u) => !members?.some((m) => m.user_id === u.id),
-  );
+  const filteredResults = searchResults?.filter((u) => !members?.some((m) => m.user_id === u.id));
 
   const invalidateMembers = () => {
     queryClient.invalidateQueries({
@@ -90,10 +78,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
     }
   };
 
-  const handleRoleChange = async (
-    userId: string,
-    role: MemberRoleType,
-  ) => {
+  const handleRoleChange = async (userId: string, role: MemberRoleType) => {
     try {
       await updateMember.mutateAsync({
         projectId,
@@ -119,8 +104,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
 
   const canManageMember = (memberRole: MemberRoleType) => {
     if (!canManage) return false;
-    if (currentUserRole === MemberRole.admin && memberRole === MemberRole.owner)
-      return false;
+    if (currentUserRole === MemberRole.admin && memberRole === MemberRole.owner) return false;
     return true;
   };
 
@@ -136,10 +120,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
     >
       <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2
-            id="project-members-title"
-            className="text-lg font-semibold text-gray-900"
-          >
+          <h2 id="project-members-title" className="text-lg font-semibold text-gray-900">
             Members
           </h2>
           <button
@@ -162,14 +143,11 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                 className="flex items-center gap-3 rounded-md border border-gray-200 px-3 py-2"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    {m.user_name}
-                  </p>
+                  <p className="text-sm font-medium text-gray-900">{m.user_name}</p>
                   <p className="text-xs text-gray-500">{m.user_email}</p>
                 </div>
 
-                {m.user_id === currentUser?.id ||
-                !canManageMember(m.role) ? (
+                {m.user_id === currentUser?.id || !canManageMember(m.role) ? (
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                     {m.role}
                   </span>
@@ -195,10 +173,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                     <select
                       value={m.role}
                       onChange={(e) =>
-                        handleRoleChange(
-                          m.user_id,
-                          e.target.value as MemberRoleType,
-                        )
+                        handleRoleChange(m.user_id, e.target.value as MemberRoleType)
                       }
                       className="rounded border border-gray-300 px-1 py-0.5 text-xs"
                     >
@@ -223,9 +198,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
 
         {canManage && (
           <div className="mt-4 border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-700">
-              Invite Member
-            </h3>
+            <h3 className="mb-2 text-sm font-medium text-gray-700">Invite Member</h3>
             <div className="relative">
               <input
                 type="text"
@@ -237,36 +210,30 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                 placeholder="Search users by name or email..."
                 className="block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
-              {!selectedUser &&
-                filteredResults &&
-                filteredResults.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
-                    {filteredResults.map((u) => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        data-testid="search-result"
-                        onClick={() => {
-                          setSelectedUser({ id: u.id, name: u.name });
-                          setSearchQuery('');
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-                      >
-                        <span className="font-medium">{u.name}</span>
-                        <span className="text-xs text-gray-500">
-                          {u.email}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+              {!selectedUser && filteredResults && filteredResults.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
+                  {filteredResults.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      data-testid="search-result"
+                      onClick={() => {
+                        setSelectedUser({ id: u.id, name: u.name });
+                        setSearchQuery('');
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                    >
+                      <span className="font-medium">{u.name}</span>
+                      <span className="text-xs text-gray-500">{u.email}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="mt-2 flex gap-2">
               <select
                 value={inviteRole}
-                onChange={(e) =>
-                  setInviteRole(e.target.value as MemberRoleType)
-                }
+                onChange={(e) => setInviteRole(e.target.value as MemberRoleType)}
                 className="rounded border border-gray-300 px-2 py-1.5 text-sm"
               >
                 <option value="member">member</option>
