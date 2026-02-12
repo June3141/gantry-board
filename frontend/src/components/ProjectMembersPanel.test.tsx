@@ -131,8 +131,10 @@ describe('ProjectMembersPanel', () => {
   it('displays role badges', () => {
     useUiStore.setState({ isProjectMembersOpen: true });
     renderWithProviders(<ProjectMembersPanel projectId="project-1" />);
-    expect(screen.getByText('owner')).toBeInTheDocument();
-    expect(screen.getByText('member')).toBeInTheDocument();
+    // Alice (self/owner) shows a static badge, Bob has a role select
+    // Check that role text exists somewhere in the document
+    expect(screen.getAllByText('owner').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('member').length).toBeGreaterThanOrEqual(1);
   });
 
   describe('owner permissions', () => {
@@ -157,7 +159,8 @@ describe('ProjectMembersPanel', () => {
       useUiStore.setState({ isProjectMembersOpen: true });
       renderWithProviders(<ProjectMembersPanel projectId="project-1" />);
       const roleSelects = screen.getAllByRole('combobox');
-      expect(roleSelects).toHaveLength(1); // Only Bob
+      // 1 for Bob's role change + 1 for invite role select
+      expect(roleSelects).toHaveLength(2);
     });
   });
 
