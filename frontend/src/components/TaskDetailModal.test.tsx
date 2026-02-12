@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as agentSessionsApi from '../api/generated/endpoints/agent-sessions/agent-sessions';
+import * as commentsApi from '../api/generated/endpoints/task-comments/task-comments';
 import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
 import * as worktreesApi from '../api/generated/endpoints/worktrees/worktrees';
 import type { Task } from '../api/generated/model';
@@ -27,6 +28,13 @@ vi.mock('../api/generated/endpoints/worktrees/worktrees', () => ({
   useListWorktrees: vi.fn(),
   useCreateWorktree: vi.fn(),
   useDeleteWorktree: vi.fn(),
+}));
+
+vi.mock('../api/generated/endpoints/task-comments/task-comments', () => ({
+  useListComments: vi.fn(),
+  useCreateComment: vi.fn(),
+  useUpdateComment: vi.fn(),
+  useDeleteComment: vi.fn(),
 }));
 
 vi.mock('../hooks/useAgentEvents', () => ({
@@ -110,6 +118,26 @@ describe('TaskDetailModal', () => {
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof worktreesApi.useDeleteWorktree>);
+
+    vi.mocked(commentsApi.useListComments).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof commentsApi.useListComments>);
+
+    vi.mocked(commentsApi.useCreateComment).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof commentsApi.useCreateComment>);
+
+    vi.mocked(commentsApi.useUpdateComment).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof commentsApi.useUpdateComment>);
+
+    vi.mocked(commentsApi.useDeleteComment).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof commentsApi.useDeleteComment>);
   });
 
   it('does not render when modal is closed', () => {

@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { AgentSession, Task } from '../api/generated/model';
+import type { AgentSession, Task, TaskComment } from '../api/generated/model';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -9,7 +9,10 @@ export type SseEvent =
   | { type: 'TaskUpdated'; task: Task }
   | { type: 'TaskDeleted'; task_id: string }
   | { type: 'AgentOutput'; session_id: string; text: string }
-  | { type: 'AgentSessionStatusChanged'; session: AgentSession };
+  | { type: 'AgentSessionStatusChanged'; session: AgentSession }
+  | { type: 'CommentCreated'; comment: TaskComment }
+  | { type: 'CommentUpdated'; comment: TaskComment }
+  | { type: 'CommentDeleted'; comment_id: string; task_id: string };
 
 export function connectEventSource(queryClient: QueryClient): () => void {
   const eventSource = new EventSource(`${API_BASE_URL}/api/events`);
@@ -57,6 +60,25 @@ export function connectEventSource(queryClient: QueryClient): () => void {
     }
   };
   eventSource.addEventListener('agent_session_status_changed', handleAgentSessionEvent);
+
+  const handleCommentEvent = (event: MessageEvent) => {
+    try {
+      const parsed = JSON.parse(event.data) as SseEvent;
+      const taskId =
+        'comment' in parsed ? parsed.comment.task_id : 'task_id' in parsed ? parsed.task_id : null;
+      if (taskId) {
+        queryClient.invalidateQueries({
+          queryKey: [`/api/tasks/${taskId}/comments`],
+          exact: false,
+        });
+      }
+    } catch {
+      console.error('Failed to parse SSE event:', event.data);
+    }
+  };
+  eventSource.addEventListener('comment_created', handleCommentEvent);
+  eventSource.addEventListener('comment_updated', handleCommentEvent);
+  eventSource.addEventListener('comment_deleted', handleCommentEvent);
 
   eventSource.onerror = (event: Event) => {
     const source = event.currentTarget as EventSource | null;
