@@ -7,6 +7,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { KanbanBoard } from './components/KanbanBoard';
 import { LoginPage } from './components/LoginPage';
 import { ProjectCreateDialog } from './components/ProjectCreateDialog';
+import { ProjectMembersPanel } from './components/ProjectMembersPanel';
+import { ProjectSettingsModal } from './components/ProjectSettingsModal';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { RegisterPage } from './components/RegisterPage';
 import { TaskCreateDialog } from './components/TaskCreateDialog';
@@ -24,6 +26,8 @@ function KanbanApp() {
   const logout = useLogout();
   const setUser = useAuthStore((state) => state.setUser);
   const openProjectModal = useUiStore((s) => s.openProjectModal);
+  const openProjectSettings = useUiStore((s) => s.openProjectSettings);
+  const openProjectMembers = useUiStore((s) => s.openProjectMembers);
 
   // Connect to SSE for real-time updates
   // biome-ignore lint/correctness/useExhaustiveDependencies: queryClient is stable from provider
@@ -72,6 +76,24 @@ function KanbanApp() {
             >
               New Project
             </button>
+            {selectedProjectId && (
+              <>
+                <button
+                  type="button"
+                  onClick={openProjectSettings}
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Settings
+                </button>
+                <button
+                  type="button"
+                  onClick={openProjectMembers}
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Members
+                </button>
+              </>
+            )}
 
             <div className="flex items-center gap-2 border-l pl-4">
               <span className="text-sm text-gray-600">{user?.name ?? user?.email}</span>
@@ -99,6 +121,15 @@ function KanbanApp() {
       <ProjectCreateDialog />
       {selectedProjectId && <TaskCreateDialog projectId={selectedProjectId} />}
       <TaskDetailModal />
+      {selectedProjectId && (
+        <ProjectSettingsModal
+          projectId={selectedProjectId}
+          onProjectDeleted={() => setSelectedProjectId(null)}
+        />
+      )}
+      {selectedProjectId && (
+        <ProjectMembersPanel projectId={selectedProjectId} />
+      )}
     </div>
   );
 }
