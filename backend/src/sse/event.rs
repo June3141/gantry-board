@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::models::agent_session::AgentSession;
 use crate::models::task::Task;
+use crate::models::task_comment::TaskComment;
 
 /// Server-Sent Event for real-time updates
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -14,6 +15,9 @@ pub enum SseEvent {
     TaskDeleted { task_id: Uuid },
     AgentOutput { session_id: Uuid, text: String },
     AgentSessionStatusChanged { session: AgentSession },
+    CommentCreated { comment: TaskComment },
+    CommentUpdated { comment: TaskComment },
+    CommentDeleted { comment_id: Uuid, task_id: Uuid },
 }
 
 impl SseEvent {
@@ -37,6 +41,21 @@ impl SseEvent {
         Self::AgentSessionStatusChanged { session }
     }
 
+    pub fn comment_created(comment: TaskComment) -> Self {
+        Self::CommentCreated { comment }
+    }
+
+    pub fn comment_updated(comment: TaskComment) -> Self {
+        Self::CommentUpdated { comment }
+    }
+
+    pub fn comment_deleted(comment_id: Uuid, task_id: Uuid) -> Self {
+        Self::CommentDeleted {
+            comment_id,
+            task_id,
+        }
+    }
+
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::TaskCreated { .. } => "task_created",
@@ -44,6 +63,9 @@ impl SseEvent {
             Self::TaskDeleted { .. } => "task_deleted",
             Self::AgentOutput { .. } => "agent_output",
             Self::AgentSessionStatusChanged { .. } => "agent_session_status_changed",
+            Self::CommentCreated { .. } => "comment_created",
+            Self::CommentUpdated { .. } => "comment_updated",
+            Self::CommentDeleted { .. } => "comment_deleted",
         }
     }
 }

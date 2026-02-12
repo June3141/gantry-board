@@ -61,6 +61,10 @@ pub struct Config {
     /// HTTP request timeout in seconds (default: 60)
     #[serde(default = "default_request_timeout_secs")]
     pub request_timeout_secs: u64,
+
+    /// Log format: "pretty" (default) or "json"
+    #[serde(default = "default_log_format")]
+    pub log_format: String,
 }
 
 fn default_bind_addr() -> String {
@@ -97,6 +101,10 @@ fn default_output_retention_days() -> u64 {
 
 fn default_request_timeout_secs() -> u64 {
     60
+}
+
+fn default_log_format() -> String {
+    "pretty".to_string()
 }
 
 impl Config {
@@ -168,6 +176,7 @@ impl Default for Config {
             sse_broadcast_capacity: default_sse_broadcast_capacity(),
             output_retention_days: default_output_retention_days(),
             request_timeout_secs: default_request_timeout_secs(),
+            log_format: default_log_format(),
         }
     }
 }

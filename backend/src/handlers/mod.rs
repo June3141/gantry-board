@@ -3,6 +3,7 @@ pub mod auth;
 pub mod health;
 pub mod project_members;
 pub mod projects;
+pub mod task_comments;
 pub mod tasks;
 pub mod users;
 pub mod worktrees;

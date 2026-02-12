@@ -1,7 +1,8 @@
 mod common;
 
-use axum::http::StatusCode;
+use axum::http::{HeaderValue, StatusCode};
 use common::create_test_server;
+use uuid::Uuid;
 
 #[tokio::test]
 async fn test_health_check_returns_json_with_db_status() {
@@ -43,4 +44,35 @@ async fn test_health_check_returns_uptime() {
         .expect("uptime_seconds should be a number");
     // Uptime should be at least 0 (test runs quickly)
     assert!(uptime < 60, "uptime should be reasonable for a test");
+}
+
+#[tokio::test]
+async fn test_response_contains_x_request_id_header() {
+    let server = create_test_server().await;
+
+    let response = server.get("/health").await;
+
+    let header = response.header("x-request-id");
+    let request_id = header
+        .to_str()
+        .expect("x-request-id should be a valid string");
+    // Verify it's a valid UUID
+    request_id
+        .parse::<Uuid>()
+        .expect("x-request-id should be a valid UUID");
+}
+
+#[tokio::test]
+async fn test_x_request_id_propagated_from_client() {
+    let server = create_test_server().await;
+    let client_id = Uuid::new_v4().to_string();
+
+    let response = server
+        .get("/health")
+        .add_header("x-request-id", HeaderValue::from_str(&client_id).unwrap())
+        .await;
+
+    let header = response.header("x-request-id");
+    let returned_id = header.to_str().expect("x-request-id should be present");
+    assert_eq!(returned_id, client_id);
 }

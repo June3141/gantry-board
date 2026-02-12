@@ -86,6 +86,11 @@ fn init_test_repo() -> (tempfile::TempDir, PathBuf) {
     (tmp, repo_path)
 }
 
+/// Create a test server with auth disabled and DB pool access.
+pub async fn create_test_server_with_pool() -> (TestServer, SqlitePool) {
+    create_test_server_impl(true, PathBuf::from(".")).await
+}
+
 /// Create a test server with a temporary git repo (for agent session tests).
 pub async fn create_test_server_with_repo() -> (tempfile::TempDir, TestServer) {
     let (tmp, repo_path) = init_test_repo();

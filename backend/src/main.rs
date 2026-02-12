@@ -17,11 +17,16 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
-        .init();
-
     let config = Config::load()?;
+
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
+    match config.log_format.as_str() {
+        "json" => tracing_subscriber::fmt()
+            .json()
+            .with_env_filter(filter)
+            .init(),
+        _ => tracing_subscriber::fmt().with_env_filter(filter).init(),
+    }
 
     #[cfg(debug_assertions)]
     if config.auth_disabled {
