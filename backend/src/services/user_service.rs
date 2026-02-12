@@ -6,6 +6,30 @@ use crate::auth::password::{hash_password, verify_password};
 use crate::error::{AppError, AppResult};
 use crate::models::user::{RegisterRequest, User, UserWithPassword};
 
+/// Row type for queries that don't include password_hash.
+#[derive(sqlx::FromRow)]
+struct UserRow {
+    id: String,
+    name: String,
+    email: String,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl TryFrom<UserRow> for User {
+    type Error = uuid::Error;
+
+    fn try_from(row: UserRow) -> Result<Self, Self::Error> {
+        Ok(User {
+            id: row.id.parse()?,
+            name: row.name,
+            email: row.email,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        })
+    }
+}
+
 /// Create a new user with hashed password
 pub async fn create_user(pool: &SqlitePool, req: &RegisterRequest) -> AppResult<User> {
     let id = Uuid::new_v4();
@@ -72,6 +96,29 @@ pub async fn get_user_by_email(pool: &SqlitePool, email: &str) -> AppResult<User
         .transpose()
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?
         .ok_or_else(|| AppError::NotFound(format!("user with email {} not found", email)))
+}
+
+/// Search users by name or email (LIKE match)
+pub async fn search_users(pool: &SqlitePool, query: &str, limit: i64) -> AppResult<Vec<User>> {
+    let pattern = format!("%{query}%");
+    let rows = sqlx::query_as::<_, UserRow>(
+        r#"
+        SELECT id, name, email, created_at, updated_at
+        FROM users
+        WHERE name LIKE $1 OR email LIKE $1
+        ORDER BY name ASC
+        LIMIT $2
+        "#,
+    )
+    .bind(&pattern)
+    .bind(limit)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<User>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
 /// Authenticate user by email and password

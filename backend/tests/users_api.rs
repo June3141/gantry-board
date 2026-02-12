@@ -1,10 +1,10 @@
 mod common;
 
 use axum::http::StatusCode;
-use common::create_auth_test_server;
+use common::{create_auth_test_server, create_test_server};
 use serde_json::json;
 
-async fn register_and_login(server: &axum_test::TestServer, email: &str, name: &str) {
+async fn register_user(server: &axum_test::TestServer, email: &str, name: &str) {
     let password = "Tr0ub4dor&3-correct-horse";
     server
         .post("/api/auth/register")
@@ -15,9 +15,9 @@ async fn register_and_login(server: &axum_test::TestServer, email: &str, name: &
 
 #[tokio::test]
 async fn test_search_users_returns_matching_results() {
-    let server = create_auth_test_server().await;
-    register_and_login(&server, "alice@example.com", "Alice Smith").await;
-    register_and_login(&server, "bob@example.com", "Bob Jones").await;
+    let server = create_test_server().await;
+    register_user(&server, "alice@example.com", "Alice Smith").await;
+    register_user(&server, "bob@example.com", "Bob Jones").await;
 
     let response = server.get("/api/users?q=alice").await;
 
@@ -30,9 +30,9 @@ async fn test_search_users_returns_matching_results() {
 
 #[tokio::test]
 async fn test_search_users_returns_all_when_no_query() {
-    let server = create_auth_test_server().await;
-    register_and_login(&server, "alice@example.com", "Alice").await;
-    register_and_login(&server, "bob@example.com", "Bob").await;
+    let server = create_test_server().await;
+    register_user(&server, "alice@example.com", "Alice").await;
+    register_user(&server, "bob@example.com", "Bob").await;
 
     let response = server.get("/api/users").await;
 
@@ -46,7 +46,6 @@ async fn test_search_users_returns_all_when_no_query() {
 async fn test_search_users_requires_auth() {
     let server = create_auth_test_server().await;
 
-    // Don't register/login — no session cookie
     let response = server.get("/api/users").await;
 
     response.assert_status(StatusCode::UNAUTHORIZED);
