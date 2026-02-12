@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
 import { useDeleteTask, useGetTask, useUpdateTask } from '../api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
-import { AgentPanel } from './AgentPanel';
-import { CommentSection } from './CommentSection';
+import { TaskTimeline } from './TaskTimeline';
 import { WorktreePanel } from './WorktreePanel';
 
 export function TaskDetailModal() {
@@ -20,6 +20,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
   const { data: task, isLoading, isError } = useGetTask(taskId);
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const { data: members } = useListMembers(task?.project_id ?? '', { query: { enabled: !!task } });
 
   const [editingField, setEditingField] = useState<'title' | 'description' | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -72,6 +73,17 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
       closeTaskDetail();
     } catch {
       setError('Failed to delete task. Please try again.');
+    }
+  };
+
+  const handleAssigneeChange = async (value: string) => {
+    try {
+      await updateTask.mutateAsync({
+        id: taskId,
+        data: { assigned_to: value || null },
+      });
+    } catch {
+      setError('Failed to update assignee. Please try again.');
     }
   };
 
@@ -160,7 +172,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label
                   htmlFor="task-detail-status"
@@ -200,11 +212,27 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   <option value="urgent">Urgent</option>
                 </select>
               </div>
-            </div>
-
-            <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Agent</h3>
-              <AgentPanel taskId={taskId} />
+              <div>
+                <label
+                  htmlFor="task-detail-assignee"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Assignee
+                </label>
+                <select
+                  id="task-detail-assignee"
+                  value={task.assigned_to ?? ''}
+                  onChange={(e) => handleAssigneeChange(e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">Unassigned</option>
+                  {members?.map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.user_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="border-t pt-4">
@@ -213,8 +241,8 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Comments</h3>
-              <CommentSection taskId={taskId} />
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Activity</h3>
+              <TaskTimeline taskId={taskId} />
             </div>
 
             <div className="border-t pt-4">
