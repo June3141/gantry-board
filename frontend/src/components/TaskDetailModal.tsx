@@ -3,8 +3,7 @@ import { useListMembers } from '../api/generated/endpoints/project-members/proje
 import { useDeleteTask, useGetTask, useUpdateTask } from '../api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
-import { AgentPanel } from './AgentPanel';
-import { CommentSection } from './CommentSection';
+import { TaskTimeline } from './TaskTimeline';
 import { WorktreePanel } from './WorktreePanel';
 
 export function TaskDetailModal() {
@@ -237,18 +236,13 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Agent</h3>
-              <AgentPanel taskId={taskId} />
-            </div>
-
-            <div className="border-t pt-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Worktrees</h3>
               <WorktreePanel />
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Comments</h3>
-              <CommentSection taskId={taskId} />
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Activity</h3>
+              <TaskTimeline taskId={taskId} />
             </div>
 
             <div className="border-t pt-4">

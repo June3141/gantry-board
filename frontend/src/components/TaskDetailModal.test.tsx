@@ -375,11 +375,11 @@ describe('TaskDetailModal', () => {
     });
   });
 
-  describe('agent panel', () => {
-    it('renders agent panel section when modal is open', () => {
+  describe('activity', () => {
+    it('renders activity section when modal is open', () => {
       useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
       renderWithProviders(<TaskDetailModal />);
-      expect(screen.getByText('Agent')).toBeInTheDocument();
+      expect(screen.getByText('Activity')).toBeInTheDocument();
       expect(screen.getByLabelText(/agent type/i)).toBeInTheDocument();
     });
   });
