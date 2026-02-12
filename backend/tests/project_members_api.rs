@@ -51,12 +51,12 @@ async fn test_list_members_returns_empty_initially() {
 async fn test_add_member_returns_created() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user_id = uuid::Uuid::new_v4();
+    let user_id = register_user(&server, "alice@test.com", "Alice").await;
 
     let response = server
         .post(&format!("/api/projects/{}/members", project_id))
         .json(&json!({
-            "user_id": user_id.to_string(),
+            "user_id": user_id,
             "role": "member"
         }))
         .await;
@@ -64,7 +64,7 @@ async fn test_add_member_returns_created() {
     response.assert_status(StatusCode::CREATED);
     let member: serde_json::Value = response.json();
     assert_eq!(member["project_id"], project_id);
-    assert_eq!(member["user_id"], user_id.to_string());
+    assert_eq!(member["user_id"], user_id);
     assert_eq!(member["role"], "member");
 }
 
@@ -72,12 +72,12 @@ async fn test_add_member_returns_created() {
 async fn test_get_member_returns_existing() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user_id = uuid::Uuid::new_v4();
+    let user_id = register_user(&server, "alice@test.com", "Alice").await;
 
     server
         .post(&format!("/api/projects/{}/members", project_id))
         .json(&json!({
-            "user_id": user_id.to_string(),
+            "user_id": user_id,
             "role": "admin"
         }))
         .await
@@ -89,7 +89,7 @@ async fn test_get_member_returns_existing() {
 
     response.assert_status_ok();
     let member: serde_json::Value = response.json();
-    assert_eq!(member["user_id"], user_id.to_string());
+    assert_eq!(member["user_id"], user_id);
     assert_eq!(member["role"], "admin");
 }
 
@@ -113,12 +113,12 @@ async fn test_get_member_returns_not_found() {
 async fn test_update_member_changes_role() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user_id = uuid::Uuid::new_v4();
+    let user_id = register_user(&server, "alice@test.com", "Alice").await;
 
     server
         .post(&format!("/api/projects/{}/members", project_id))
         .json(&json!({
-            "user_id": user_id.to_string(),
+            "user_id": user_id,
             "role": "member"
         }))
         .await
@@ -140,12 +140,12 @@ async fn test_update_member_changes_role() {
 async fn test_remove_member_returns_no_content() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user_id = uuid::Uuid::new_v4();
+    let user_id = register_user(&server, "alice@test.com", "Alice").await;
 
     server
         .post(&format!("/api/projects/{}/members", project_id))
         .json(&json!({
-            "user_id": user_id.to_string(),
+            "user_id": user_id,
             "role": "member"
         }))
         .await
@@ -168,13 +168,13 @@ async fn test_remove_member_returns_no_content() {
 async fn test_list_members_returns_all_members() {
     let server = create_test_server().await;
     let project_id = create_test_project(&server).await;
-    let user1 = uuid::Uuid::new_v4();
-    let user2 = uuid::Uuid::new_v4();
+    let user1 = register_user(&server, "alice@test.com", "Alice").await;
+    let user2 = register_user(&server, "bob@test.com", "Bob").await;
 
     server
         .post(&format!("/api/projects/{}/members", project_id))
         .json(&json!({
-            "user_id": user1.to_string(),
+            "user_id": user1,
             "role": "owner"
         }))
         .await
@@ -183,7 +183,7 @@ async fn test_list_members_returns_all_members() {
     server
         .post(&format!("/api/projects/{}/members", project_id))
         .json(&json!({
-            "user_id": user2.to_string(),
+            "user_id": user2,
             "role": "member"
         }))
         .await

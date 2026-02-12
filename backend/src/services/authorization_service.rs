@@ -112,10 +112,26 @@ pub async fn count_owners(pool: &SqlitePool, project_id: Uuid) -> AppResult<i64>
 mod tests {
     use super::*;
     use crate::models::project::AddMemberRequest;
-    use crate::services::{member_service, project_service};
+    use crate::models::user::RegisterRequest;
+    use crate::services::{member_service, project_service, user_service};
     use crate::test_helpers::setup_test_db;
 
     use crate::models::project::CreateProjectRequest;
+
+    static USER_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+    async fn create_test_user(pool: &SqlitePool) -> Uuid {
+        let n = USER_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let req = RegisterRequest {
+            email: format!("user{n}@test.com"),
+            name: format!("User {n}"),
+            password: "password123".to_string(),
+        };
+        user_service::create_user(pool, &req)
+            .await
+            .expect("Failed to create user")
+            .id
+    }
 
     async fn setup_project_with_member(pool: &SqlitePool, role: MemberRole) -> (Uuid, Uuid) {
         let project = project_service::create_project(
@@ -127,7 +143,7 @@ mod tests {
         )
         .await
         .unwrap();
-        let user_id = Uuid::new_v4();
+        let user_id = create_test_user(pool).await;
         member_service::add_member(pool, project.id, &AddMemberRequest { user_id, role })
             .await
             .unwrap();
@@ -287,7 +303,7 @@ mod tests {
     #[tokio::test]
     async fn test_list_user_project_ids_returns_member_projects() {
         let pool = setup_test_db().await;
-        let user_id = Uuid::new_v4();
+        let user_id = create_test_user(&pool).await;
 
         let project1 = project_service::create_project(
             &pool,
@@ -369,9 +385,9 @@ mod tests {
         .await
         .unwrap();
 
-        let owner1 = Uuid::new_v4();
-        let owner2 = Uuid::new_v4();
-        let admin = Uuid::new_v4();
+        let owner1 = create_test_user(&pool).await;
+        let owner2 = create_test_user(&pool).await;
+        let admin = create_test_user(&pool).await;
 
         member_service::add_member(
             &pool,

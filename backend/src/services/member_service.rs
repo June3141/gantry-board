@@ -11,6 +11,8 @@ struct MemberRow {
     project_id: String,
     user_id: String,
     role: MemberRole,
+    user_name: String,
+    user_email: String,
     created_at: DateTime<Utc>,
 }
 
@@ -22,6 +24,8 @@ impl TryFrom<MemberRow> for ProjectMember {
             project_id: row.project_id.parse()?,
             user_id: row.user_id.parse()?,
             role: row.role,
+            user_name: row.user_name,
+            user_email: row.user_email,
             created_at: row.created_at,
         })
     }
@@ -47,12 +51,7 @@ pub async fn add_member(
     .execute(pool)
     .await?;
 
-    Ok(ProjectMember {
-        project_id,
-        user_id: req.user_id,
-        role: req.role.clone(),
-        created_at: now,
-    })
+    get_member(pool, project_id, req.user_id).await
 }
 
 pub async fn get_member(
@@ -62,9 +61,12 @@ pub async fn get_member(
 ) -> AppResult<ProjectMember> {
     let row = sqlx::query_as::<_, MemberRow>(
         r#"
-        SELECT project_id, user_id, role, created_at
-        FROM project_members
-        WHERE project_id = $1 AND user_id = $2
+        SELECT pm.project_id, pm.user_id, pm.role,
+               u.name as user_name, u.email as user_email,
+               pm.created_at
+        FROM project_members pm
+        JOIN users u ON pm.user_id = u.id
+        WHERE pm.project_id = $1 AND pm.user_id = $2
         "#,
     )
     .bind(project_id.to_string())
@@ -86,10 +88,13 @@ pub async fn get_member(
 pub async fn list_members(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<ProjectMember>> {
     let rows = sqlx::query_as::<_, MemberRow>(
         r#"
-        SELECT project_id, user_id, role, created_at
-        FROM project_members
-        WHERE project_id = $1
-        ORDER BY created_at ASC
+        SELECT pm.project_id, pm.user_id, pm.role,
+               u.name as user_name, u.email as user_email,
+               pm.created_at
+        FROM project_members pm
+        JOIN users u ON pm.user_id = u.id
+        WHERE pm.project_id = $1
+        ORDER BY pm.created_at ASC
         "#,
     )
     .bind(project_id.to_string())
@@ -108,7 +113,8 @@ pub async fn update_member_role(
     user_id: Uuid,
     req: &UpdateMemberRequest,
 ) -> AppResult<ProjectMember> {
-    let existing = get_member(pool, project_id, user_id).await?;
+    // Verify member exists
+    get_member(pool, project_id, user_id).await?;
 
     sqlx::query(
         r#"
@@ -123,12 +129,7 @@ pub async fn update_member_role(
     .execute(pool)
     .await?;
 
-    Ok(ProjectMember {
-        project_id,
-        user_id,
-        role: req.role.clone(),
-        created_at: existing.created_at,
-    })
+    get_member(pool, project_id, user_id).await
 }
 
 pub async fn remove_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) -> AppResult<()> {
@@ -157,7 +158,8 @@ pub async fn remove_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) -
 mod tests {
     use super::*;
     use crate::models::project::CreateProjectRequest;
-    use crate::services::project_service;
+    use crate::models::user::RegisterRequest;
+    use crate::services::{project_service, user_service};
     use crate::test_helpers::setup_test_db;
 
     async fn create_test_project(pool: &SqlitePool) -> Uuid {
@@ -171,11 +173,23 @@ mod tests {
         project.id
     }
 
+    async fn create_test_user(pool: &SqlitePool, email: &str, name: &str) -> Uuid {
+        let req = RegisterRequest {
+            email: email.to_string(),
+            name: name.to_string(),
+            password: "password123".to_string(),
+        };
+        user_service::create_user(pool, &req)
+            .await
+            .expect("Failed to create user")
+            .id
+    }
+
     #[tokio::test]
     async fn test_add_member_creates_membership() {
         let pool = setup_test_db().await;
         let project_id = create_test_project(&pool).await;
-        let user_id = Uuid::new_v4();
+        let user_id = create_test_user(&pool, "alice@test.com", "Alice").await;
 
         let req = AddMemberRequest {
             user_id,
@@ -188,13 +202,15 @@ mod tests {
         assert_eq!(member.project_id, project_id);
         assert_eq!(member.user_id, user_id);
         assert!(matches!(member.role, MemberRole::Member));
+        assert_eq!(member.user_name, "Alice");
+        assert_eq!(member.user_email, "alice@test.com");
     }
 
     #[tokio::test]
     async fn test_add_member_with_owner_role() {
         let pool = setup_test_db().await;
         let project_id = create_test_project(&pool).await;
-        let user_id = Uuid::new_v4();
+        let user_id = create_test_user(&pool, "bob@test.com", "Bob").await;
 
         let req = AddMemberRequest {
             user_id,
@@ -211,7 +227,7 @@ mod tests {
     async fn test_get_member_returns_existing() {
         let pool = setup_test_db().await;
         let project_id = create_test_project(&pool).await;
-        let user_id = Uuid::new_v4();
+        let user_id = create_test_user(&pool, "alice@test.com", "Alice").await;
 
         let req = AddMemberRequest {
             user_id,
@@ -257,8 +273,8 @@ mod tests {
         let pool = setup_test_db().await;
         let project_id = create_test_project(&pool).await;
 
-        let user1 = Uuid::new_v4();
-        let user2 = Uuid::new_v4();
+        let user1 = create_test_user(&pool, "alice@test.com", "Alice").await;
+        let user2 = create_test_user(&pool, "bob@test.com", "Bob").await;
 
         add_member(
             &pool,
@@ -293,7 +309,7 @@ mod tests {
     async fn test_update_member_role_changes_role() {
         let pool = setup_test_db().await;
         let project_id = create_test_project(&pool).await;
-        let user_id = Uuid::new_v4();
+        let user_id = create_test_user(&pool, "alice@test.com", "Alice").await;
 
         add_member(
             &pool,
@@ -324,7 +340,7 @@ mod tests {
     async fn test_remove_member_deletes_membership() {
         let pool = setup_test_db().await;
         let project_id = create_test_project(&pool).await;
-        let user_id = Uuid::new_v4();
+        let user_id = create_test_user(&pool, "alice@test.com", "Alice").await;
 
         add_member(
             &pool,
