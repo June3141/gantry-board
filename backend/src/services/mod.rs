@@ -4,6 +4,7 @@ pub mod authorization_service;
 pub mod member_service;
 pub mod project_service;
 pub mod session_service;
+pub mod task_comment_service;
 pub mod task_service;
 pub mod user_service;
 pub mod worktree_service;
