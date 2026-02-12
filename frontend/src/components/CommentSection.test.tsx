@@ -54,7 +54,13 @@ describe('CommentSection', () => {
     vi.clearAllMocks();
 
     useAuthStore.setState({
-      user: { id: 'user-1', email: 'alice@test.com', name: 'Alice', created_at: '', updated_at: '' },
+      user: {
+        id: 'user-1',
+        email: 'alice@test.com',
+        name: 'Alice',
+        created_at: '',
+        updated_at: '',
+      },
       isAuthenticated: true,
       isLoading: false,
     });
@@ -200,7 +206,9 @@ describe('CommentSection', () => {
     mockDeleteMutateAsync.mockResolvedValue({});
     renderWithProviders(<CommentSection taskId="task-1" />);
 
-    const deleteBtn = screen.getAllByTestId('comment-item')[0].querySelector('[aria-label="Delete"]');
+    const deleteBtn = screen
+      .getAllByTestId('comment-item')[0]
+      .querySelector('[aria-label="Delete"]');
     await user.click(deleteBtn!);
 
     // Confirmation appears

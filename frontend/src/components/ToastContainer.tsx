@@ -11,7 +11,10 @@ export function ToastContainer() {
   const removeToast = useToastStore((s) => s.removeToast);
 
   return (
-    <div data-testid="toast-container" className="fixed right-4 bottom-4 z-[60] flex flex-col gap-2">
+    <div
+      data-testid="toast-container"
+      className="fixed right-4 bottom-4 z-[60] flex flex-col gap-2"
+    >
       {toasts.map((toast) => (
         <div
           key={toast.id}
