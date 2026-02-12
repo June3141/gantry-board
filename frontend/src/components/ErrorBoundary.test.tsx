@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ErrorBoundary } from './ErrorBoundary';
 
 function ThrowingChild(): React.ReactNode {
@@ -12,6 +12,10 @@ function GoodChild() {
 }
 
 describe('ErrorBoundary', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('renders children normally when no error', () => {
     render(
       <ErrorBoundary>
@@ -23,7 +27,6 @@ describe('ErrorBoundary', () => {
   });
 
   it('shows fallback UI on error', () => {
-    // Suppress console.error for expected error boundary logging
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     render(
@@ -39,11 +42,12 @@ describe('ErrorBoundary', () => {
   it('reloads page when reload button is clicked', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    // Mock window.location.reload
+    const originalLocation = window.location;
     const reloadMock = vi.fn();
     Object.defineProperty(window, 'location', {
-      value: { ...window.location, reload: reloadMock },
+      value: { ...originalLocation, reload: reloadMock },
       writable: true,
+      configurable: true,
     });
 
     render(
@@ -56,5 +60,12 @@ describe('ErrorBoundary', () => {
     await userEvent.click(reloadButton);
 
     expect(reloadMock).toHaveBeenCalled();
+
+    // Restore original location
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
   });
 });
