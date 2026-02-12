@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
 import { useCreateTask } from '../api/generated/endpoints/tasks/tasks';
 import { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
@@ -25,11 +26,13 @@ function TaskCreateForm({
 }) {
   const closeTaskModal = useUiStore((s) => s.closeTaskModal);
   const createTask = useCreateTask();
+  const { data: members } = useListMembers(projectId);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>(defaultStatus ?? TaskStatus.backlog);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.medium);
+  const [assignedTo, setAssignedTo] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,6 +56,7 @@ function TaskCreateForm({
           description: description.trim() || undefined,
           status,
           priority,
+          ...(assignedTo ? { assigned_to: assignedTo } : {}),
         },
       });
       closeTaskModal();
@@ -102,7 +106,7 @@ function TaskCreateForm({
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label htmlFor="task-status" className="block text-sm font-medium text-gray-700">
                 Status
@@ -134,6 +138,24 @@ function TaskCreateForm({
                 <option value={TaskPriority.medium}>Medium</option>
                 <option value={TaskPriority.high}>High</option>
                 <option value={TaskPriority.urgent}>Urgent</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="task-assignee" className="block text-sm font-medium text-gray-700">
+                Assignee
+              </label>
+              <select
+                id="task-assignee"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="">Unassigned</option>
+                {members?.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.user_name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
