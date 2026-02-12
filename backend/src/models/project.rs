@@ -24,11 +24,13 @@ pub enum MemberRole {
     Member,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProjectMember {
     pub project_id: Uuid,
     pub user_id: Uuid,
     pub role: MemberRole,
+    pub user_name: String,
+    pub user_email: String,
     pub created_at: DateTime<Utc>,
 }
 

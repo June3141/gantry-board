@@ -64,6 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         sse_hub,
         config: Arc::new(config.clone()),
         orchestrator,
+        started_at: std::time::Instant::now(),
     };
     let app = gantry_board::app(state)?;
 

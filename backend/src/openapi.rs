@@ -35,6 +35,7 @@ use crate::sse;
         handlers::agent_sessions::stop_agent_session,
         handlers::agent_sessions::get_agent_session_outputs,
         handlers::agent_sessions::restart_agent_session,
+        handlers::users::search_users,
         handlers::worktrees::list_worktrees,
         handlers::worktrees::create_worktree,
         handlers::worktrees::get_worktree,
@@ -70,6 +71,10 @@ use crate::sse;
         handlers::worktrees::CreateWorktreeRequest,
         models::pagination::PaginatedResponse<models::task::Task>,
         models::pagination::PaginatedResponse<models::project::Project>,
+        handlers::health::HealthResponse,
+        models::task_comment::TaskComment,
+        models::task_comment::CreateCommentRequest,
+        models::task_comment::UpdateCommentRequest,
     )),
     tags(
         (name = "health", description = "Health check"),
@@ -78,6 +83,7 @@ use crate::sse;
         (name = "projects", description = "Project management"),
         (name = "project-members", description = "Project member management"),
         (name = "agent-sessions", description = "Agent session management"),
+        (name = "users", description = "User management"),
         (name = "worktrees", description = "Git worktree management"),
     ),
     info(

@@ -35,6 +35,7 @@ pub struct AppState {
     pub sse_hub: Arc<SseHub>,
     pub config: Arc<config::Config>,
     pub orchestrator: Arc<AgentOrchestrator>,
+    pub started_at: std::time::Instant,
 }
 
 pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
@@ -105,6 +106,8 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         .route("/projects/{id}", get(handlers::projects::get_project))
         .route("/projects/{id}", patch(handlers::projects::update_project))
         .route("/projects/{id}", delete(handlers::projects::delete_project))
+        // User endpoints
+        .route("/users", get(handlers::users::search_users))
         // Project members
         .route(
             "/projects/{project_id}/members",
