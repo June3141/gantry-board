@@ -18,9 +18,9 @@ use crate::AppState;
     request_body = CreateCommentRequest,
     responses(
         (status = 201, description = "Comment created", body = TaskComment),
+        (status = 400, description = "Validation error"),
         (status = 403, description = "Forbidden"),
-        (status = 404, description = "Task not found"),
-        (status = 422, description = "Validation error")
+        (status = 404, description = "Task not found")
     ),
     tag = "task-comments"
 )]
@@ -76,20 +76,23 @@ pub async fn list_comments(
     request_body = UpdateCommentRequest,
     responses(
         (status = 200, description = "Comment updated", body = TaskComment),
+        (status = 400, description = "Validation error"),
         (status = 403, description = "Forbidden - only author can edit"),
-        (status = 404, description = "Comment not found"),
-        (status = 422, description = "Validation error")
+        (status = 404, description = "Comment not found")
     ),
     tag = "task-comments"
 )]
 pub async fn update_comment(
     State(state): State<AppState>,
     auth: AuthUser,
-    Path((_task_id, comment_id)): Path<(Uuid, Uuid)>,
+    Path((task_id, comment_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<UpdateCommentRequest>,
 ) -> AppResult<Json<TaskComment>> {
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
+    let task = task_service::get_task(&state.pool, task_id).await?;
+    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
+        .await?;
     let comment =
         task_comment_service::update_comment(&state.pool, comment_id, auth.user_id, &body).await?;
     state
@@ -115,20 +118,21 @@ pub async fn update_comment(
 pub async fn delete_comment(
     State(state): State<AppState>,
     auth: AuthUser,
-    Path((task_id, comment_id)): Path<(Uuid, Uuid)>,
+    Path((_task_id, comment_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<StatusCode> {
-    // Try author delete first; if forbidden, check if user is project admin
     let existing = task_comment_service::get_comment(&state.pool, comment_id).await?;
     if existing.user_id == auth.user_id {
-        task_comment_service::delete_comment(&state.pool, comment_id, auth.user_id).await?;
+        // Author can delete their own comment — skip re-fetch inside the service
+        task_comment_service::delete_comment_admin(&state.pool, comment_id).await?;
     } else {
-        let task = task_service::get_task(&state.pool, task_id).await?;
+        // Non-author: authorize using the comment's actual task/project
+        let task = task_service::get_task(&state.pool, existing.task_id).await?;
         authorization_service::require_project_admin(&state.pool, auth.user_id, task.project_id)
             .await?;
         task_comment_service::delete_comment_admin(&state.pool, comment_id).await?;
     }
     state
         .sse_hub
-        .broadcast(SseEvent::comment_deleted(comment_id, task_id));
+        .broadcast(SseEvent::comment_deleted(comment_id, existing.task_id));
     Ok(StatusCode::NO_CONTENT)
 }
