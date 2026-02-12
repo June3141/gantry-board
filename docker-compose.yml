@@ -14,6 +14,9 @@ services:
       - RUST_LOG=info
       - GANTRY_BIND_ADDR=0.0.0.0:3000
       - GANTRY_DATABASE_URL=sqlite:/workspace/backend/data/gantry_board.db?mode=rwc
+      - GANTRY_AUTH_DISABLED=true
+      - GANTRY_CORS_ORIGIN=http://localhost:5173
+      - GANTRY_COOKIE_SECURE=false
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
