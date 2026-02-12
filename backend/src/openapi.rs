@@ -70,6 +70,7 @@ use crate::sse;
         handlers::worktrees::CreateWorktreeRequest,
         models::pagination::PaginatedResponse<models::task::Task>,
         models::pagination::PaginatedResponse<models::project::Project>,
+        handlers::health::HealthResponse,
     )),
     tags(
         (name = "health", description = "Health check"),

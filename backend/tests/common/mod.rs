@@ -51,6 +51,7 @@ async fn create_test_server_impl(
         sse_hub,
         config: Arc::new(config),
         orchestrator,
+        started_at: std::time::Instant::now(),
     };
 
     let app = gantry_board::app(state)

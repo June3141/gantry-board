@@ -74,6 +74,7 @@ mod tests {
             sse_hub,
             config: Arc::new(Config::default()),
             orchestrator,
+            started_at: std::time::Instant::now(),
         }
     }
 

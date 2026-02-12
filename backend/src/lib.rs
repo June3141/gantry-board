@@ -35,6 +35,7 @@ pub struct AppState {
     pub sse_hub: Arc<SseHub>,
     pub config: Arc<config::Config>,
     pub orchestrator: Arc<AgentOrchestrator>,
+    pub started_at: std::time::Instant,
 }
 
 pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
