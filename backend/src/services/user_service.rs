@@ -243,4 +243,100 @@ mod tests {
 
         assert!(matches!(result, Err(AppError::InvalidCredentials)));
     }
+
+    #[tokio::test]
+    async fn test_search_users_by_name() {
+        let pool = setup_test_db().await;
+        create_user(
+            &pool,
+            &RegisterRequest {
+                email: "alice@example.com".to_string(),
+                name: "Alice Smith".to_string(),
+                password: "password123".to_string(),
+            },
+        )
+        .await
+        .unwrap();
+        create_user(
+            &pool,
+            &RegisterRequest {
+                email: "bob@example.com".to_string(),
+                name: "Bob Jones".to_string(),
+                password: "password123".to_string(),
+            },
+        )
+        .await
+        .unwrap();
+
+        let results = search_users(&pool, "alice", 50).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Alice Smith");
+    }
+
+    #[tokio::test]
+    async fn test_search_users_by_email() {
+        let pool = setup_test_db().await;
+        create_user(
+            &pool,
+            &RegisterRequest {
+                email: "alice@example.com".to_string(),
+                name: "Alice".to_string(),
+                password: "password123".to_string(),
+            },
+        )
+        .await
+        .unwrap();
+
+        let results = search_users(&pool, "alice@example", 50).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].email, "alice@example.com");
+    }
+
+    #[tokio::test]
+    async fn test_search_users_returns_all_when_empty_query() {
+        let pool = setup_test_db().await;
+        create_user(
+            &pool,
+            &RegisterRequest {
+                email: "alice@example.com".to_string(),
+                name: "Alice".to_string(),
+                password: "password123".to_string(),
+            },
+        )
+        .await
+        .unwrap();
+        create_user(
+            &pool,
+            &RegisterRequest {
+                email: "bob@example.com".to_string(),
+                name: "Bob".to_string(),
+                password: "password123".to_string(),
+            },
+        )
+        .await
+        .unwrap();
+
+        let results = search_users(&pool, "", 50).await.unwrap();
+        assert_eq!(results.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_search_users_respects_limit() {
+        let pool = setup_test_db().await;
+        for i in 0..5 {
+            create_user(
+                &pool,
+                &RegisterRequest {
+                    email: format!("user{i}@example.com"),
+                    name: format!("User {i}"),
+                    password: "password123".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        }
+
+        let results = search_users(&pool, "", 2).await.unwrap();
+        assert_eq!(results.len(), 2);
+    }
 }
