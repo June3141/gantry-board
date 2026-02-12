@@ -9,6 +9,7 @@ import {
 } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
+import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
 import {
   getListTasksQueryKey,
   useListTasks,
@@ -35,6 +36,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const queryClient = useQueryClient();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const { data: tasksResponse, isLoading, error } = useListTasks({ project_id: projectId });
+  const { data: members } = useListMembers(projectId);
   const tasks = tasksResponse?.data;
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
@@ -157,10 +159,11 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
             status={status}
             tasks={tasksByStatus[status]}
             activeTaskId={activeTask?.id}
+            members={members}
           />
         ))}
       </div>
-      <DragOverlay>{activeTask ? <TaskCard task={activeTask} /> : null}</DragOverlay>
+      <DragOverlay>{activeTask ? <TaskCard task={activeTask} members={members} /> : null}</DragOverlay>
     </DndContext>
   );
 }

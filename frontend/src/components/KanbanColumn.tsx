@@ -1,5 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
-import type { Task } from '../api/generated/model';
+import type { ProjectMember, Task } from '../api/generated/model';
 import { TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
 import { TaskCard } from './TaskCard';
@@ -8,6 +8,7 @@ interface KanbanColumnProps {
   status: TaskStatus;
   tasks: Task[];
   activeTaskId?: string | null;
+  members?: ProjectMember[];
 }
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -18,7 +19,7 @@ const statusLabels: Record<TaskStatus, string> = {
   [TaskStatus.done]: 'Done',
 };
 
-export function KanbanColumn({ status, tasks, activeTaskId }: KanbanColumnProps) {
+export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanColumnProps) {
   const openTaskModal = useUiStore((s) => s.openTaskModal);
   const { setNodeRef, isOver } = useDroppable({
     id: status,
@@ -46,7 +47,7 @@ export function KanbanColumn({ status, tasks, activeTaskId }: KanbanColumnProps)
           </div>
         ) : (
           tasks.map((task) => (
-            <TaskCard key={task.id} task={task} isDragging={activeTaskId === task.id} />
+            <TaskCard key={task.id} task={task} isDragging={activeTaskId === task.id} members={members} />
           ))
         )}
       </div>

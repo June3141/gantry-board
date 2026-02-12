@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as membersApi from '../api/generated/endpoints/project-members/project-members';
 import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
 import type { Task } from '../api/generated/model';
 import { TaskPriority, TaskStatus } from '../api/generated/model';
@@ -9,6 +10,10 @@ import { KanbanBoard } from './KanbanBoard';
 vi.mock('../api/generated/endpoints/tasks/tasks', () => ({
   useListTasks: vi.fn(),
   useUpdateTask: vi.fn(),
+}));
+
+vi.mock('../api/generated/endpoints/project-members/project-members', () => ({
+  useListMembers: vi.fn(),
 }));
 
 const createMockTask = (overrides: Partial<Task> = {}): Task => ({
@@ -40,6 +45,10 @@ const renderWithProviders = (ui: React.ReactElement) => {
 describe('KanbanBoard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(membersApi.useListMembers).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof membersApi.useListMembers>);
   });
 
   it('renders all status columns', () => {

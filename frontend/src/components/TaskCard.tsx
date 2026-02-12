@@ -1,12 +1,23 @@
 import { useDraggable } from '@dnd-kit/core';
 import { useRef } from 'react';
-import type { Task } from '../api/generated/model';
+import type { ProjectMember, Task } from '../api/generated/model';
 import { TaskPriority } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
 
 interface TaskCardProps {
   task: Task;
   isDragging?: boolean;
+  members?: ProjectMember[];
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 }
 
 const CLICK_THRESHOLD = 5;
@@ -18,7 +29,7 @@ const priorityStyles: Record<TaskPriority, string> = {
   [TaskPriority.low]: 'bg-gray-100 text-gray-800',
 };
 
-export function TaskCard({ task, isDragging }: TaskCardProps) {
+export function TaskCard({ task, isDragging, members }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: task.id,
     data: { task },
@@ -81,6 +92,21 @@ export function TaskCard({ task, isDragging }: TaskCardProps) {
           {task.description}
         </p>
       )}
+      {task.assigned_to && (() => {
+        const member = members?.find((m) => m.user_id === task.assigned_to);
+        const initials = member ? getInitials(member.user_name) : '?';
+        return (
+          <div className="mt-2 flex justify-end">
+            <div
+              data-testid="assignee-avatar"
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-800"
+              title={member?.user_name}
+            >
+              {initials}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
