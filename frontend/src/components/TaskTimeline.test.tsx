@@ -113,7 +113,15 @@ const renderWithProviders = (ui: React.ReactElement) => {
 describe('TaskTimeline component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useAuthStore.setState({ user: { id: 'user-1', name: 'Alice', email: 'alice@test.com' } });
+    useAuthStore.setState({
+      user: {
+        id: 'user-1',
+        name: 'Alice',
+        email: 'alice@test.com',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    });
 
     vi.mocked(commentsApi.useCreateComment).mockReturnValue({
       mutateAsync: vi.fn(),
