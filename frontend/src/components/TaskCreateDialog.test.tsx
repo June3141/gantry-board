@@ -2,14 +2,39 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as membersApi from '../api/generated/endpoints/project-members/project-members';
 import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
-import { TaskStatus } from '../api/generated/model';
+import type { ProjectMember } from '../api/generated/model';
+import { MemberRole, TaskStatus } from '../api/generated/model';
 import { useUiStore } from '../stores/uiStore';
 import { TaskCreateDialog } from './TaskCreateDialog';
 
 vi.mock('../api/generated/endpoints/tasks/tasks', () => ({
   useCreateTask: vi.fn(),
 }));
+
+vi.mock('../api/generated/endpoints/project-members/project-members', () => ({
+  useListMembers: vi.fn(),
+}));
+
+const mockMembers: ProjectMember[] = [
+  {
+    user_id: 'user-1',
+    user_name: 'Alice',
+    user_email: 'alice@test.com',
+    role: MemberRole.owner,
+    project_id: 'proj-1',
+    created_at: '2026-01-01T00:00:00Z',
+  },
+  {
+    user_id: 'user-2',
+    user_name: 'Bob',
+    user_email: 'bob@test.com',
+    role: MemberRole.member,
+    project_id: 'proj-1',
+    created_at: '2026-01-01T00:00:00Z',
+  },
+];
 
 const createQueryClient = () =>
   new QueryClient({
@@ -36,6 +61,10 @@ describe('TaskCreateDialog', () => {
       defaultStatus: null,
       isProjectModalOpen: false,
     });
+    vi.mocked(membersApi.useListMembers).mockReturnValue({
+      data: mockMembers,
+      isLoading: false,
+    } as unknown as ReturnType<typeof membersApi.useListMembers>);
   });
 
   it('does not render when modal is closed', () => {
@@ -136,5 +165,45 @@ describe('TaskCreateDialog', () => {
     });
 
     expect(screen.getByLabelText(/title/i)).toHaveValue('');
+  });
+
+  describe('assignee', () => {
+    it('displays assignee select with Unassigned as default', () => {
+      useUiStore.setState({ isTaskModalOpen: true });
+      renderWithProviders(<TaskCreateDialog projectId="proj-1" />);
+      const select = screen.getByLabelText(/assignee/i) as HTMLSelectElement;
+      expect(select.value).toBe('');
+      const selectedOption = select.options[select.selectedIndex];
+      expect(selectedOption.text).toBe('Unassigned');
+    });
+
+    it('lists all project members', () => {
+      useUiStore.setState({ isTaskModalOpen: true });
+      renderWithProviders(<TaskCreateDialog projectId="proj-1" />);
+      const select = screen.getByLabelText(/assignee/i) as HTMLSelectElement;
+      const options = Array.from(select.options);
+      expect(options.some((o) => o.text === 'Alice')).toBe(true);
+      expect(options.some((o) => o.text === 'Bob')).toBe(true);
+    });
+
+    it('includes assigned_to in create request', async () => {
+      const user = userEvent.setup();
+      useUiStore.setState({ isTaskModalOpen: true, defaultStatus: TaskStatus.todo });
+      renderWithProviders(<TaskCreateDialog projectId="proj-1" />);
+
+      await user.type(screen.getByLabelText(/title/i), 'Assigned Task');
+      await user.selectOptions(screen.getByLabelText(/assignee/i), 'user-2');
+      await user.click(screen.getByRole('button', { name: /create/i }));
+
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        data: {
+          project_id: 'proj-1',
+          title: 'Assigned Task',
+          status: 'todo',
+          priority: 'medium',
+          assigned_to: 'user-2',
+        },
+      });
+    });
   });
 });
