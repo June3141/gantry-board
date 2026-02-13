@@ -369,6 +369,35 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_add_member_nonexistent_user_leaves_no_row() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+        let nonexistent_user = Uuid::new_v4();
+
+        // Attempt to add a nonexistent user as a member — should fail
+        let result = add_member(
+            &pool,
+            project_id,
+            &AddMemberRequest {
+                user_id: nonexistent_user,
+                role: MemberRole::Member,
+            },
+        )
+        .await;
+
+        assert!(result.is_err());
+
+        // Verify no member row was created (atomicity guarantee)
+        let members = list_members(&pool, project_id)
+            .await
+            .expect("list should succeed");
+        assert!(
+            members.is_empty(),
+            "no member row should exist after failed add_member"
+        );
+    }
+
+    #[tokio::test]
     async fn test_remove_nonexistent_member_returns_not_found() {
         let pool = setup_test_db().await;
         let project_id = create_test_project(&pool).await;

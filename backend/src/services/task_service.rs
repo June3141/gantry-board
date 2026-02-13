@@ -808,6 +808,104 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_update_task_validation_failure_preserves_original() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+        let nonexistent_user = Uuid::new_v4();
+
+        let created = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id,
+                title: "Original Title".to_string(),
+                description: Some("Original Description".to_string()),
+                status: Some(TaskStatus::Backlog),
+                priority: Some(TaskPriority::Low),
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("task creation should succeed");
+
+        // Attempt update with invalid assigned_to AND other valid field changes.
+        // The entire operation must be atomic: either all fields update or none do.
+        let result = update_task(
+            &pool,
+            created.id,
+            &UpdateTaskRequest {
+                title: Some("Changed Title".to_string()),
+                description: Some("Changed Description".to_string()),
+                status: Some(TaskStatus::Done),
+                priority: Some(TaskPriority::Urgent),
+                parent_id: None,
+                assigned_to: Some(nonexistent_user),
+                position: Some(99),
+            },
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+
+        // Verify the task in DB is completely unchanged
+        let after = get_task(&pool, created.id)
+            .await
+            .expect("task should still exist");
+        assert_eq!(after.title, "Original Title");
+        assert_eq!(after.description, Some("Original Description".to_string()));
+        assert!(matches!(after.status, TaskStatus::Backlog));
+        assert!(matches!(after.priority, TaskPriority::Low));
+        assert_eq!(after.position, 0);
+        assert!(after.assigned_to.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_create_task_validation_failure_leaves_no_row() {
+        let pool = setup_test_db().await;
+        let project1 = create_test_project(&pool).await;
+        let project2 = create_test_project(&pool).await;
+
+        // Create a parent in project2
+        let parent = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id: project2,
+                title: "Parent in P2".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .expect("parent task creation should succeed");
+
+        // Attempt to create a task in project1 with parent in project2 — should fail validation
+        let result = create_task(
+            &pool,
+            &CreateTaskRequest {
+                project_id: project1,
+                title: "Orphan".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: Some(parent.id),
+                assigned_to: None,
+            },
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::Validation(_))));
+
+        // Verify no task was created in project1
+        let tasks = list_tasks(&pool, project1)
+            .await
+            .expect("list should succeed");
+        assert!(tasks.is_empty(), "no task should exist after failed create");
+    }
+
+    #[tokio::test]
     async fn test_update_task_with_parent_in_different_project_returns_validation_error() {
         let pool = setup_test_db().await;
         let project1 = create_test_project(&pool).await;
