@@ -190,6 +190,11 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/worktrees/{name}",
             delete(handlers::worktrees::delete_worktree),
         )
+        // Preview endpoints
+        .route("/previews", get(handlers::previews::list_previews))
+        .route("/previews", post(handlers::previews::create_preview))
+        .route("/previews/{id}", get(handlers::previews::get_preview))
+        .route("/previews/{id}", delete(handlers::previews::delete_preview))
         // CSRF protection: require X-Requested-With header on state-changing requests
         .layer(axum::middleware::from_fn(auth::csrf::csrf_check))
         // General API rate limit applied to all routes

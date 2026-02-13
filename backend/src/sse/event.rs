@@ -3,6 +3,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::models::agent_session::AgentSession;
+use crate::models::docker_preview::DockerPreview;
 use crate::models::task::Task;
 use crate::models::task_comment::TaskComment;
 
@@ -18,6 +19,8 @@ pub enum SseEvent {
     CommentCreated { comment: TaskComment },
     CommentUpdated { comment: TaskComment },
     CommentDeleted { comment_id: Uuid, task_id: Uuid },
+    PreviewStatusChanged { preview: DockerPreview },
+    PreviewDeleted { preview_id: Uuid },
 }
 
 impl SseEvent {
@@ -56,6 +59,14 @@ impl SseEvent {
         }
     }
 
+    pub fn preview_status_changed(preview: DockerPreview) -> Self {
+        Self::PreviewStatusChanged { preview }
+    }
+
+    pub fn preview_deleted(preview_id: Uuid) -> Self {
+        Self::PreviewDeleted { preview_id }
+    }
+
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::TaskCreated { .. } => "task_created",
@@ -66,6 +77,8 @@ impl SseEvent {
             Self::CommentCreated { .. } => "comment_created",
             Self::CommentUpdated { .. } => "comment_updated",
             Self::CommentDeleted { .. } => "comment_deleted",
+            Self::PreviewStatusChanged { .. } => "preview_status_changed",
+            Self::PreviewDeleted { .. } => "preview_deleted",
         }
     }
 }

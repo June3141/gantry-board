@@ -65,3 +65,6 @@ git2 = "0.20"
 # Agent
 async-trait = "0.1"
 tokio-util = { version = "0.7", features = ["rt"] }
+
+# Docker
+bollard = "0.19"

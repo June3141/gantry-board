@@ -44,6 +44,10 @@ use crate::sse;
         handlers::worktrees::create_worktree,
         handlers::worktrees::get_worktree,
         handlers::worktrees::delete_worktree,
+        handlers::previews::create_preview,
+        handlers::previews::list_previews,
+        handlers::previews::get_preview,
+        handlers::previews::delete_preview,
     ),
     components(schemas(
         models::task::Task,
@@ -79,6 +83,9 @@ use crate::sse;
         models::task_comment::TaskComment,
         models::task_comment::CreateCommentRequest,
         models::task_comment::UpdateCommentRequest,
+        models::docker_preview::DockerPreview,
+        models::docker_preview::PreviewStatus,
+        models::docker_preview::CreatePreviewRequest,
     )),
     tags(
         (name = "health", description = "Health check"),
@@ -90,6 +97,7 @@ use crate::sse;
         (name = "users", description = "User management"),
         (name = "task-comments", description = "Task comment management"),
         (name = "worktrees", description = "Git worktree management"),
+        (name = "previews", description = "Docker preview management"),
     ),
     info(
         title = "Gantry Board API",
