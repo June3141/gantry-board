@@ -43,16 +43,7 @@ pub fn create_worktree(repo_path: &Path, name: &str) -> AppResult<WorktreeInfo> 
         .parent()
         .ok_or_else(|| AppError::Internal("repository has no parent directory".to_string()))?;
 
-    // Canonicalize parent to resolve symlinks, then verify the worktree path stays within it
-    let canonical_parent = parent_dir
-        .canonicalize()
-        .map_err(|e| AppError::Internal(format!("failed to canonicalize parent directory: {e}")))?;
-    let wt_path = canonical_parent.join(name);
-    if !wt_path.starts_with(&canonical_parent) {
-        return Err(AppError::Validation(format!(
-            "worktree path escapes parent directory: {name}"
-        )));
-    }
+    let wt_path = parent_dir.join(name);
 
     let mut opts = WorktreeAddOptions::new();
     opts.reference(Some(branch.get()));
