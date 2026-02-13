@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { AgentSession, Task, TaskComment } from '../api/generated/model';
+import type { AgentSession, DockerPreview, Task, TaskComment } from '../api/generated/model';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -12,7 +12,9 @@ export type SseEvent =
   | { type: 'AgentSessionStatusChanged'; session: AgentSession }
   | { type: 'CommentCreated'; comment: TaskComment }
   | { type: 'CommentUpdated'; comment: TaskComment }
-  | { type: 'CommentDeleted'; comment_id: string; task_id: string };
+  | { type: 'CommentDeleted'; comment_id: string; task_id: string }
+  | { type: 'PreviewStatusChanged'; preview: DockerPreview }
+  | { type: 'PreviewDeleted'; preview_id: string };
 
 export function connectEventSource(queryClient: QueryClient): () => void {
   const eventSource = new EventSource(`${API_BASE_URL}/api/events`);
@@ -79,6 +81,15 @@ export function connectEventSource(queryClient: QueryClient): () => void {
   eventSource.addEventListener('comment_created', handleCommentEvent);
   eventSource.addEventListener('comment_updated', handleCommentEvent);
   eventSource.addEventListener('comment_deleted', handleCommentEvent);
+
+  const handlePreviewEvent = () => {
+    queryClient.invalidateQueries({
+      queryKey: ['/api/previews'],
+      exact: false,
+    });
+  };
+  eventSource.addEventListener('preview_status_changed', handlePreviewEvent);
+  eventSource.addEventListener('preview_deleted', handlePreviewEvent);
 
   eventSource.onerror = (event: Event) => {
     const source = event.currentTarget as EventSource | null;
