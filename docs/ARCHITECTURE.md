@@ -392,6 +392,49 @@ Workflow: `task api:generate` で OpenAPI spec → TypeScript クライアント
 | **Rate Limit (general API)** | ~1 req/s, 60 burst per IP | tower_governor |
 | **Tracing** | HTTP request/response logging | `RUST_LOG` env |
 
+## Deployment Constraints
+
+### Single-Instance Architecture
+
+Gantry Board は **シングルインスタンスデプロイ** を前提に設計されている。
+
+#### In-Memory State
+
+| コンポーネント | 状態 | 影響 |
+|---------------|------|------|
+| `AgentOrchestrator.running` | 実行中セッションのキャンセルトークン | セッション完了/キャンセル時に自動クリーンアップ |
+| `AgentOrchestrator.task_locks` | タスク単位の排他ロック | 使用後にクリーンアップ |
+| `SseHub` | broadcast channel（容量は設定可能、デフォルト 4096） | 接続間で共有、バッファ制限あり |
+| Prometheus metrics | `OnceLock` で初期化されるグローバルレコーダー | プロセス寿命と同じ |
+
+#### 制約事項
+
+- **水平スケーリング不可**: 各インスタンスが独立したセッション状態を持つため、ロードバランサー背後の複数インスタンス構成は不可
+- **プロセス再起動でセッション喪失**: 実行中のエージェントセッションはメモリ上のみ。再起動時に Running 状態のセッションは孤立する（DB 上は Running のまま残る）
+- **フェイルオーバー非対応**: 単一障害点
+
+#### 推奨デプロイ構成
+
+```
+[systemd / supervisor]
+    └── gantry-board (single process)
+            ├── SQLite (WAL mode, ファイルシステム上)
+            └── Agent subprocesses (tokio::process)
+```
+
+- プロセスマネージャ (systemd, supervisor) による自動再起動を推奨
+- SQLite DB は永続ストレージに配置
+- バックアップは SQLite の `.backup` コマンドまたはファイルコピー (WAL チェックポイント後)
+
+#### 将来の拡張パス
+
+水平スケーリングが必要になった場合のアプローチ:
+
+1. **セッション状態の外部化**: Redis or PostgreSQL にセッション状態を移行
+2. **リーダー選出**: エージェントプロセスの実行ノードを決定するコーディネーション
+3. **DB 移行**: SQLite → PostgreSQL (複数接続対応)
+4. **SSE 配信**: Redis Pub/Sub で複数インスタンス間のイベント伝播
+
 ## Development Commands
 
 ```bash
