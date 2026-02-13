@@ -51,6 +51,7 @@ async fn create_test_server_impl(
         sse_hub,
         config: Arc::new(config),
         orchestrator,
+        preview_manager: None,
         started_at: std::time::Instant::now(),
     };
 

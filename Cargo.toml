@@ -68,3 +68,6 @@ tokio-util = { version = "0.7", features = ["rt"] }
 
 # Docker
 bollard = "0.19"
+tar = "0.4"
+http-body-util = "0.1"
+bytes = "1"

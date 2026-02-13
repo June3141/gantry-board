@@ -96,7 +96,107 @@ pub async fn delete_preview(
 ) -> AppResult<StatusCode> {
     preview_service::delete_preview(&state.pool, id).await?;
 
+    // Cleanup container if preview manager is available
+    if let Some(ref pm) = state.preview_manager {
+        let _ = pm.cleanup(id).await;
+    }
+
     state.sse_hub.broadcast(SseEvent::preview_deleted(id));
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/previews/{id}/start",
+    params(("id" = Uuid, Path, description = "Preview ID")),
+    responses(
+        (status = 202, description = "Build and start initiated"),
+        (status = 404, description = "Preview not found")
+    ),
+    tag = "previews"
+)]
+pub async fn start_preview(
+    State(state): State<AppState>,
+    _auth: AuthUser,
+    Path(id): Path<Uuid>,
+) -> AppResult<StatusCode> {
+    // Verify preview exists
+    preview_service::get_preview(&state.pool, id).await?;
+
+    if let Some(pm) = state.preview_manager.clone() {
+        tokio::spawn(async move {
+            if let Err(e) = pm.build_and_start(id).await {
+                tracing::error!(%id, %e, "preview build_and_start failed");
+            }
+        });
+    }
+
+    Ok(StatusCode::ACCEPTED)
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/previews/{id}/stop",
+    params(("id" = Uuid, Path, description = "Preview ID")),
+    responses(
+        (status = 200, description = "Preview stopped", body = DockerPreview),
+        (status = 404, description = "Preview not found")
+    ),
+    tag = "previews"
+)]
+pub async fn stop_preview(
+    State(state): State<AppState>,
+    _auth: AuthUser,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<DockerPreview>> {
+    if let Some(ref pm) = state.preview_manager {
+        let preview = pm.stop(id).await?;
+        Ok(Json(preview))
+    } else {
+        // No Docker available: just update status in DB
+        let mut conn = state.pool.acquire().await?;
+        let preview = preview_service::update_status_tx(
+            &mut conn,
+            id,
+            crate::models::docker_preview::PreviewStatus::Stopped,
+            None,
+        )
+        .await?;
+        state
+            .sse_hub
+            .broadcast(SseEvent::preview_status_changed(preview.clone()));
+        Ok(Json(preview))
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/previews/{id}/restart",
+    params(("id" = Uuid, Path, description = "Preview ID")),
+    responses(
+        (status = 202, description = "Restart initiated"),
+        (status = 404, description = "Preview not found")
+    ),
+    tag = "previews"
+)]
+pub async fn restart_preview(
+    State(state): State<AppState>,
+    _auth: AuthUser,
+    Path(id): Path<Uuid>,
+) -> AppResult<StatusCode> {
+    // Verify preview exists
+    preview_service::get_preview(&state.pool, id).await?;
+
+    if let Some(pm) = state.preview_manager.clone() {
+        tokio::spawn(async move {
+            // Stop first, then rebuild
+            let _ = pm.stop(id).await;
+            if let Err(e) = pm.build_and_start(id).await {
+                tracing::error!(%id, %e, "preview restart failed");
+            }
+        });
+    }
+
+    Ok(StatusCode::ACCEPTED)
 }

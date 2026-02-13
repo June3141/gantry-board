@@ -48,6 +48,9 @@ use crate::sse;
         handlers::previews::list_previews,
         handlers::previews::get_preview,
         handlers::previews::delete_preview,
+        handlers::previews::start_preview,
+        handlers::previews::stop_preview,
+        handlers::previews::restart_preview,
     ),
     components(schemas(
         models::task::Task,
