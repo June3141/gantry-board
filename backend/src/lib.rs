@@ -41,49 +41,35 @@ pub struct AppState {
     pub started_at: std::time::Instant,
 }
 
+macro_rules! governor {
+    ($per_second:expr, $burst_size:expr) => {
+        GovernorConfigBuilder::default()
+            .per_second($per_second)
+            .burst_size($burst_size)
+            .finish()
+            .ok_or_else(|| {
+                config::ConfigError::RateLimiter(format!(
+                    "per_second={}, burst_size={}",
+                    $per_second, $burst_size
+                ))
+            })
+    };
+}
+
 pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
     // Rate limit: login — 5 attempts per 15 min per IP.
     // per_second(N) sets the replenishment *interval* to N seconds (NOT N req/sec).
-    let login_governor = GovernorConfigBuilder::default()
-        .per_second(180) // 1 token every 180s
-        .burst_size(5) // bucket capacity
-        .finish()
-        .expect("valid governor config");
-
+    let login_governor = governor!(180, 5)?;
     // Rate limit: register — 3 attempts per hour per IP.
-    let register_governor = GovernorConfigBuilder::default()
-        .per_second(1200) // 1 token every 1200s
-        .burst_size(3) // bucket capacity
-        .finish()
-        .expect("valid governor config");
-
+    let register_governor = governor!(1200, 3)?;
     // General API rate limit: ~1 req/s sustained, 60-request burst capacity per IP.
-    let general_governor = GovernorConfigBuilder::default()
-        .per_second(1) // refill 1 token per second
-        .burst_size(60) // bucket capacity: allows initial burst up to 60
-        .finish()
-        .expect("valid governor config");
-
+    let general_governor = governor!(1, 60)?;
     // Rate limit: agent start — 1 per 10 seconds, burst 3 per IP.
-    let agent_start_governor = GovernorConfigBuilder::default()
-        .per_second(10) // 1 token every 10s
-        .burst_size(3) // bucket capacity
-        .finish()
-        .expect("valid governor config");
-
+    let agent_start_governor = governor!(10, 3)?;
     // Rate limit: agent restart — same as start.
-    let agent_restart_governor = GovernorConfigBuilder::default()
-        .per_second(10)
-        .burst_size(3)
-        .finish()
-        .expect("valid governor config");
-
+    let agent_restart_governor = governor!(10, 3)?;
     // Rate limit: SSE connections — 5 connections per 10 seconds per IP.
-    let sse_governor = GovernorConfigBuilder::default()
-        .per_second(10) // 1 token every 10s
-        .burst_size(5) // bucket capacity
-        .finish()
-        .expect("valid governor config");
+    let sse_governor = governor!(10, 5)?;
 
     let api_routes = Router::new()
         // Auth endpoints (rate-limited)
@@ -226,6 +212,8 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
 
     Ok(Router::new()
         .route("/health", get(handlers::health::health_check))
+        .route("/health/live", get(handlers::health::liveness))
+        .route("/health/ready", get(handlers::health::readiness))
         .nest("/api", api_routes)
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),

@@ -258,6 +258,39 @@ impl AgentOrchestrator {
         running.contains_key(&session_id)
     }
 
+    /// Gracefully shut down all running agent sessions.
+    ///
+    /// Cancels every running session and waits for their monitor tasks to finish
+    /// (which handles DB status updates and worktree cleanup).
+    pub async fn shutdown_gracefully(&self) {
+        let sessions: Vec<(Uuid, RunningSession)> = {
+            let mut running = self.running.lock().await;
+            running.drain().collect()
+        };
+
+        if sessions.is_empty() {
+            return;
+        }
+
+        tracing::info!(
+            count = sessions.len(),
+            "shutting down running agent sessions"
+        );
+
+        let mut handles = Vec::new();
+        for (session_id, session) in sessions {
+            tracing::info!(%session_id, "cancelling agent session");
+            session.cancel.cancel();
+            handles.push(session._monitor_handle);
+        }
+
+        for handle in handles {
+            let _ = handle.await;
+        }
+
+        tracing::info!("all agent sessions shut down");
+    }
+
     async fn mark_session_cancelled(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
         // Pending -> Failed is not a valid transition; use Pending -> Cancelled.
         agent_session_service::update_agent_session(
@@ -312,12 +345,20 @@ impl AgentOrchestrator {
                     AgentOutputEvent::Output { text } => {
                         sse_hub.broadcast(SseEvent::agent_output(session_id, text.clone()));
                         // Best-effort persistence (after broadcast to avoid delaying SSE)
-                        if let Err(e) = agent_session_output_service::append_output(
+                        match agent_session_output_service::append_output(
                             &pool, session_id, sequence, &text,
                         )
                         .await
                         {
-                            warn!("failed to persist output for session {session_id} seq {sequence}: {e}");
+                            Ok(_) => {}
+                            Err(crate::error::AppError::Validation(ref msg))
+                                if msg.contains("limit reached") =>
+                            {
+                                warn!("output limit reached for session {session_id}, stopping persistence");
+                            }
+                            Err(e) => {
+                                warn!("failed to persist output for session {session_id} seq {sequence}: {e}");
+                            }
                         }
                         sequence += 1;
                     }

@@ -39,10 +39,11 @@ pub fn create_worktree(repo_path: &Path, name: &str) -> AppResult<WorktreeInfo> 
     let commit = head.peel_to_commit()?;
     let mut branch = repo.branch(name, &commit, false)?;
 
-    let wt_path = repo_path
+    let parent_dir = repo_path
         .parent()
-        .ok_or_else(|| AppError::Internal("repository has no parent directory".to_string()))?
-        .join(name);
+        .ok_or_else(|| AppError::Internal("repository has no parent directory".to_string()))?;
+
+    let wt_path = parent_dir.join(name);
 
     let mut opts = WorktreeAddOptions::new();
     opts.reference(Some(branch.get()));

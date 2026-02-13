@@ -6,4 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UpdateTaskRequestTitle = string | null;
+export interface LivenessResponse {
+  status: string;
+}

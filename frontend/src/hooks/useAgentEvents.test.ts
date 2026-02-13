@@ -1,9 +1,10 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useAgentEvents } from './useAgentEvents';
+import { _resetSharedEventSource, useAgentEvents } from './useAgentEvents';
 
 class MockEventSource {
   static instances: MockEventSource[] = [];
+  static CLOSED = 2;
   url: string;
   onerror: ((event: Event) => void) | null = null;
   readyState = 0;
@@ -25,6 +26,12 @@ class MockEventSource {
     this.handlers[type].push(handler);
   }
 
+  removeEventListener(type: string, handler: (event: MessageEvent) => void) {
+    if (this.handlers[type]) {
+      this.handlers[type] = this.handlers[type].filter((h) => h !== handler);
+    }
+  }
+
   simulateEvent(type: string, data: unknown) {
     const handlers = this.handlers[type] ?? [];
     for (const handler of handlers) {
@@ -37,9 +44,11 @@ describe('useAgentEvents', () => {
   beforeEach(() => {
     MockEventSource.instances = [];
     vi.stubGlobal('EventSource', MockEventSource);
+    _resetSharedEventSource();
   });
 
   afterEach(() => {
+    _resetSharedEventSource();
     vi.unstubAllGlobals();
   });
 
@@ -91,6 +100,44 @@ describe('useAgentEvents', () => {
     const es = MockEventSource.instances[0];
     unmount();
 
+    expect(es.readyState).toBe(2);
+  });
+
+  it('shares EventSource across multiple hooks', () => {
+    const onOutput1 = vi.fn();
+    const onOutput2 = vi.fn();
+    renderHook(() => useAgentEvents('session-1', onOutput1));
+    renderHook(() => useAgentEvents('session-2', onOutput2));
+
+    // Only one EventSource should be created (singleton)
+    expect(MockEventSource.instances.length).toBe(1);
+  });
+
+  it('keeps EventSource open when one of multiple hooks unmounts', () => {
+    const onOutput1 = vi.fn();
+    const onOutput2 = vi.fn();
+    const hook1 = renderHook(() => useAgentEvents('session-1', onOutput1));
+    renderHook(() => useAgentEvents('session-2', onOutput2));
+
+    const es = MockEventSource.instances[0];
+
+    // Unmount first hook — EventSource should stay open for the second
+    hook1.unmount();
+    expect(es.readyState).toBe(0);
+  });
+
+  it('closes EventSource only when last hook unmounts', () => {
+    const onOutput1 = vi.fn();
+    const onOutput2 = vi.fn();
+    const hook1 = renderHook(() => useAgentEvents('session-1', onOutput1));
+    const hook2 = renderHook(() => useAgentEvents('session-2', onOutput2));
+
+    const es = MockEventSource.instances[0];
+
+    hook1.unmount();
+    expect(es.readyState).toBe(0);
+
+    hook2.unmount();
     expect(es.readyState).toBe(2);
   });
 });

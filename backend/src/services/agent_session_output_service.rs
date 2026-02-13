@@ -5,12 +5,30 @@ use uuid::Uuid;
 use crate::error::{AppError, AppResult};
 use crate::models::agent_session_output::{AgentSessionOutput, AgentSessionOutputRow};
 
+/// Maximum size of a single output content in bytes (64 KB).
+const MAX_CONTENT_SIZE: usize = 64 * 1024;
+
+/// Maximum number of output records per session.
+const MAX_OUTPUTS_PER_SESSION: i64 = 10_000;
+
 pub async fn append_output(
     pool: &SqlitePool,
     session_id: Uuid,
     sequence: i64,
     content: &str,
 ) -> AppResult<AgentSessionOutput> {
+    if content.len() > MAX_CONTENT_SIZE {
+        return Err(AppError::Validation(format!(
+            "output content exceeds maximum size of {} bytes",
+            MAX_CONTENT_SIZE
+        )));
+    }
+    if sequence >= MAX_OUTPUTS_PER_SESSION {
+        return Err(AppError::Validation(format!(
+            "session output limit reached ({MAX_OUTPUTS_PER_SESSION} records)"
+        )));
+    }
+
     let row = sqlx::query_as::<_, AgentSessionOutputRow>(
         r#"
         INSERT INTO agent_session_outputs (session_id, sequence, content)
@@ -319,6 +337,31 @@ mod tests {
             .await
             .expect("Failed to get task_id");
         row.0.parse().expect("Failed to parse task_id")
+    }
+
+    #[tokio::test]
+    async fn test_append_output_rejects_oversized_content() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        let big_content = "x".repeat(65 * 1024); // 65 KB > 64 KB limit
+        let result = append_output(&pool, session_id, 0, &big_content).await;
+        assert!(
+            matches!(result, Err(AppError::Validation(_))),
+            "oversized content should be rejected, got: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_append_output_rejects_over_sequence_limit() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        let result = append_output(&pool, session_id, 10_000, "content").await;
+        assert!(
+            matches!(result, Err(AppError::Validation(_))),
+            "sequence >= limit should be rejected, got: {result:?}"
+        );
     }
 
     #[tokio::test]

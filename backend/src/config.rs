@@ -11,6 +11,8 @@ pub enum ConfigError {
         "GANTRY_CORS_ORIGIN must be set in production. Permissive CORS is only allowed in debug builds."
     )]
     MissingCorsOriginInRelease,
+    #[error("rate limiter configuration error: {0}")]
+    RateLimiter(String),
 }
 
 #[derive(Debug, Deserialize, Clone)]

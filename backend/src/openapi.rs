@@ -8,6 +8,8 @@ use crate::sse;
 #[openapi(
     paths(
         handlers::health::health_check,
+        handlers::health::liveness,
+        handlers::health::readiness,
         handlers::auth::register,
         handlers::auth::login,
         handlers::auth::logout,
@@ -83,6 +85,8 @@ use crate::sse;
         models::pagination::PaginatedResponse<models::task::Task>,
         models::pagination::PaginatedResponse<models::project::Project>,
         handlers::health::HealthResponse,
+        handlers::health::LivenessResponse,
+        handlers::health::ReadinessResponse,
         models::task_comment::TaskComment,
         models::task_comment::CreateCommentRequest,
         models::task_comment::UpdateCommentRequest,

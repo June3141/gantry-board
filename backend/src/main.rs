@@ -14,6 +14,7 @@ use gantry_board::services::preview_service::PreviewManager;
 use gantry_board::services::{agent_session_output_service, session_service};
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
+use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -81,6 +82,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    let shutdown_orchestrator = Arc::clone(&orchestrator);
+
     let state = AppState {
         pool,
         sse_hub,
@@ -91,15 +94,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let app = gantry_board::app(state)?;
 
+    // Cancellation token for graceful shutdown of background tasks
+    let shutdown_token = CancellationToken::new();
+
     // Spawn background task for periodic session cleanup
     let cleanup_interval_secs = config.session_cleanup_interval_secs.max(1);
     let cleanup_interval = Duration::from_secs(cleanup_interval_secs);
+    let bg_token = shutdown_token.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(cleanup_interval);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         interval.tick().await; // skip the immediate first tick
         loop {
-            interval.tick().await;
+            tokio::select! {
+                _ = interval.tick() => {}
+                _ = bg_token.cancelled() => {
+                    tracing::info!("background cleanup task shutting down");
+                    return;
+                }
+            }
             match session_service::cleanup_expired_sessions(&cleanup_pool).await {
                 Ok(count) if count > 0 => {
                     tracing::info!(count, "cleaned up expired sessions");
@@ -130,11 +143,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind(&config.bind_addr).await?;
     tracing::info!("listening on {}", config.bind_addr);
+
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
+    .with_graceful_shutdown(shutdown_signal())
     .await?;
 
+    // Gracefully shut down running agent sessions (with timeout)
+    if tokio::time::timeout(
+        Duration::from_secs(30),
+        shutdown_orchestrator.shutdown_gracefully(),
+    )
+    .await
+    .is_err()
+    {
+        tracing::warn!("orchestrator graceful shutdown timed out after 30s");
+    }
+
+    // Signal background tasks to stop
+    shutdown_token.cancel();
+    tracing::info!("shutdown complete");
+
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+
+    #[cfg(unix)]
+    {
+        let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler");
+        tokio::select! {
+            _ = ctrl_c => tracing::info!("received SIGINT, starting graceful shutdown"),
+            _ = sigterm.recv() => tracing::info!("received SIGTERM, starting graceful shutdown"),
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        ctrl_c.await.ok();
+        tracing::info!("received SIGINT, starting graceful shutdown");
+    }
 }
