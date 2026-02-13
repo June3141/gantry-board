@@ -43,6 +43,7 @@ impl TryFrom<TaskRow> for Task {
 }
 
 #[tracing::instrument(skip(pool, req), fields(project_id = %req.project_id))]
+#[allow(clippy::explicit_auto_deref)] // sqlx Transaction requires explicit deref
 pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResult<Task> {
     let mut tx = pool.begin().await?;
 
@@ -168,6 +169,7 @@ pub async fn list_tasks_paginated(
 }
 
 #[tracing::instrument(skip(pool, req), fields(task_id = %id))]
+#[allow(clippy::explicit_auto_deref)] // sqlx Transaction requires explicit deref
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
     let mut tx = pool.begin().await?;
 

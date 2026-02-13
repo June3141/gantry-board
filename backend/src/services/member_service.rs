@@ -32,6 +32,7 @@ impl TryFrom<MemberRow> for ProjectMember {
 }
 
 #[tracing::instrument(skip(pool, req), fields(%project_id, user_id = %req.user_id))]
+#[allow(clippy::explicit_auto_deref)] // sqlx Transaction requires explicit deref
 pub async fn add_member(
     pool: &SqlitePool,
     project_id: Uuid,
