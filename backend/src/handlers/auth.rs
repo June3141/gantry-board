@@ -83,12 +83,9 @@ pub async fn login(
 
     let user = user_service::authenticate_user(&state.pool, &body.email, &body.password).await?;
 
-    // Invalidate existing sessions to prevent session fixation
-    session_service::delete_user_sessions(&state.pool, user.id).await?;
-
-    // Create session
+    // Atomically delete existing sessions and create a new one to prevent session fixation
     let session =
-        session_service::create_session(&state.pool, user.id, state.config.session_duration_hours)
+        session_service::rotate_session(&state.pool, user.id, state.config.session_duration_hours)
             .await?;
 
     let session_id = session

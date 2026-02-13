@@ -117,6 +117,49 @@ pub async fn delete_user_sessions(pool: &SqlitePool, user_id: Uuid) -> AppResult
     Ok(())
 }
 
+/// Delete all sessions for a user and create a new one atomically.
+/// Prevents session fixation by ensuring no window between delete and create.
+pub async fn rotate_session(
+    pool: &SqlitePool,
+    user_id: Uuid,
+    duration_hours: u64,
+) -> AppResult<Session> {
+    let mut tx = pool.begin().await?;
+
+    sqlx::query("DELETE FROM sessions WHERE user_id = $1")
+        .bind(user_id.to_string())
+        .execute(&mut *tx)
+        .await?;
+
+    let id = Uuid::new_v4();
+    let now = Utc::now();
+    let expires_at = now + Duration::hours(duration_hours as i64);
+
+    sqlx::query(
+        r#"
+        INSERT INTO sessions (id, user_id, created_at, expires_at, last_active_at)
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+    )
+    .bind(id.to_string())
+    .bind(user_id.to_string())
+    .bind(now)
+    .bind(expires_at)
+    .bind(now)
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(Session {
+        id: id.to_string(),
+        user_id: user_id.to_string(),
+        created_at: now,
+        expires_at,
+        last_active_at: now,
+    })
+}
+
 /// Clean up expired sessions
 pub async fn cleanup_expired_sessions(pool: &SqlitePool) -> AppResult<u64> {
     let now = Utc::now();
@@ -261,6 +304,27 @@ mod tests {
 
         assert!(get_session(&pool, session1_id).await.unwrap().is_none());
         assert!(get_session(&pool, session2_id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_rotate_session_deletes_old_and_creates_new() {
+        let pool = setup_test_db().await;
+        let user_id = create_test_user(&pool).await;
+
+        let old1 = create_session(&pool, user_id, 24).await.unwrap();
+        let old2 = create_session(&pool, user_id, 24).await.unwrap();
+
+        let new_session = rotate_session(&pool, user_id, 24).await.unwrap();
+
+        // Old sessions should be gone
+        let old1_id: Uuid = old1.id.parse().unwrap();
+        let old2_id: Uuid = old2.id.parse().unwrap();
+        assert!(get_session(&pool, old1_id).await.unwrap().is_none());
+        assert!(get_session(&pool, old2_id).await.unwrap().is_none());
+
+        // New session should exist
+        let new_id: Uuid = new_session.id.parse().unwrap();
+        assert!(get_session(&pool, new_id).await.unwrap().is_some());
     }
 
     #[tokio::test]
