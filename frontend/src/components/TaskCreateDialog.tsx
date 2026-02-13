@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
 import { useCreateTask } from '../api/generated/endpoints/tasks/tasks';
 import { TaskPriority, TaskStatus } from '../api/generated/model';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useUiStore } from '../stores/uiStore';
 
 interface TaskCreateDialogProps {
@@ -35,13 +36,7 @@ function TaskCreateForm({
   const [assignedTo, setAssignedTo] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeTaskModal();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [closeTaskModal]);
+  useEscapeKey(closeTaskModal);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

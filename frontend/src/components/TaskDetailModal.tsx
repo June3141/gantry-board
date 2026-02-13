@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
 import { useDeleteTask, useGetTask, useUpdateTask } from '../api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '../api/generated/model';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useUiStore } from '../stores/uiStore';
 import { TaskTimeline } from './TaskTimeline';
 import { WorktreePanel } from './WorktreePanel';
@@ -27,19 +28,14 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (editingField) {
-          setEditingField(null);
-        } else {
-          closeTaskDetail();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [closeTaskDetail, editingField]);
+  const escapeGuard = useCallback(() => {
+    if (editingField) {
+      setEditingField(null);
+      return true;
+    }
+    return false;
+  }, [editingField]);
+  useEscapeKey(closeTaskDetail, escapeGuard);
 
   const startEditing = (field: 'title' | 'description', value: string) => {
     setEditingField(field);
