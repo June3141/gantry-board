@@ -29,6 +29,7 @@ impl TryFrom<ProjectRow> for Project {
     }
 }
 
+#[tracing::instrument(skip(pool, req))]
 pub async fn create_project(pool: &SqlitePool, req: &CreateProjectRequest) -> AppResult<Project> {
     let id = Uuid::new_v4();
     let now = Utc::now();
@@ -189,6 +190,7 @@ pub async fn list_projects_for_user_paginated(
     Ok((projects, total.0))
 }
 
+#[tracing::instrument(skip(pool, req), fields(project_id = %id))]
 pub async fn update_project(
     pool: &SqlitePool,
     id: Uuid,
@@ -226,6 +228,7 @@ pub async fn update_project(
     })
 }
 
+#[tracing::instrument(skip(pool), fields(project_id = %id))]
 pub async fn delete_project(pool: &SqlitePool, id: Uuid) -> AppResult<()> {
     let result = sqlx::query(
         r#"

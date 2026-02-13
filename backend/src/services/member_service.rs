@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::project::{AddMemberRequest, MemberRole, ProjectMember, UpdateMemberRequest};
-use crate::services::user_service;
 
 #[derive(FromRow)]
 struct MemberRow {
@@ -32,13 +31,26 @@ impl TryFrom<MemberRow> for ProjectMember {
     }
 }
 
+#[tracing::instrument(skip(pool, req), fields(%project_id, user_id = %req.user_id))]
+#[allow(clippy::explicit_auto_deref)] // sqlx Transaction requires explicit deref
 pub async fn add_member(
     pool: &SqlitePool,
     project_id: Uuid,
     req: &AddMemberRequest,
 ) -> AppResult<ProjectMember> {
-    // Validate that the user exists before creating the membership
-    user_service::get_user(pool, req.user_id).await?;
+    let mut tx = pool.begin().await?;
+
+    // Validate that the user exists within the transaction
+    let user_exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM users WHERE id = $1")
+        .bind(req.user_id.to_string())
+        .fetch_optional(&mut *tx)
+        .await?;
+    if user_exists.is_none() {
+        return Err(AppError::NotFound(format!(
+            "user {} not found",
+            req.user_id
+        )));
+    }
 
     let now = Utc::now();
 
@@ -52,8 +64,10 @@ pub async fn add_member(
     .bind(req.user_id.to_string())
     .bind(&req.role)
     .bind(now)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+
+    tx.commit().await?;
 
     get_member(pool, project_id, req.user_id).await
 }
@@ -111,6 +125,7 @@ pub async fn list_members(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
+#[tracing::instrument(skip(pool, req), fields(%project_id, %user_id))]
 pub async fn update_member_role(
     pool: &SqlitePool,
     project_id: Uuid,
@@ -136,6 +151,7 @@ pub async fn update_member_role(
     get_member(pool, project_id, user_id).await
 }
 
+#[tracing::instrument(skip(pool), fields(%project_id, %user_id))]
 pub async fn remove_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) -> AppResult<()> {
     let result = sqlx::query(
         r#"
@@ -363,6 +379,35 @@ mod tests {
 
         let result = get_member(&pool, project_id, user_id).await;
         assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_add_member_nonexistent_user_leaves_no_row() {
+        let pool = setup_test_db().await;
+        let project_id = create_test_project(&pool).await;
+        let nonexistent_user = Uuid::new_v4();
+
+        // Attempt to add a nonexistent user as a member — should fail
+        let result = add_member(
+            &pool,
+            project_id,
+            &AddMemberRequest {
+                user_id: nonexistent_user,
+                role: MemberRole::Member,
+            },
+        )
+        .await;
+
+        assert!(result.is_err());
+
+        // Verify no member row was created (atomicity guarantee)
+        let members = list_members(&pool, project_id)
+            .await
+            .expect("list should succeed");
+        assert!(
+            members.is_empty(),
+            "no member row should exist after failed add_member"
+        );
     }
 
     #[tokio::test]

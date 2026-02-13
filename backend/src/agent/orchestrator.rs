@@ -210,6 +210,7 @@ impl AgentOrchestrator {
                     _monitor_handle: monitor_handle,
                 },
             );
+            metrics::gauge!("gantry_agent_sessions_active").set(running.len() as f64);
         }
 
         Ok(StartSessionResult {
@@ -248,6 +249,7 @@ impl AgentOrchestrator {
         {
             let mut running = self.running.lock().await;
             running.remove(&session_id);
+            metrics::gauge!("gantry_agent_sessions_active").set(running.len() as f64);
         }
 
         Ok(())
@@ -265,7 +267,9 @@ impl AgentOrchestrator {
     pub async fn shutdown_gracefully(&self) {
         let sessions: Vec<(Uuid, RunningSession)> = {
             let mut running = self.running.lock().await;
-            running.drain().collect()
+            let drained = running.drain().collect();
+            metrics::gauge!("gantry_agent_sessions_active").set(0.0);
+            drained
         };
 
         if sessions.is_empty() {

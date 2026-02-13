@@ -63,6 +63,28 @@ async fn test_response_contains_x_request_id_header() {
 }
 
 #[tokio::test]
+async fn test_metrics_endpoint_returns_prometheus_format() {
+    let server = create_test_server().await;
+
+    // Make a request first so there's at least one metric recorded
+    server.get("/health").await;
+
+    let response = server.get("/metrics").await;
+    response.assert_status(StatusCode::OK);
+
+    let body = response.text();
+    // axum-prometheus provides these standard HTTP metrics
+    assert!(
+        body.contains("axum_http_requests_total"),
+        "metrics should contain axum_http_requests_total"
+    );
+    assert!(
+        body.contains("axum_http_requests_duration_seconds"),
+        "metrics should contain axum_http_requests_duration_seconds"
+    );
+}
+
+#[tokio::test]
 async fn test_x_request_id_propagated_from_client() {
     let server = create_test_server().await;
     let client_id = Uuid::new_v4().to_string();
