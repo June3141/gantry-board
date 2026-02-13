@@ -254,6 +254,7 @@ impl PreviewManager {
 
     /// Build and start a Docker container for a preview.
     /// This runs as a background task; callers should `tokio::spawn` it.
+    #[tracing::instrument(skip(self), fields(%preview_id))]
     pub async fn build_and_start(&self, preview_id: Uuid) -> AppResult<()> {
         // 1. Get preview record
         let preview = get_preview(&self.pool, preview_id).await?;
@@ -337,6 +338,7 @@ impl PreviewManager {
     }
 
     /// Stop a running container.
+    #[tracing::instrument(skip(self), fields(%preview_id))]
     pub async fn stop(&self, preview_id: Uuid) -> AppResult<DockerPreview> {
         let preview = get_preview(&self.pool, preview_id).await?;
 
@@ -356,6 +358,7 @@ impl PreviewManager {
     }
 
     /// Stop and remove the Docker container for a preview.
+    #[tracing::instrument(skip(self), fields(%preview_id))]
     pub async fn cleanup(&self, preview_id: Uuid) -> AppResult<()> {
         let preview = get_preview(&self.pool, preview_id).await?;
 

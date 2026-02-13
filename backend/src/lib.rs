@@ -11,13 +11,14 @@ pub mod sse;
 #[cfg(test)]
 pub mod test_helpers;
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use axum::http::Method;
 use axum::routing::{delete, get, patch, post};
 use axum::Router;
-use axum_prometheus::PrometheusMetricLayerBuilder;
+use axum_prometheus::metrics_exporter_prometheus::PrometheusHandle;
+use axum_prometheus::{GenericMetricLayer, Handle};
 use sqlx::SqlitePool;
 use tower_governor::governor::GovernorConfigBuilder;
 use tower_governor::GovernorLayer;
@@ -211,9 +212,10 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             get(sse::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
         ));
 
-    let (prometheus_layer, metric_handle) = PrometheusMetricLayerBuilder::new()
-        .with_default_metrics()
-        .build_pair();
+    let metric_handle = init_metrics();
+    let (prometheus_layer, _) = GenericMetricLayer::<'_, PrometheusHandle, Handle>::pair_from(
+        Handle(metric_handle.clone()),
+    );
 
     Ok(Router::new()
         .route("/health", get(handlers::health::health_check))
@@ -247,6 +249,22 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         ))
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .with_state(state))
+}
+
+/// Initialize the Prometheus metrics recorder once (safe for repeated calls in tests).
+fn init_metrics() -> PrometheusHandle {
+    static HANDLE: OnceLock<PrometheusHandle> = OnceLock::new();
+    HANDLE
+        .get_or_init(|| {
+            let recorder =
+                axum_prometheus::metrics_exporter_prometheus::PrometheusBuilder::default()
+                    .build_recorder();
+            let handle = recorder.handle();
+            // Ignore error if another recorder was already installed
+            let _ = metrics::set_global_recorder(recorder);
+            handle
+        })
+        .clone()
 }
 
 fn build_cors_layer(config: &config::Config) -> Result<CorsLayer, config::ConfigError> {

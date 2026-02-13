@@ -32,6 +32,7 @@ impl TryFrom<MemberRow> for ProjectMember {
     }
 }
 
+#[tracing::instrument(skip(pool, req), fields(%project_id, user_id = %req.user_id))]
 pub async fn add_member(
     pool: &SqlitePool,
     project_id: Uuid,
@@ -111,6 +112,7 @@ pub async fn list_members(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
+#[tracing::instrument(skip(pool, req), fields(%project_id, %user_id))]
 pub async fn update_member_role(
     pool: &SqlitePool,
     project_id: Uuid,
@@ -136,6 +138,7 @@ pub async fn update_member_role(
     get_member(pool, project_id, user_id).await
 }
 
+#[tracing::instrument(skip(pool), fields(%project_id, %user_id))]
 pub async fn remove_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) -> AppResult<()> {
     let result = sqlx::query(
         r#"

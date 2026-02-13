@@ -243,6 +243,7 @@ fn validate_status_transition(from: &AgentSessionStatus, to: &AgentSessionStatus
     Ok(())
 }
 
+#[tracing::instrument(skip(pool, req), fields(session_id = %id, %task_id))]
 pub async fn update_agent_session(
     pool: &SqlitePool,
     task_id: Uuid,

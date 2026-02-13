@@ -1,4 +1,6 @@
 use std::convert::Infallible;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 use axum::extract::State;
@@ -10,11 +12,32 @@ use tokio_stream::StreamExt;
 use crate::auth::middleware::AuthUser;
 use crate::AppState;
 
+/// Wrapper stream that decrements the SSE connection gauge on drop.
+struct TrackedStream<S> {
+    inner: Pin<Box<S>>,
+}
+
+impl<S: Stream> Stream for TrackedStream<S> {
+    type Item = S::Item;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.inner.as_mut().poll_next(cx)
+    }
+}
+
+impl<S> Drop for TrackedStream<S> {
+    fn drop(&mut self) {
+        metrics::gauge!("gantry_sse_connections_active").decrement(1.0);
+    }
+}
+
 /// SSE endpoint for real-time task updates
 pub async fn sse_handler(
     _auth: AuthUser,
     State(state): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    metrics::gauge!("gantry_sse_connections_active").increment(1.0);
+
     let rx = state.sse_hub.subscribe();
     let stream = BroadcastStream::new(rx).filter_map(|result| {
         result.ok().and_then(|event| {
@@ -25,7 +48,10 @@ pub async fn sse_handler(
         })
     });
 
-    Sse::new(stream).keep_alive(
+    Sse::new(TrackedStream {
+        inner: Box::pin(stream),
+    })
+    .keep_alive(
         KeepAlive::new()
             .interval(Duration::from_secs(30))
             .text("keep-alive"),

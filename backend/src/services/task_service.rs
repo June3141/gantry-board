@@ -42,6 +42,7 @@ impl TryFrom<TaskRow> for Task {
     }
 }
 
+#[tracing::instrument(skip(pool, req), fields(project_id = %req.project_id))]
 pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResult<Task> {
     validate_assigned_to(pool, req.assigned_to).await?;
     validate_parent_project(pool, req.parent_id, req.project_id).await?;
@@ -162,6 +163,7 @@ pub async fn list_tasks_paginated(
     Ok((tasks, total.0))
 }
 
+#[tracing::instrument(skip(pool, req), fields(task_id = %id))]
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
     let existing = get_task(pool, id).await?;
 
@@ -249,6 +251,7 @@ async fn validate_parent_project(
     Ok(())
 }
 
+#[tracing::instrument(skip(pool), fields(task_id = %id))]
 pub async fn delete_task(pool: &SqlitePool, id: Uuid) -> AppResult<()> {
     let result = sqlx::query(
         r#"

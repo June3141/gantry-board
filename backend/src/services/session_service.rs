@@ -59,6 +59,7 @@ pub async fn get_session(pool: &SqlitePool, session_id: Uuid) -> AppResult<Optio
 
 /// Validate and update session's last_active_at timestamp
 /// Returns the session if valid, Unauthorized error if not found or expired
+#[tracing::instrument(skip(pool))]
 pub async fn validate_session(pool: &SqlitePool, session_id: Uuid) -> AppResult<Session> {
     let session = get_session(pool, session_id).await?;
 
@@ -119,6 +120,7 @@ pub async fn delete_user_sessions(pool: &SqlitePool, user_id: Uuid) -> AppResult
 
 /// Delete all sessions for a user and create a new one atomically.
 /// Prevents session fixation by ensuring no window between delete and create.
+#[tracing::instrument(skip(pool))]
 pub async fn rotate_session(
     pool: &SqlitePool,
     user_id: Uuid,
