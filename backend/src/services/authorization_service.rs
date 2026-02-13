@@ -9,7 +9,9 @@ use crate::services::{project_service, task_service};
 /// Fetch a task and verify the user is a member of its project.
 /// Returns the task on success.
 pub async fn authorize_task(pool: &SqlitePool, user_id: Uuid, task_id: Uuid) -> AppResult<Task> {
-    todo!()
+    let task = task_service::get_task(pool, task_id).await?;
+    require_project_member(pool, user_id, task.project_id).await?;
+    Ok(task)
 }
 
 /// Verify a project exists and the user is a member.
@@ -18,7 +20,9 @@ pub async fn authorize_project(
     user_id: Uuid,
     project_id: Uuid,
 ) -> AppResult<()> {
-    todo!()
+    project_service::get_project(pool, project_id).await?;
+    require_project_member(pool, user_id, project_id).await?;
+    Ok(())
 }
 
 /// Check if user is a member of the project (any role).

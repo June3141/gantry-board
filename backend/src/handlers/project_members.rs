@@ -25,8 +25,7 @@ pub async fn list_members(
     auth: AuthUser,
     Path(project_id): Path<Uuid>,
 ) -> AppResult<Json<Vec<ProjectMember>>> {
-    project_service::get_project(&state.pool, project_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, project_id).await?;
+    authorization_service::authorize_project(&state.pool, auth.user_id, project_id).await?;
     let members = member_service::list_members(&state.pool, project_id).await?;
     Ok(Json(members))
 }

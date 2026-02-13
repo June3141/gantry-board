@@ -9,7 +9,7 @@ use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::pagination::{self, PaginatedResponse};
 use crate::models::task::{CreateTaskRequest, Task, UpdateTaskRequest};
-use crate::services::{authorization_service, project_service, task_service};
+use crate::services::{authorization_service, task_service};
 use crate::sse::event::SseEvent;
 use crate::AppState;
 
@@ -43,9 +43,7 @@ pub async fn list_tasks(
     Query(query): Query<ListTasksQuery>,
 ) -> AppResult<Json<PaginatedResponse<Task>>> {
     pagination::validate(query.limit, query.offset)?;
-    project_service::get_project(&state.pool, query.project_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, query.project_id)
-        .await?;
+    authorization_service::authorize_project(&state.pool, auth.user_id, query.project_id).await?;
     let (tasks, total) = task_service::list_tasks_paginated(
         &state.pool,
         query.project_id,
@@ -80,9 +78,7 @@ pub async fn create_task(
 ) -> AppResult<(StatusCode, Json<Task>)> {
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
-    project_service::get_project(&state.pool, body.project_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, body.project_id)
-        .await?;
+    authorization_service::authorize_project(&state.pool, auth.user_id, body.project_id).await?;
     let task = task_service::create_task(&state.pool, &body).await?;
     state
         .sse_hub
@@ -106,9 +102,7 @@ pub async fn get_task(
     auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<Task>> {
-    let task = task_service::get_task(&state.pool, id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    let task = authorization_service::authorize_task(&state.pool, auth.user_id, id).await?;
     Ok(Json(task))
 }
 
@@ -133,9 +127,7 @@ pub async fn update_task(
 ) -> AppResult<Json<Task>> {
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
-    let existing = task_service::get_task(&state.pool, id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, existing.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, id).await?;
     let task = task_service::update_task(&state.pool, id, &body).await?;
     state
         .sse_hub
@@ -159,9 +151,7 @@ pub async fn delete_task(
     auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
-    let existing = task_service::get_task(&state.pool, id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, existing.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, id).await?;
     task_service::delete_task(&state.pool, id).await?;
     state.sse_hub.broadcast(SseEvent::task_deleted(id));
     Ok(StatusCode::NO_CONTENT)

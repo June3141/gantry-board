@@ -32,9 +32,7 @@ pub async fn create_comment(
 ) -> AppResult<(StatusCode, Json<TaskComment>)> {
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
     let comment =
         task_comment_service::create_comment(&state.pool, task_id, auth.user_id, &body).await?;
     state
@@ -59,9 +57,7 @@ pub async fn list_comments(
     auth: AuthUser,
     Path(task_id): Path<Uuid>,
 ) -> AppResult<Json<Vec<TaskComment>>> {
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
     let comments = task_comment_service::list_comments(&state.pool, task_id).await?;
     Ok(Json(comments))
 }
@@ -90,9 +86,7 @@ pub async fn update_comment(
 ) -> AppResult<Json<TaskComment>> {
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
     let comment =
         task_comment_service::update_comment(&state.pool, comment_id, auth.user_id, &body).await?;
     state
