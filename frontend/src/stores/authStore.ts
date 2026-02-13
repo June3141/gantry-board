@@ -31,7 +31,6 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
       onRehydrateStorage: () => {
-        useAuthStore.setState({ isLoading: true });
         return (_state, error) => {
           if (error) {
             useAuthStore.setState({ isAuthenticated: false, user: null, isLoading: true });

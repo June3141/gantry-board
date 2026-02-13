@@ -6,4 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UpdateTaskRequestTitle = string | null;
+export interface ReadinessResponse {
+  db: string;
+  status: string;
+}
