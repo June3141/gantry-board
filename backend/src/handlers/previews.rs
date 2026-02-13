@@ -94,12 +94,12 @@ pub async fn delete_preview(
     _auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
-    preview_service::delete_preview(&state.pool, id).await?;
-
-    // Cleanup container if preview manager is available
+    // Cleanup container before deleting DB record (cleanup reads the record)
     if let Some(ref pm) = state.preview_manager {
         let _ = pm.cleanup(id).await;
     }
+
+    preview_service::delete_preview(&state.pool, id).await?;
 
     state.sse_hub.broadcast(SseEvent::preview_deleted(id));
 
@@ -124,13 +124,16 @@ pub async fn start_preview(
     // Verify preview exists
     preview_service::get_preview(&state.pool, id).await?;
 
-    if let Some(pm) = state.preview_manager.clone() {
-        tokio::spawn(async move {
-            if let Err(e) = pm.build_and_start(id).await {
-                tracing::error!(%id, %e, "preview build_and_start failed");
-            }
-        });
-    }
+    let pm = state
+        .preview_manager
+        .clone()
+        .ok_or_else(|| AppError::Internal("Docker is not available".to_string()))?;
+
+    tokio::spawn(async move {
+        if let Err(e) = pm.build_and_start(id).await {
+            tracing::error!(%id, %e, "preview build_and_start failed");
+        }
+    });
 
     Ok(StatusCode::ACCEPTED)
 }
@@ -188,15 +191,18 @@ pub async fn restart_preview(
     // Verify preview exists
     preview_service::get_preview(&state.pool, id).await?;
 
-    if let Some(pm) = state.preview_manager.clone() {
-        tokio::spawn(async move {
-            // Stop first, then rebuild
-            let _ = pm.stop(id).await;
-            if let Err(e) = pm.build_and_start(id).await {
-                tracing::error!(%id, %e, "preview restart failed");
-            }
-        });
-    }
+    let pm = state
+        .preview_manager
+        .clone()
+        .ok_or_else(|| AppError::Internal("Docker is not available".to_string()))?;
+
+    tokio::spawn(async move {
+        // Stop first, then rebuild
+        let _ = pm.stop(id).await;
+        if let Err(e) = pm.build_and_start(id).await {
+            tracing::error!(%id, %e, "preview restart failed");
+        }
+    });
 
     Ok(StatusCode::ACCEPTED)
 }

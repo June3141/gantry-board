@@ -5,7 +5,7 @@ use common::create_test_server_with_repo;
 use serde_json::json;
 
 #[tokio::test]
-async fn test_start_preview_returns_202() {
+async fn test_start_preview_without_docker_returns_500() {
     let (_tmp, server) = create_test_server_with_repo().await;
 
     server
@@ -22,9 +22,10 @@ async fn test_start_preview_returns_202() {
     let preview: serde_json::Value = create_resp.json();
     let id = preview["id"].as_str().unwrap();
 
+    // Without Docker (preview_manager=None), start should return 500
     let response = server.post(&format!("/api/previews/{id}/start")).await;
 
-    response.assert_status(StatusCode::ACCEPTED);
+    response.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
 }
 
 #[tokio::test]
@@ -75,7 +76,7 @@ async fn test_stop_nonexistent_preview_returns_404() {
 }
 
 #[tokio::test]
-async fn test_restart_preview_returns_202() {
+async fn test_restart_preview_without_docker_returns_500() {
     let (_tmp, server) = create_test_server_with_repo().await;
 
     server
@@ -92,9 +93,10 @@ async fn test_restart_preview_returns_202() {
     let preview: serde_json::Value = create_resp.json();
     let id = preview["id"].as_str().unwrap();
 
+    // Without Docker (preview_manager=None), restart should return 500
     let response = server.post(&format!("/api/previews/{id}/restart")).await;
 
-    response.assert_status(StatusCode::ACCEPTED);
+    response.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
 }
 
 #[tokio::test]

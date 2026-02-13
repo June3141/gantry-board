@@ -354,7 +354,7 @@ impl PreviewManager {
         Ok(updated)
     }
 
-    /// Remove container and image.
+    /// Stop and remove the Docker container for a preview.
     pub async fn cleanup(&self, preview_id: Uuid) -> AppResult<()> {
         let preview = get_preview(&self.pool, preview_id).await?;
 
@@ -446,7 +446,7 @@ impl PreviewManager {
         port_bindings.insert(
             "8080/tcp".to_string(),
             Some(vec![PortBinding {
-                host_ip: Some("0.0.0.0".to_string()),
+                host_ip: Some("127.0.0.1".to_string()),
                 host_port: Some(host_port.to_string()),
             }]),
         );

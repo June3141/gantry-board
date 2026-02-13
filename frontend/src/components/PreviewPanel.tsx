@@ -94,6 +94,7 @@ export function PreviewPanel() {
   };
 
   const handleStart = async (id: string) => {
+    setError(null);
     try {
       await startPreview({ id });
     } catch {
@@ -102,6 +103,7 @@ export function PreviewPanel() {
   };
 
   const handleStop = async (id: string) => {
+    setError(null);
     try {
       await stopPreview({ id });
     } catch {
@@ -110,6 +112,7 @@ export function PreviewPanel() {
   };
 
   const handleRestart = async (id: string) => {
+    setError(null);
     try {
       await restartPreview({ id });
     } catch {
@@ -118,6 +121,7 @@ export function PreviewPanel() {
   };
 
   const handleDelete = async (id: string) => {
+    setError(null);
     try {
       await deletePreview({ id });
     } catch {
