@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -453,6 +454,14 @@ impl PreviewManager {
 
         let host_config = HostConfig {
             port_bindings: Some(port_bindings),
+            memory: Some(512 * 1024 * 1024),        // 512 MB memory limit
+            memory_swap: Some(512 * 1024 * 1024),    // No swap (same as memory)
+            pids_limit: Some(256),                    // Max 256 processes
+            readonly_rootfs: Some(true),              // Read-only root filesystem
+            security_opt: Some(vec!["no-new-privileges:true".to_string()]),
+            tmpfs: Some(HashMap::from([
+                ("/tmp".to_string(), "rw,noexec,nosuid,size=64m".to_string()),
+            ])),
             ..Default::default()
         };
 
