@@ -65,6 +65,22 @@ pub struct Config {
     /// Log format: "pretty" (default) or "json"
     #[serde(default = "default_log_format")]
     pub log_format: String,
+
+    /// Docker daemon socket (default: "unix:///var/run/docker.sock")
+    #[serde(default = "default_docker_host")]
+    pub docker_host: String,
+
+    /// Preview port range start (default: 8100)
+    #[serde(default = "default_preview_port_range_start")]
+    pub preview_port_range_start: u16,
+
+    /// Preview port range end (default: 8199)
+    #[serde(default = "default_preview_port_range_end")]
+    pub preview_port_range_end: u16,
+
+    /// Preview base URL (default: "http://localhost")
+    #[serde(default = "default_preview_base_url")]
+    pub preview_base_url: String,
 }
 
 fn default_bind_addr() -> String {
@@ -105,6 +121,22 @@ fn default_request_timeout_secs() -> u64 {
 
 fn default_log_format() -> String {
     "pretty".to_string()
+}
+
+fn default_docker_host() -> String {
+    "unix:///var/run/docker.sock".to_string()
+}
+
+fn default_preview_port_range_start() -> u16 {
+    8100
+}
+
+fn default_preview_port_range_end() -> u16 {
+    8199
+}
+
+fn default_preview_base_url() -> String {
+    "http://localhost".to_string()
 }
 
 impl Config {
@@ -177,6 +209,10 @@ impl Default for Config {
             output_retention_days: default_output_retention_days(),
             request_timeout_secs: default_request_timeout_secs(),
             log_format: default_log_format(),
+            docker_host: default_docker_host(),
+            preview_port_range_start: default_preview_port_range_start(),
+            preview_port_range_end: default_preview_port_range_end(),
+            preview_base_url: default_preview_base_url(),
         }
     }
 }

@@ -38,6 +38,10 @@ async-trait = { workspace = true }
 tokio-util = { workspace = true }
 tower_governor = { workspace = true }
 zxcvbn = { workspace = true }
+bollard = { workspace = true }
+tar = { workspace = true }
+http-body-util = { workspace = true }
+bytes = { workspace = true }
 
 [dev-dependencies]
 axum-test = "18"

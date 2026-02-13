@@ -1,6 +1,7 @@
 pub mod agent_sessions;
 pub mod auth;
 pub mod health;
+pub mod previews;
 pub mod project_members;
 pub mod projects;
 pub mod task_comments;

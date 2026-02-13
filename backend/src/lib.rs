@@ -28,6 +28,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::agent::orchestrator::AgentOrchestrator;
+use crate::services::preview_service::PreviewManager;
 use crate::sse::hub::SseHub;
 
 #[derive(Clone)]
@@ -36,6 +37,7 @@ pub struct AppState {
     pub sse_hub: Arc<SseHub>,
     pub config: Arc<config::Config>,
     pub orchestrator: Arc<AgentOrchestrator>,
+    pub preview_manager: Option<Arc<PreviewManager>>,
     pub started_at: std::time::Instant,
 }
 
@@ -189,6 +191,23 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         .route(
             "/worktrees/{name}",
             delete(handlers::worktrees::delete_worktree),
+        )
+        // Preview endpoints
+        .route("/previews", get(handlers::previews::list_previews))
+        .route("/previews", post(handlers::previews::create_preview))
+        .route("/previews/{id}", get(handlers::previews::get_preview))
+        .route("/previews/{id}", delete(handlers::previews::delete_preview))
+        .route(
+            "/previews/{id}/start",
+            post(handlers::previews::start_preview),
+        )
+        .route(
+            "/previews/{id}/stop",
+            post(handlers::previews::stop_preview),
+        )
+        .route(
+            "/previews/{id}/restart",
+            post(handlers::previews::restart_preview),
         )
         // CSRF protection: require X-Requested-With header on state-changing requests
         .layer(axum::middleware::from_fn(auth::csrf::csrf_check))

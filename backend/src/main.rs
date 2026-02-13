@@ -10,6 +10,7 @@ use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::db;
 use gantry_board::models::agent_session::AgentType;
+use gantry_board::services::preview_service::PreviewManager;
 use gantry_board::services::{agent_session_output_service, session_service};
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
@@ -57,18 +58,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let orchestrator = Arc::new(AgentOrchestrator::new(
         executors,
         pool.clone(),
-        repo_path,
+        repo_path.clone(),
         Arc::clone(&sse_hub),
     ));
 
     let cleanup_pool = pool.clone();
     let output_retention_days = config.output_retention_days;
 
+    let preview_manager = match PreviewManager::new(
+        Arc::new(config.clone()),
+        pool.clone(),
+        Arc::clone(&sse_hub),
+        repo_path,
+    ) {
+        Ok(pm) => {
+            tracing::info!("Docker preview manager initialized");
+            Some(Arc::new(pm))
+        }
+        Err(e) => {
+            tracing::warn!(%e, "Docker preview manager unavailable — preview features disabled");
+            None
+        }
+    };
+
     let state = AppState {
         pool,
         sse_hub,
         config: Arc::new(config.clone()),
         orchestrator,
+        preview_manager,
         started_at: std::time::Instant::now(),
     };
     let app = gantry_board::app(state)?;
