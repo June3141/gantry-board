@@ -82,6 +82,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    let shutdown_orchestrator = Arc::clone(&orchestrator);
+
     let state = AppState {
         pool,
         sse_hub,
@@ -148,6 +150,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .with_graceful_shutdown(shutdown_signal())
     .await?;
+
+    // Gracefully shut down running agent sessions (with timeout)
+    if tokio::time::timeout(
+        Duration::from_secs(30),
+        shutdown_orchestrator.shutdown_gracefully(),
+    )
+    .await
+    .is_err()
+    {
+        tracing::warn!("orchestrator graceful shutdown timed out after 30s");
+    }
 
     // Signal background tasks to stop
     shutdown_token.cancel();
