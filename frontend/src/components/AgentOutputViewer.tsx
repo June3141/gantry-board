@@ -31,7 +31,7 @@ export function AgentOutputViewer({ lines, isLoading = false }: AgentOutputViewe
       className="max-h-64 overflow-y-auto rounded-md bg-gray-900 p-3 font-mono text-xs text-green-400"
     >
       {lines.map((line, i) => (
-        <div key={`${i}-${line.slice(0, 20)}`}>{line}</div>
+        <div key={i}>{line}</div>
       ))}
       <div ref={bottomRef} />
     </div>
