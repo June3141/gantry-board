@@ -3,6 +3,27 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::project::MemberRole;
+use crate::models::task::Task;
+use crate::services::{project_service, task_service};
+
+/// Fetch a task and verify the user is a member of its project.
+/// Returns the task on success.
+pub async fn authorize_task(pool: &SqlitePool, user_id: Uuid, task_id: Uuid) -> AppResult<Task> {
+    let task = task_service::get_task(pool, task_id).await?;
+    require_project_member(pool, user_id, task.project_id).await?;
+    Ok(task)
+}
+
+/// Verify a project exists and the user is a member.
+pub async fn authorize_project(
+    pool: &SqlitePool,
+    user_id: Uuid,
+    project_id: Uuid,
+) -> AppResult<()> {
+    project_service::get_project(pool, project_id).await?;
+    require_project_member(pool, user_id, project_id).await?;
+    Ok(())
+}
 
 /// Check if user is a member of the project (any role).
 /// Returns the member's role or Forbidden.
@@ -368,6 +389,103 @@ mod tests {
 
         let project_ids = list_user_project_ids(&pool, user_id).await.unwrap();
         assert!(project_ids.is_empty());
+    }
+
+    // --- authorize_task ---
+
+    #[tokio::test]
+    async fn test_authorize_task_returns_task_for_member() {
+        let pool = setup_test_db().await;
+        let (project_id, user_id) = setup_project_with_member(&pool, MemberRole::Member).await;
+        let task = task_service::create_task(
+            &pool,
+            &crate::models::task::CreateTaskRequest {
+                project_id,
+                title: "Test Task".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .unwrap();
+
+        let result = authorize_task(&pool, user_id, task.id).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().id, task.id);
+    }
+
+    #[tokio::test]
+    async fn test_authorize_task_returns_forbidden_for_non_member() {
+        let pool = setup_test_db().await;
+        let (project_id, _owner) = setup_project_with_member(&pool, MemberRole::Owner).await;
+        let task = task_service::create_task(
+            &pool,
+            &crate::models::task::CreateTaskRequest {
+                project_id,
+                title: "Test Task".to_string(),
+                description: None,
+                status: None,
+                priority: None,
+                parent_id: None,
+                assigned_to: None,
+            },
+        )
+        .await
+        .unwrap();
+
+        let non_member = create_test_user(&pool).await;
+        let result = authorize_task(&pool, non_member, task.id).await;
+        assert!(matches!(result, Err(AppError::Forbidden(_))));
+    }
+
+    #[tokio::test]
+    async fn test_authorize_task_returns_not_found_for_missing_task() {
+        let pool = setup_test_db().await;
+        let user_id = create_test_user(&pool).await;
+
+        let result = authorize_task(&pool, user_id, Uuid::new_v4()).await;
+        assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    // --- authorize_project ---
+
+    #[tokio::test]
+    async fn test_authorize_project_allows_member() {
+        let pool = setup_test_db().await;
+        let (project_id, user_id) = setup_project_with_member(&pool, MemberRole::Member).await;
+
+        let result = authorize_project(&pool, user_id, project_id).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_authorize_project_returns_forbidden_for_non_member() {
+        let pool = setup_test_db().await;
+        let project = project_service::create_project(
+            &pool,
+            &CreateProjectRequest {
+                name: "Test".to_string(),
+                description: None,
+            },
+        )
+        .await
+        .unwrap();
+
+        let non_member = create_test_user(&pool).await;
+        let result = authorize_project(&pool, non_member, project.id).await;
+        assert!(matches!(result, Err(AppError::Forbidden(_))));
+    }
+
+    #[tokio::test]
+    async fn test_authorize_project_returns_not_found_for_missing_project() {
+        let pool = setup_test_db().await;
+        let user_id = create_test_user(&pool).await;
+
+        let result = authorize_project(&pool, user_id, Uuid::new_v4()).await;
+        assert!(matches!(result, Err(AppError::NotFound(_))));
     }
 
     // --- count_owners ---

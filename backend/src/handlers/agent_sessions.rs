@@ -14,9 +14,7 @@ use crate::models::agent_session::{
     UpdateAgentSessionRequest,
 };
 use crate::models::agent_session_output::AgentSessionOutput;
-use crate::services::{
-    agent_session_output_service, agent_session_service, authorization_service, task_service,
-};
+use crate::services::{agent_session_output_service, agent_session_service, authorization_service};
 use crate::AppState;
 
 #[utoipa::path(
@@ -37,9 +35,7 @@ pub async fn create_agent_session(
     Path(task_id): Path<Uuid>,
     Json(body): Json<CreateAgentSessionRequest>,
 ) -> AppResult<(StatusCode, Json<AgentSession>)> {
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
     let session = agent_session_service::create_agent_session(&state.pool, task_id, &body).await?;
     Ok((StatusCode::CREATED, Json(session)))
 }
@@ -60,9 +56,7 @@ pub async fn list_agent_sessions(
     auth: AuthUser,
     Path(task_id): Path<Uuid>,
 ) -> AppResult<Json<Vec<AgentSession>>> {
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
     let sessions = agent_session_service::list_agent_sessions(&state.pool, task_id).await?;
     Ok(Json(sessions))
 }
@@ -86,9 +80,7 @@ pub async fn get_agent_session(
     auth: AuthUser,
     Path((task_id, session_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<Json<AgentSession>> {
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
     let session =
         agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
     Ok(Json(session))
@@ -116,9 +108,7 @@ pub async fn update_agent_session(
     Path((task_id, session_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<UpdateAgentSessionRequest>,
 ) -> AppResult<Json<AgentSession>> {
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
     let session =
         agent_session_service::update_agent_session(&state.pool, task_id, session_id, &body)
             .await?;
@@ -147,9 +137,7 @@ pub async fn start_agent_session(
 ) -> AppResult<(StatusCode, Json<StartAgentSessionResponse>)> {
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
 
     let result = state
         .orchestrator
@@ -187,9 +175,7 @@ pub async fn stop_agent_session(
     auth: AuthUser,
     Path((task_id, session_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<Json<AgentSession>> {
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
 
     // Ensure the session belongs to this task before attempting to stop it
     agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
@@ -222,9 +208,7 @@ pub async fn restart_agent_session(
     auth: AuthUser,
     Path((task_id, session_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<(StatusCode, Json<StartAgentSessionResponse>)> {
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
 
     let old_session =
         agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
@@ -275,9 +259,7 @@ pub async fn get_agent_session_outputs(
     Path((task_id, session_id)): Path<(Uuid, Uuid)>,
     Query(query): Query<GetOutputsQuery>,
 ) -> AppResult<Json<Vec<AgentSessionOutput>>> {
-    let task = task_service::get_task(&state.pool, task_id).await?;
-    authorization_service::require_project_member(&state.pool, auth.user_id, task.project_id)
-        .await?;
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
     agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
 
     let outputs = match query.after {
