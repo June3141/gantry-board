@@ -325,3 +325,175 @@ export const useDeletePreview = <TError = void, TContext = unknown>(
 
   return useMutation(mutationOptions, queryClient);
 };
+export const restartPreview = (id: string, signal?: AbortSignal) => {
+  return customInstance<void>({ url: `/api/previews/${id}/restart`, method: 'POST', signal });
+};
+
+export const getRestartPreviewMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restartPreview>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restartPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['restartPreview'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof restartPreview>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
+
+    return restartPreview(id);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RestartPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof restartPreview>>>;
+
+export type RestartPreviewMutationError = void;
+
+export const useRestartPreview = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof restartPreview>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof restartPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getRestartPreviewMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+export const startPreview = (id: string, signal?: AbortSignal) => {
+  return customInstance<void>({ url: `/api/previews/${id}/start`, method: 'POST', signal });
+};
+
+export const getStartPreviewMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startPreview>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['startPreview'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPreview>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
+
+    return startPreview(id);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof startPreview>>>;
+
+export type StartPreviewMutationError = void;
+
+export const useStartPreview = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startPreview>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof startPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getStartPreviewMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+export const stopPreview = (id: string, signal?: AbortSignal) => {
+  return customInstance<DockerPreview>({ url: `/api/previews/${id}/stop`, method: 'POST', signal });
+};
+
+export const getStopPreviewMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof stopPreview>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof stopPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['stopPreview'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopPreview>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
+
+    return stopPreview(id);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StopPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof stopPreview>>>;
+
+export type StopPreviewMutationError = void;
+
+export const useStopPreview = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof stopPreview>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof stopPreview>>, TError, { id: string }, TContext> => {
+  const mutationOptions = getStopPreviewMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
