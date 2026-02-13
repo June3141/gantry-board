@@ -81,6 +81,8 @@ impl AgentOrchestrator {
         // Step 1: Acquire per-task lock
         let task_lock = {
             let mut locks = self.task_locks.lock().await;
+            // Evict stale locks (no external references) to prevent unbounded growth
+            locks.retain(|_, lock| Arc::strong_count(lock) > 1);
             locks
                 .entry(req.task_id)
                 .or_insert_with(|| Arc::new(Mutex::new(())))
