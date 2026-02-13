@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useCreateProject } from '../api/generated/endpoints/projects/projects';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useUiStore } from '../stores/uiStore';
 
 export function ProjectCreateDialog() {
@@ -18,13 +19,7 @@ function ProjectCreateForm() {
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeProjectModal();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [closeProjectModal]);
+  useEscapeKey(closeProjectModal);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

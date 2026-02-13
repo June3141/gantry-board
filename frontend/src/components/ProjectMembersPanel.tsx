@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   getListMembersQueryKey,
   useAddMember,
@@ -10,6 +10,7 @@ import {
 import { useSearchUsers } from '../api/generated/endpoints/users/users';
 import type { MemberRole as MemberRoleType } from '../api/generated/model';
 import { MemberRole } from '../api/generated/model';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useAuthStore } from '../stores/authStore';
 import { useToastStore } from '../stores/toastStore';
 import { useUiStore } from '../stores/uiStore';
@@ -54,13 +55,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
     });
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeProjectMembers();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [closeProjectMembers]);
+  useEscapeKey(closeProjectMembers);
 
   const handleInvite = async () => {
     if (!selectedUser) return;

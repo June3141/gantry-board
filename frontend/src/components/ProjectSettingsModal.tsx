@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
 import {
   getGetProjectQueryKey,
@@ -9,6 +9,7 @@ import {
   useUpdateProject,
 } from '../api/generated/endpoints/projects/projects';
 import { MemberRole } from '../api/generated/model';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useAuthStore } from '../stores/authStore';
 import { useToastStore } from '../stores/toastStore';
 import { useUiStore } from '../stores/uiStore';
@@ -49,19 +50,14 @@ function ProjectSettingsContent({
   const canEdit = currentUserRole === MemberRole.owner || currentUserRole === MemberRole.admin;
   const isOwner = currentUserRole === MemberRole.owner;
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (editingField) {
-          setEditingField(null);
-        } else {
-          closeProjectSettings();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [closeProjectSettings, editingField]);
+  const escapeGuard = useCallback(() => {
+    if (editingField) {
+      setEditingField(null);
+      return true;
+    }
+    return false;
+  }, [editingField]);
+  useEscapeKey(closeProjectSettings, escapeGuard);
 
   const startEditing = (field: 'name' | 'description', value: string) => {
     setEditingField(field);
