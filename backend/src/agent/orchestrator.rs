@@ -312,12 +312,20 @@ impl AgentOrchestrator {
                     AgentOutputEvent::Output { text } => {
                         sse_hub.broadcast(SseEvent::agent_output(session_id, text.clone()));
                         // Best-effort persistence (after broadcast to avoid delaying SSE)
-                        if let Err(e) = agent_session_output_service::append_output(
+                        match agent_session_output_service::append_output(
                             &pool, session_id, sequence, &text,
                         )
                         .await
                         {
-                            warn!("failed to persist output for session {session_id} seq {sequence}: {e}");
+                            Ok(_) => {}
+                            Err(crate::error::AppError::Validation(ref msg))
+                                if msg.contains("limit reached") =>
+                            {
+                                warn!("output limit reached for session {session_id}, stopping persistence");
+                            }
+                            Err(e) => {
+                                warn!("failed to persist output for session {session_id} seq {sequence}: {e}");
+                            }
                         }
                         sequence += 1;
                     }
