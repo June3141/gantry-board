@@ -1,11 +1,11 @@
 use chrono::{DateTime, Utc};
 use sqlx::prelude::FromRow;
+use sqlx::sqlite::SqliteConnection;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::task::{CreateTaskRequest, Task, TaskPriority, TaskStatus, UpdateTaskRequest};
-use crate::services::user_service;
 
 #[derive(FromRow)]
 struct TaskRow {
@@ -44,8 +44,10 @@ impl TryFrom<TaskRow> for Task {
 
 #[tracing::instrument(skip(pool, req), fields(project_id = %req.project_id))]
 pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResult<Task> {
-    validate_assigned_to(pool, req.assigned_to).await?;
-    validate_parent_project(pool, req.parent_id, req.project_id).await?;
+    let mut tx = pool.begin().await?;
+
+    validate_assigned_to_tx(&mut *tx, req.assigned_to).await?;
+    validate_parent_project_tx(&mut *tx, req.parent_id, req.project_id).await?;
 
     let id = Uuid::new_v4();
     let now = Utc::now();
@@ -69,8 +71,10 @@ pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResul
     .bind(0i32)
     .bind(now)
     .bind(now)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+
+    tx.commit().await?;
 
     Ok(Task {
         id,
@@ -165,10 +169,12 @@ pub async fn list_tasks_paginated(
 
 #[tracing::instrument(skip(pool, req), fields(task_id = %id))]
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
-    let existing = get_task(pool, id).await?;
+    let mut tx = pool.begin().await?;
 
-    validate_assigned_to(pool, req.assigned_to).await?;
-    validate_parent_project(pool, req.parent_id, existing.project_id).await?;
+    let existing = get_task_tx(&mut *tx, id).await?;
+
+    validate_assigned_to_tx(&mut *tx, req.assigned_to).await?;
+    validate_parent_project_tx(&mut *tx, req.parent_id, existing.project_id).await?;
 
     let now = Utc::now();
 
@@ -196,8 +202,10 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
     .bind(position)
     .bind(now)
     .bind(id.to_string())
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+
+    tx.commit().await?;
 
     Ok(Task {
         id,
@@ -214,29 +222,50 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
     })
 }
 
-async fn validate_assigned_to(pool: &SqlitePool, assigned_to: Option<Uuid>) -> AppResult<()> {
+async fn get_task_tx(conn: &mut SqliteConnection, id: Uuid) -> AppResult<Task> {
+    let row = sqlx::query_as::<_, TaskRow>(
+        r#"
+        SELECT id, project_id, title, description, status, priority, parent_id, assigned_to, position, created_at, updated_at
+        FROM tasks
+        WHERE id = $1
+        "#,
+    )
+    .bind(id.to_string())
+    .fetch_optional(&mut *conn)
+    .await?;
+
+    row.map(|r| r.try_into())
+        .transpose()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("task {} not found", id)))
+}
+
+async fn validate_assigned_to_tx(
+    conn: &mut SqliteConnection,
+    assigned_to: Option<Uuid>,
+) -> AppResult<()> {
     if let Some(user_id) = assigned_to {
-        match user_service::get_user(pool, user_id).await {
-            Err(AppError::NotFound(_)) => {
-                return Err(AppError::Validation(format!(
-                    "assigned user {} does not exist",
-                    user_id
-                )));
-            }
-            Err(e) => return Err(e),
-            Ok(_) => {}
+        let exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM users WHERE id = $1")
+            .bind(user_id.to_string())
+            .fetch_optional(&mut *conn)
+            .await?;
+        if exists.is_none() {
+            return Err(AppError::Validation(format!(
+                "assigned user {} does not exist",
+                user_id
+            )));
         }
     }
     Ok(())
 }
 
-async fn validate_parent_project(
-    pool: &SqlitePool,
+async fn validate_parent_project_tx(
+    conn: &mut SqliteConnection,
     parent_id: Option<Uuid>,
     project_id: Uuid,
 ) -> AppResult<()> {
     if let Some(pid) = parent_id {
-        let parent = get_task(pool, pid).await.map_err(|e| match e {
+        let parent = get_task_tx(&mut *conn, pid).await.map_err(|e| match e {
             AppError::NotFound(_) => {
                 AppError::Validation(format!("parent task {} does not exist", pid))
             }

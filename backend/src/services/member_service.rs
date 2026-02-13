@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::project::{AddMemberRequest, MemberRole, ProjectMember, UpdateMemberRequest};
-use crate::services::user_service;
 
 #[derive(FromRow)]
 struct MemberRow {
@@ -38,8 +37,19 @@ pub async fn add_member(
     project_id: Uuid,
     req: &AddMemberRequest,
 ) -> AppResult<ProjectMember> {
-    // Validate that the user exists before creating the membership
-    user_service::get_user(pool, req.user_id).await?;
+    let mut tx = pool.begin().await?;
+
+    // Validate that the user exists within the transaction
+    let user_exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM users WHERE id = $1")
+        .bind(req.user_id.to_string())
+        .fetch_optional(&mut *tx)
+        .await?;
+    if user_exists.is_none() {
+        return Err(AppError::NotFound(format!(
+            "user {} not found",
+            req.user_id
+        )));
+    }
 
     let now = Utc::now();
 
@@ -53,8 +63,10 @@ pub async fn add_member(
     .bind(req.user_id.to_string())
     .bind(&req.role)
     .bind(now)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+
+    tx.commit().await?;
 
     get_member(pool, project_id, req.user_id).await
 }
