@@ -17,6 +17,7 @@ use std::time::Duration;
 use axum::http::Method;
 use axum::routing::{delete, get, patch, post};
 use axum::Router;
+use axum_prometheus::PrometheusMetricLayerBuilder;
 use sqlx::SqlitePool;
 use tower_governor::governor::GovernorConfigBuilder;
 use tower_governor::GovernorLayer;
@@ -210,14 +211,23 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             get(sse::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
         ));
 
+    let (prometheus_layer, metric_handle) = PrometheusMetricLayerBuilder::new()
+        .with_default_metrics()
+        .build_pair();
+
     Ok(Router::new()
         .route("/health", get(handlers::health::health_check))
         .route("/health/live", get(handlers::health::liveness))
         .route("/health/ready", get(handlers::health::readiness))
+        .route(
+            "/metrics",
+            get(move || async move { metric_handle.render() }),
+        )
         .nest("/api", api_routes)
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
         )
+        .layer(prometheus_layer)
         .layer(build_cors_layer(&state.config)?)
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(TraceLayer::new_for_http().make_span_with(

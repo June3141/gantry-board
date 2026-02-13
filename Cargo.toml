@@ -38,9 +38,11 @@ anyhow = "1"
 figment = { version = "0.10", features = ["env", "toml"] }
 dotenvy = "0.15"
 
-# Logging
+# Logging / Metrics
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+axum-prometheus = "0.10"
+metrics = "0.24"
 
 # Utilities
 uuid = { version = "1", features = ["v4", "serde"] }

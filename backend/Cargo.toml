@@ -26,6 +26,8 @@ figment = { workspace = true }
 dotenvy = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+axum-prometheus = { workspace = true }
+metrics = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 futures-util = { workspace = true }
