@@ -5,6 +5,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use axum::http::header;
 use axum_test::TestServer;
 use gantry_board::agent::executor::{AgentExecutor, NoopExecutor};
 use gantry_board::agent::orchestrator::AgentOrchestrator;
@@ -115,9 +116,36 @@ pub async fn create_test_server_with_repo_and_pool() -> (tempfile::TempDir, Test
     (tmp, server, pool)
 }
 
-// ========== Auth Test Helpers ==========
+// ========== Common Test Helpers ==========
 
-use axum::http::header;
+/// Create a project and a task in it, returning (project_id, task_id).
+/// Used by agent_sessions tests that don't require auth.
+pub async fn create_project_and_task(server: &TestServer) -> (String, String) {
+    let response = server
+        .post("/api/projects")
+        .json(&serde_json::json!({ "name": "Test Project" }))
+        .await;
+    let project_id = response.json::<serde_json::Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let response = server
+        .post("/api/tasks")
+        .json(&serde_json::json!({
+            "project_id": project_id,
+            "title": "Test Task"
+        }))
+        .await;
+    let task_id = response.json::<serde_json::Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    (project_id, task_id)
+}
+
+// ========== Auth Test Helpers ==========
 
 /// Register a user and return (user_id, session_cookie_header_value)
 pub async fn register_user(server: &TestServer, email: &str, name: &str) -> (String, String) {

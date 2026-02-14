@@ -1,7 +1,9 @@
 use axum::http::{header, StatusCode};
 use serde_json::json;
 
-use crate::common::{add_member, create_auth_test_server as create_test_server, create_project, register_user};
+use crate::common::{
+    add_member, create_auth_test_server as create_test_server, create_project, register_user,
+};
 
 // =============================================================
 // Phase 2: create_project auto-adds creator as Owner

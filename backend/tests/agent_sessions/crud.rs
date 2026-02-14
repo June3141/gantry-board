@@ -2,37 +2,12 @@ use axum::http::StatusCode;
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::common::create_test_server_with_repo as create_test_server;
-
-async fn create_test_task(server: &axum_test::TestServer) -> (String, String) {
-    let response = server
-        .post("/api/projects")
-        .json(&json!({ "name": "Test Project" }))
-        .await;
-    let project_id = response.json::<serde_json::Value>()["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
-
-    let response = server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Test Task"
-        }))
-        .await;
-    let task_id = response.json::<serde_json::Value>()["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
-
-    (project_id, task_id)
-}
+use crate::common::{create_project_and_task, create_test_server_with_repo as create_test_server};
 
 #[tokio::test]
 async fn test_create_agent_session_returns_created() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let response = server
         .post(&format!("/api/tasks/{}/sessions", task_id))
@@ -64,7 +39,7 @@ async fn test_create_agent_session_for_nonexistent_task_returns_404() {
 #[tokio::test]
 async fn test_list_agent_sessions_returns_empty() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let response = server
         .get(&format!("/api/tasks/{}/sessions", task_id))
@@ -78,7 +53,7 @@ async fn test_list_agent_sessions_returns_empty() {
 #[tokio::test]
 async fn test_list_agent_sessions_returns_created_sessions() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let resp1 = server
         .post(&format!("/api/tasks/{}/sessions", task_id))
@@ -113,7 +88,7 @@ async fn test_list_agent_sessions_returns_created_sessions() {
 #[tokio::test]
 async fn test_get_agent_session_returns_existing() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let create_response = server
         .post(&format!("/api/tasks/{}/sessions", task_id))
@@ -135,7 +110,7 @@ async fn test_get_agent_session_returns_existing() {
 #[tokio::test]
 async fn test_get_agent_session_returns_not_found() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
     let fake_session_id = Uuid::new_v4();
 
     let response = server
@@ -151,7 +126,7 @@ async fn test_get_agent_session_returns_not_found() {
 #[tokio::test]
 async fn test_update_agent_session_changes_status() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let create_response = server
         .post(&format!("/api/tasks/{}/sessions", task_id))
@@ -174,8 +149,8 @@ async fn test_update_agent_session_changes_status() {
 #[tokio::test]
 async fn test_get_session_under_wrong_task_returns_404() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_a) = create_test_task(&server).await;
-    let (_project_id2, task_b) = create_test_task(&server).await;
+    let (_project_id, task_a) = create_project_and_task(&server).await;
+    let (_project_id2, task_b) = create_project_and_task(&server).await;
 
     let create_response = server
         .post(&format!("/api/tasks/{}/sessions", task_a))
@@ -194,7 +169,7 @@ async fn test_get_session_under_wrong_task_returns_404() {
 #[tokio::test]
 async fn test_invalid_status_transition_returns_400() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let create_response = server
         .post(&format!("/api/tasks/{}/sessions", task_id))

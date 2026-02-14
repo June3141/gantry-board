@@ -2,37 +2,12 @@ use axum::http::StatusCode;
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::common::create_test_server_with_repo as create_test_server;
-
-async fn create_test_task(server: &axum_test::TestServer) -> (String, String) {
-    let response = server
-        .post("/api/projects")
-        .json(&json!({ "name": "Test Project" }))
-        .await;
-    let project_id = response.json::<serde_json::Value>()["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
-
-    let response = server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Test Task"
-        }))
-        .await;
-    let task_id = response.json::<serde_json::Value>()["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
-
-    (project_id, task_id)
-}
+use crate::common::{create_project_and_task, create_test_server_with_repo as create_test_server};
 
 #[tokio::test]
 async fn test_restart_session_creates_new_session() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let start_response = server
         .post(&format!("/api/tasks/{}/sessions/start", task_id))
@@ -73,7 +48,7 @@ async fn test_restart_session_creates_new_session() {
 #[tokio::test]
 async fn test_restart_session_409_when_active_session_exists() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let start_response = server
         .post(&format!("/api/tasks/{}/sessions/start", task_id))
@@ -99,7 +74,7 @@ async fn test_restart_session_409_when_active_session_exists() {
 #[tokio::test]
 async fn test_restart_session_404_for_nonexistent_session() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
     let fake_session_id = Uuid::new_v4();
 
     let response = server
@@ -115,7 +90,7 @@ async fn test_restart_session_404_for_nonexistent_session() {
 #[tokio::test]
 async fn test_restart_session_400_when_no_prompt_saved() {
     let (_tmp, server) = create_test_server().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let create_response = server
         .post(&format!("/api/tasks/{}/sessions", task_id))

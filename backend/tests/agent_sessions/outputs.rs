@@ -3,33 +3,8 @@ use axum_test::TestServer;
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::common::{create_test_server_with_repo_and_pool, SqlitePool};
+use crate::common::{create_project_and_task, create_test_server_with_repo_and_pool, SqlitePool};
 use gantry_board::services::agent_session_output_service;
-
-async fn create_test_task(server: &TestServer) -> (String, String) {
-    let response = server
-        .post("/api/projects")
-        .json(&json!({ "name": "Test Project" }))
-        .await;
-    let project_id = response.json::<serde_json::Value>()["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
-
-    let response = server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Test Task"
-        }))
-        .await;
-    let task_id = response.json::<serde_json::Value>()["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
-
-    (project_id, task_id)
-}
 
 async fn create_session_with_outputs(
     server: &TestServer,
@@ -62,7 +37,7 @@ async fn create_session_with_outputs(
 #[tokio::test]
 async fn test_get_session_outputs_returns_200() {
     let (_tmp, server, pool) = create_test_server_with_repo_and_pool().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
     let session_id = create_session_with_outputs(&server, &pool, &task_id).await;
 
     let response = server
@@ -84,7 +59,7 @@ async fn test_get_session_outputs_returns_200() {
 #[tokio::test]
 async fn test_get_session_outputs_with_after_param() {
     let (_tmp, server, pool) = create_test_server_with_repo_and_pool().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
     let session_id = create_session_with_outputs(&server, &pool, &task_id).await;
 
     let response = server
@@ -104,7 +79,7 @@ async fn test_get_session_outputs_with_after_param() {
 #[tokio::test]
 async fn test_get_session_outputs_empty_session() {
     let (_tmp, server, _pool) = create_test_server_with_repo_and_pool().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
 
     let create_response = server
         .post(&format!("/api/tasks/{}/sessions", task_id))
@@ -129,7 +104,7 @@ async fn test_get_session_outputs_empty_session() {
 #[tokio::test]
 async fn test_get_session_outputs_404_for_nonexistent_session() {
     let (_tmp, server, _pool) = create_test_server_with_repo_and_pool().await;
-    let (_project_id, task_id) = create_test_task(&server).await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
     let fake_session_id = Uuid::new_v4();
 
     let response = server
