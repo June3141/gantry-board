@@ -82,6 +82,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    let github_client = match &config.github_token {
+        Some(token) if !token.is_empty() => {
+            match gantry_board::github::octocrab_client::OctocrabClient::new(token) {
+                Ok(client) => {
+                    tracing::info!("GitHub integration initialized");
+                    Some(Arc::new(client) as Arc<dyn gantry_board::github::api::GitHubApi>)
+                }
+                Err(e) => {
+                    tracing::warn!(%e, "GitHub client initialization failed — GitHub features disabled");
+                    None
+                }
+            }
+        }
+        _ => {
+            tracing::info!("GANTRY_GITHUB_TOKEN not set — GitHub features disabled");
+            None
+        }
+    };
+
     let shutdown_orchestrator = Arc::clone(&orchestrator);
 
     let state = AppState {
@@ -90,6 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config: Arc::new(config.clone()),
         orchestrator,
         preview_manager,
+        github_client,
         started_at: std::time::Instant::now(),
     };
     let app = gantry_board::app(state)?;

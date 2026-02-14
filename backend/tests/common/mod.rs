@@ -52,6 +52,7 @@ async fn create_test_server_impl(
         config: Arc::new(config),
         orchestrator,
         preview_manager: None,
+        github_client: None,
         started_at: std::time::Instant::now(),
     };
 

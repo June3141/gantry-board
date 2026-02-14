@@ -31,6 +31,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::agent::orchestrator::AgentOrchestrator;
+use crate::github::api::GitHubApi;
 use crate::services::preview_service::PreviewManager;
 use crate::sse::hub::SseHub;
 
@@ -41,6 +42,7 @@ pub struct AppState {
     pub config: Arc<config::Config>,
     pub orchestrator: Arc<AgentOrchestrator>,
     pub preview_manager: Option<Arc<PreviewManager>>,
+    pub github_client: Option<Arc<dyn GitHubApi>>,
     pub started_at: std::time::Instant,
 }
 
@@ -180,6 +182,23 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         .route(
             "/worktrees/{name}",
             delete(handlers::worktrees::delete_worktree),
+        )
+        // GitHub link endpoints
+        .route(
+            "/projects/{project_id}/github-link",
+            post(handlers::github_links::create_github_link),
+        )
+        .route(
+            "/projects/{project_id}/github-link",
+            get(handlers::github_links::get_github_link),
+        )
+        .route(
+            "/projects/{project_id}/github-link",
+            delete(handlers::github_links::delete_github_link),
+        )
+        .route(
+            "/projects/{project_id}/github-link/status",
+            get(handlers::github_links::get_github_link_status),
         )
         // Preview endpoints
         .route("/previews", get(handlers::previews::list_previews))
