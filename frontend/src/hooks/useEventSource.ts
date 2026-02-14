@@ -1,6 +1,12 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { AgentSession, DockerPreview, Task, TaskComment } from '../api/generated/model';
+import type {
+  AgentSession,
+  DockerPreview,
+  SyncResult,
+  Task,
+  TaskComment,
+} from '../api/generated/model';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -14,7 +20,9 @@ export type SseEvent =
   | { type: 'CommentUpdated'; comment: TaskComment }
   | { type: 'CommentDeleted'; comment_id: string; task_id: string }
   | { type: 'PreviewStatusChanged'; preview: DockerPreview }
-  | { type: 'PreviewDeleted'; preview_id: string };
+  | { type: 'PreviewDeleted'; preview_id: string }
+  | { type: 'GitHubSyncCompleted'; result: SyncResult }
+  | { type: 'GitHubSyncFailed'; project_id: string; error: string };
 
 export function connectEventSource(queryClient: QueryClient): () => void {
   const eventSource = new EventSource(`${API_BASE_URL}/api/events`);
@@ -90,6 +98,25 @@ export function connectEventSource(queryClient: QueryClient): () => void {
   };
   eventSource.addEventListener('preview_status_changed', handlePreviewEvent);
   eventSource.addEventListener('preview_deleted', handlePreviewEvent);
+
+  const handleGithubSyncEvent = (event: MessageEvent) => {
+    try {
+      JSON.parse(event.data);
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return (
+            typeof key === 'string' &&
+            (key.includes('github-link') || key.includes('pull-requests'))
+          );
+        },
+      });
+    } catch {
+      console.error('Failed to parse GitHub sync SSE event:', event.data);
+    }
+  };
+  eventSource.addEventListener('github_sync_completed', handleGithubSyncEvent);
+  eventSource.addEventListener('github_sync_failed', handleGithubSyncEvent);
 
   eventSource.onerror = (event: Event) => {
     const source = event.currentTarget as EventSource | null;
