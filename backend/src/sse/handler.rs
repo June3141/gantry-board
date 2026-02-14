@@ -101,6 +101,7 @@ mod tests {
             config: Arc::new(Config::default()),
             orchestrator,
             preview_manager: None,
+            github_client: None,
             started_at: std::time::Instant::now(),
         }
     }
