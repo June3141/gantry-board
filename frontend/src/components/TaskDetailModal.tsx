@@ -4,6 +4,7 @@ import { useDeleteTask, useGetTask, useUpdateTask } from '../api/generated/endpo
 import type { TaskPriority, TaskStatus } from '../api/generated/model';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useUiStore } from '../stores/uiStore';
+import { PullRequestList } from './PullRequestList';
 import { TaskTimeline } from './TaskTimeline';
 import { WorktreePanel } from './WorktreePanel';
 
@@ -234,6 +235,11 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
             <div className="border-t pt-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Worktrees</h3>
               <WorktreePanel />
+            </div>
+
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Pull Requests</h3>
+              <PullRequestList taskId={taskId} />
             </div>
 
             <div className="border-t pt-4">

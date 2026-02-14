@@ -13,6 +13,7 @@ import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useAuthStore } from '../stores/authStore';
 import { useToastStore } from '../stores/toastStore';
 import { useUiStore } from '../stores/uiStore';
+import { GitHubLinkSettings } from './GitHubLinkSettings';
 
 export function ProjectSettingsModal({
   projectId,
@@ -186,6 +187,13 @@ function ProjectSettingsContent({
                 </p>
               )}
             </div>
+
+            {canEdit && (
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">GitHub</h3>
+                <GitHubLinkSettings projectId={projectId} />
+              </div>
+            )}
 
             {isOwner && (
               <div className="border-t pt-4">
