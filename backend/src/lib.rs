@@ -140,6 +140,11 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/tasks/{task_id}/comments/{comment_id}",
             delete(handlers::task_comments::delete_comment),
         )
+        // Pull request endpoints
+        .route(
+            "/tasks/{task_id}/pull-requests",
+            get(handlers::pull_requests::list_pull_requests),
+        )
         // Agent session endpoints
         .route(
             "/tasks/{task_id}/sessions",
