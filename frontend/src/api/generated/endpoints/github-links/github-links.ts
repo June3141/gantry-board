@@ -22,7 +22,12 @@ import type {
 } from '@tanstack/react-query';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
-import type { CreateGitHubLinkRequest, GitHubLink, GitHubLinkStatus } from '../../model';
+import type {
+  CreateGitHubLinkRequest,
+  GitHubLink,
+  GitHubLinkStatus,
+  SyncResult,
+} from '../../model';
 
 export const getGithubLink = (projectId: string, signal?: AbortSignal) => {
   return customInstance<GitHubLink>({
@@ -369,3 +374,68 @@ export function useGetGithubLinkStatus<
 
   return query;
 }
+
+export const syncGithubLink = (projectId: string, signal?: AbortSignal) => {
+  return customInstance<SyncResult>({
+    url: `/api/projects/${projectId}/github-link/sync`,
+    method: 'POST',
+    signal,
+  });
+};
+
+export const getSyncGithubLinkMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncGithubLink>>,
+    TError,
+    { projectId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncGithubLink>>,
+  TError,
+  { projectId: string },
+  TContext
+> => {
+  const mutationKey = ['syncGithubLink'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncGithubLink>>,
+    { projectId: string }
+  > = (props) => {
+    const { projectId } = props ?? {};
+
+    return syncGithubLink(projectId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SyncGithubLinkMutationResult = NonNullable<Awaited<ReturnType<typeof syncGithubLink>>>;
+
+export type SyncGithubLinkMutationError = void;
+
+export const useSyncGithubLink = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof syncGithubLink>>,
+      TError,
+      { projectId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof syncGithubLink>>,
+  TError,
+  { projectId: string },
+  TContext
+> => {
+  const mutationOptions = getSyncGithubLinkMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};

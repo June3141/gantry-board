@@ -50,6 +50,7 @@ use crate::sse;
         handlers::github_links::get_github_link,
         handlers::github_links::delete_github_link,
         handlers::github_links::get_github_link_status,
+        handlers::github_links::sync_github_link,
         handlers::previews::create_preview,
         handlers::previews::list_previews,
         handlers::previews::get_preview,

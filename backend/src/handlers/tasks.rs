@@ -13,6 +13,23 @@ use crate::services::{authorization_service, task_service};
 use crate::sse::event::SseEvent;
 use crate::AppState;
 
+/// Fire-and-forget auto-push of a task to GitHub when a link exists.
+fn spawn_auto_push(state: &AppState, task: &Task) {
+    let github_client = state
+        .github_client
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| std::sync::Arc::new(crate::github::api::NoopGitHubClient));
+    let pool = state.pool.clone();
+    let task = task.clone();
+    tokio::spawn(async move {
+        let engine = crate::github::sync_engine::SyncEngine::new(github_client, pool);
+        if let Err(e) = engine.try_push_task(&task).await {
+            tracing::warn!(task_id = %task.id, error = %e, "auto-push to GitHub failed");
+        }
+    });
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ListTasksQuery {
     pub project_id: Uuid,
@@ -83,6 +100,7 @@ pub async fn create_task(
     state
         .sse_hub
         .broadcast(SseEvent::task_created(task.clone()));
+    spawn_auto_push(&state, &task);
     Ok((StatusCode::CREATED, Json(task)))
 }
 
@@ -132,6 +150,7 @@ pub async fn update_task(
     state
         .sse_hub
         .broadcast(SseEvent::task_updated(task.clone()));
+    spawn_auto_push(&state, &task);
     Ok(Json(task))
 }
 

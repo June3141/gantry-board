@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
-use crate::models::github::{CreateGitHubLinkRequest, GitHubLink, GitHubLinkStatus};
+use crate::models::github::{CreateGitHubLinkRequest, GitHubLink, GitHubLinkStatus, SyncResult};
 use crate::services::{authorization_service, github_link_service, project_service};
 use crate::AppState;
 
@@ -117,4 +117,52 @@ pub async fn get_github_link_status(
         connected,
         last_synced_at: link.last_synced_at,
     }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/projects/{project_id}/github-link/sync",
+    params(("project_id" = Uuid, Path, description = "Project ID")),
+    responses(
+        (status = 200, description = "Sync completed", body = SyncResult),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Not found")
+    ),
+    tag = "github-links"
+)]
+pub async fn sync_github_link(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(project_id): Path<Uuid>,
+) -> AppResult<Json<SyncResult>> {
+    authorization_service::authorize_project(&state.pool, auth.user_id, project_id).await?;
+    let link = github_link_service::get_github_link(&state.pool, project_id).await?;
+
+    let github_client = state
+        .github_client
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| std::sync::Arc::new(crate::github::api::NoopGitHubClient));
+
+    let engine = crate::github::sync_engine::SyncEngine::new(github_client, state.pool.clone());
+
+    match engine.sync_project(&link).await {
+        Ok(result) => {
+            state
+                .sse_hub
+                .broadcast(crate::sse::event::SseEvent::github_sync_completed(
+                    result.clone(),
+                ));
+            Ok(Json(result))
+        }
+        Err(e) => {
+            state
+                .sse_hub
+                .broadcast(crate::sse::event::SseEvent::github_sync_failed(
+                    project_id,
+                    e.to_string(),
+                ));
+            Err(e)
+        }
+    }
 }
