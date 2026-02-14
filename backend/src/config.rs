@@ -83,6 +83,14 @@ pub struct Config {
     /// Preview base URL (default: "http://localhost")
     #[serde(default = "default_preview_base_url")]
     pub preview_base_url: String,
+
+    /// GitHub Personal Access Token (optional, env: GANTRY_GITHUB_TOKEN)
+    #[serde(default)]
+    pub github_token: Option<String>,
+
+    /// GitHub sync interval in seconds (default: 300 = 5 minutes)
+    #[serde(default = "default_github_sync_interval_secs")]
+    pub github_sync_interval_secs: u64,
 }
 
 fn default_bind_addr() -> String {
@@ -139,6 +147,10 @@ fn default_preview_port_range_end() -> u16 {
 
 fn default_preview_base_url() -> String {
     "http://localhost".to_string()
+}
+
+fn default_github_sync_interval_secs() -> u64 {
+    300 // 5 minutes
 }
 
 impl Config {
@@ -215,6 +227,8 @@ impl Default for Config {
             preview_port_range_start: default_preview_port_range_start(),
             preview_port_range_end: default_preview_port_range_end(),
             preview_base_url: default_preview_base_url(),
+            github_token: None,
+            github_sync_interval_secs: default_github_sync_interval_secs(),
         }
     }
 }

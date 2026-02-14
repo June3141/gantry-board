@@ -44,6 +44,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 axum-prometheus = "0.10"
 metrics = "0.24"
 
+# GitHub Integration
+octocrab = "0.49"
+
 # Utilities
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
