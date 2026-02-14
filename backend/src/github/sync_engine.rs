@@ -51,11 +51,12 @@ impl SyncEngine {
                         &req,
                     )
                     .await?;
+                let now = Utc::now();
                 github_sync_service::update_mapping_timestamps(
                     &self.pool,
                     mapping.id,
-                    Some(Utc::now()),
-                    None,
+                    Some(now),
+                    Some(now),
                 )
                 .await?;
                 Ok(mapping)
@@ -92,6 +93,15 @@ impl SyncEngine {
                         .update_issue(&link.repo_owner, &link.repo_name, issue.number, &close_req)
                         .await?;
                 }
+
+                let now = Utc::now();
+                github_sync_service::update_mapping_timestamps(
+                    &self.pool,
+                    mapping.id,
+                    Some(now),
+                    Some(now),
+                )
+                .await?;
 
                 Ok(mapping)
             }
@@ -192,12 +202,21 @@ impl SyncEngine {
     }
 
     /// Sync all projects that have sync enabled.
+    /// Continues with remaining projects if one fails.
     pub async fn sync_all(&self) -> AppResult<Vec<SyncResult>> {
         let links = github_link_service::list_sync_enabled(&self.pool).await?;
         let mut results = Vec::new();
         for link in &links {
-            let result = self.sync_project(link).await?;
-            results.push(result);
+            match self.sync_project(link).await {
+                Ok(result) => results.push(result),
+                Err(e) => {
+                    tracing::warn!(
+                        project_id = %link.project_id,
+                        error = %e,
+                        "sync failed for project, continuing with next"
+                    );
+                }
+            }
         }
         Ok(results)
     }
