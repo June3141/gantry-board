@@ -12,45 +12,111 @@ pub struct LabelDefinition {
 }
 
 /// Convert a TaskStatus to a GitHub label string.
-pub fn task_status_to_label(_status: &TaskStatus) -> &'static str {
-    todo!()
+pub fn task_status_to_label(status: &TaskStatus) -> &'static str {
+    match status {
+        TaskStatus::Backlog => "status:backlog",
+        TaskStatus::Todo => "status:todo",
+        TaskStatus::InProgress => "status:in_progress",
+        TaskStatus::InReview => "status:in_review",
+        TaskStatus::Done => "status:done",
+    }
 }
 
 /// Convert a GitHub label string to a TaskStatus, if it matches.
-pub fn label_to_task_status(_label: &str) -> Option<TaskStatus> {
-    todo!()
+pub fn label_to_task_status(label: &str) -> Option<TaskStatus> {
+    let suffix = label.strip_prefix(STATUS_PREFIX)?;
+    match suffix {
+        "backlog" => Some(TaskStatus::Backlog),
+        "todo" => Some(TaskStatus::Todo),
+        "in_progress" => Some(TaskStatus::InProgress),
+        "in_review" => Some(TaskStatus::InReview),
+        "done" => Some(TaskStatus::Done),
+        _ => None,
+    }
 }
 
 /// Convert a TaskPriority to a GitHub label string.
-pub fn task_priority_to_label(_priority: &TaskPriority) -> &'static str {
-    todo!()
+pub fn task_priority_to_label(priority: &TaskPriority) -> &'static str {
+    match priority {
+        TaskPriority::Low => "priority:low",
+        TaskPriority::Medium => "priority:medium",
+        TaskPriority::High => "priority:high",
+        TaskPriority::Urgent => "priority:urgent",
+    }
 }
 
 /// Convert a GitHub label string to a TaskPriority, if it matches.
-pub fn label_to_task_priority(_label: &str) -> Option<TaskPriority> {
-    todo!()
+pub fn label_to_task_priority(label: &str) -> Option<TaskPriority> {
+    let suffix = label.strip_prefix(PRIORITY_PREFIX)?;
+    match suffix {
+        "low" => Some(TaskPriority::Low),
+        "medium" => Some(TaskPriority::Medium),
+        "high" => Some(TaskPriority::High),
+        "urgent" => Some(TaskPriority::Urgent),
+        _ => None,
+    }
 }
 
 /// Extract the TaskStatus from a list of label strings.
 /// Returns None if no status label is found.
-pub fn extract_status_from_labels(_labels: &[String]) -> Option<TaskStatus> {
-    todo!()
+pub fn extract_status_from_labels(labels: &[String]) -> Option<TaskStatus> {
+    labels.iter().find_map(|l| label_to_task_status(l))
 }
 
 /// Extract the TaskPriority from a list of label strings.
 /// Returns None if no priority label is found.
-pub fn extract_priority_from_labels(_labels: &[String]) -> Option<TaskPriority> {
-    todo!()
+pub fn extract_priority_from_labels(labels: &[String]) -> Option<TaskPriority> {
+    labels.iter().find_map(|l| label_to_task_priority(l))
 }
 
 /// Build the set of label strings for a task given its status and priority.
-pub fn build_labels_for_task(_status: &TaskStatus, _priority: &TaskPriority) -> Vec<String> {
-    todo!()
+pub fn build_labels_for_task(status: &TaskStatus, priority: &TaskPriority) -> Vec<String> {
+    vec![
+        task_status_to_label(status).to_string(),
+        task_priority_to_label(priority).to_string(),
+    ]
 }
 
 /// Return all label definitions (status + priority) for ensuring labels exist in a repo.
 pub fn all_label_definitions() -> Vec<LabelDefinition> {
-    todo!()
+    vec![
+        LabelDefinition {
+            name: "status:backlog",
+            color: "e6e6e6",
+        },
+        LabelDefinition {
+            name: "status:todo",
+            color: "0075ca",
+        },
+        LabelDefinition {
+            name: "status:in_progress",
+            color: "fbca04",
+        },
+        LabelDefinition {
+            name: "status:in_review",
+            color: "d876e3",
+        },
+        LabelDefinition {
+            name: "status:done",
+            color: "0e8a16",
+        },
+        LabelDefinition {
+            name: "priority:low",
+            color: "c5def5",
+        },
+        LabelDefinition {
+            name: "priority:medium",
+            color: "bfd4f2",
+        },
+        LabelDefinition {
+            name: "priority:high",
+            color: "d93f0b",
+        },
+        LabelDefinition {
+            name: "priority:urgent",
+            color: "b60205",
+        },
+    ]
 }
 
 #[cfg(test)]
