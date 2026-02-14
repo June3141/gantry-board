@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 
 use crate::error::AppResult;
-use crate::models::github::{CreateIssueRequest, GitHubIssue, UpdateIssueRequest};
+use crate::models::github::{CreateIssueRequest, GitHubIssue, LinkedPr, UpdateIssueRequest};
 
 /// Abstraction over the GitHub API for testability.
 #[async_trait::async_trait]
@@ -38,6 +38,14 @@ pub trait GitHubApi: Send + Sync {
     /// Ensure a label exists in a repository (create if missing).
     async fn ensure_label(&self, owner: &str, repo: &str, name: &str, color: &str)
         -> AppResult<()>;
+
+    /// List pull requests linked to an issue via timeline events.
+    async fn list_prs_for_issue(
+        &self,
+        owner: &str,
+        repo: &str,
+        issue_number: u64,
+    ) -> AppResult<Vec<LinkedPr>>;
 }
 
 /// No-op implementation for tests and when GitHub integration is disabled.
@@ -104,6 +112,15 @@ impl GitHubApi for NoopGitHubClient {
         _color: &str,
     ) -> AppResult<()> {
         Ok(())
+    }
+
+    async fn list_prs_for_issue(
+        &self,
+        _owner: &str,
+        _repo: &str,
+        _issue_number: u64,
+    ) -> AppResult<Vec<LinkedPr>> {
+        Ok(vec![])
     }
 }
 

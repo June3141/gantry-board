@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 
 use super::api::GitHubApi;
 use crate::error::{AppError, AppResult};
-use crate::models::github::{CreateIssueRequest, GitHubIssue, UpdateIssueRequest};
+use crate::models::github::{CreateIssueRequest, GitHubIssue, LinkedPr, UpdateIssueRequest};
 
 pub struct OctocrabClient {
     client: octocrab::Octocrab,
@@ -150,5 +150,71 @@ impl GitHubApi for OctocrabClient {
                 Ok(())
             }
         }
+    }
+
+    async fn list_prs_for_issue(
+        &self,
+        owner: &str,
+        repo: &str,
+        issue_number: u64,
+    ) -> AppResult<Vec<LinkedPr>> {
+        let url = format!("/repos/{owner}/{repo}/issues/{issue_number}/timeline?per_page=100");
+        let response: Vec<serde_json::Value> = self
+            .client
+            .get(&url, None::<&()>)
+            .await
+            .map_err(|e| AppError::Internal(format!("GitHub timeline API failed: {e}")))?;
+
+        let mut prs = Vec::new();
+        for event in response {
+            if event.get("event").and_then(|v| v.as_str()) != Some("cross-referenced") {
+                continue;
+            }
+            let Some(source) = event.get("source").and_then(|s| s.get("issue")) else {
+                continue;
+            };
+            // Only include if this is a pull request
+            if source.get("pull_request").is_none() {
+                continue;
+            }
+            let pr_number = source.get("number").and_then(|v| v.as_u64()).unwrap_or(0);
+            let title = source
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let html_url = source
+                .get("html_url")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let state = source
+                .get("state")
+                .and_then(|v| v.as_str())
+                .unwrap_or("open")
+                .to_string();
+            let is_merged = source
+                .get("pull_request")
+                .and_then(|pr| pr.get("merged_at"))
+                .is_some_and(|v| !v.is_null());
+            let author = source
+                .get("user")
+                .and_then(|u| u.get("login"))
+                .and_then(|v| v.as_str())
+                .map(String::from);
+
+            if pr_number > 0 {
+                prs.push(LinkedPr {
+                    pr_number,
+                    title,
+                    url: html_url,
+                    state,
+                    is_merged,
+                    author,
+                });
+            }
+        }
+
+        Ok(prs)
     }
 }
