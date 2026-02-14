@@ -99,17 +99,21 @@ export function connectEventSource(queryClient: QueryClient): () => void {
   eventSource.addEventListener('preview_status_changed', handlePreviewEvent);
   eventSource.addEventListener('preview_deleted', handlePreviewEvent);
 
-  const handleGithubSyncEvent = () => {
-    // Invalidate GitHub link and pull request queries
-    queryClient.invalidateQueries({
-      predicate: (query) => {
-        const key = query.queryKey[0];
-        return (
-          typeof key === 'string' &&
-          (key.includes('github-link') || key.includes('pull-requests'))
-        );
-      },
-    });
+  const handleGithubSyncEvent = (event: MessageEvent) => {
+    try {
+      JSON.parse(event.data);
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return (
+            typeof key === 'string' &&
+            (key.includes('github-link') || key.includes('pull-requests'))
+          );
+        },
+      });
+    } catch {
+      console.error('Failed to parse GitHub sync SSE event:', event.data);
+    }
   };
   eventSource.addEventListener('github_sync_completed', handleGithubSyncEvent);
   eventSource.addEventListener('github_sync_failed', handleGithubSyncEvent);

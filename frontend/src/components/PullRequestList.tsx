@@ -42,7 +42,9 @@ function PullRequestItem({ pr }: { pr: GitHubPullRequest }) {
         </a>
         {pr.author && <span className="text-gray-400 shrink-0">{pr.author}</span>}
       </div>
-      <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.classes}`}>
+      <span
+        className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.classes}`}
+      >
         {badge.label}
       </span>
     </div>

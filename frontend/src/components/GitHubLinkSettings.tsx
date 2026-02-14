@@ -42,8 +42,8 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
   const handleSync = async () => {
     try {
       const result = await syncLink.mutateAsync({ projectId });
-      addToast('success', `Sync complete: ${result.pushed} pushed, ${result.pulled} pulled.`);
       await invalidate();
+      addToast('success', `Sync complete: ${result.pushed} pushed, ${result.pulled} pulled.`);
     } catch {
       addToast('error', 'Sync failed.');
     }
