@@ -9,7 +9,7 @@ use crate::models::github::{
     CreateIssueRequest, GitHubIssue, GitHubIssueMapping, GitHubLink, SyncResult, UpdateIssueRequest,
 };
 use crate::models::task::{CreateTaskRequest, Task, TaskPriority, TaskStatus, UpdateTaskRequest};
-use crate::services::{github_link_service, github_sync_service, task_service};
+use crate::services::{github_link_service, github_pr_service, github_sync_service, task_service};
 
 pub struct SyncEngine {
     pub(crate) github_client: Arc<dyn GitHubApi>,
@@ -172,7 +172,53 @@ impl SyncEngine {
         Ok((created, updated))
     }
 
-    /// Run a full sync for one project: ensure labels, push, pull, update last_synced.
+    /// Detect pull requests linked to mapped issues and save them to DB.
+    /// Soft failure: logs a warning and continues on error.
+    pub async fn detect_pull_requests(&self, link: &GitHubLink) {
+        let mappings = match github_sync_service::list_mappings_by_link(&self.pool, link.id).await {
+            Ok(m) => m,
+            Err(e) => {
+                tracing::warn!(error = %e, "failed to list mappings for PR detection");
+                return;
+            }
+        };
+
+        for mapping in &mappings {
+            let prs = match self
+                .github_client
+                .list_prs_for_issue(
+                    &link.repo_owner,
+                    &link.repo_name,
+                    mapping.github_issue_number as u64,
+                )
+                .await
+            {
+                Ok(prs) => prs,
+                Err(e) => {
+                    tracing::warn!(
+                        issue_number = mapping.github_issue_number,
+                        error = %e,
+                        "failed to list PRs for issue, skipping"
+                    );
+                    continue;
+                }
+            };
+
+            for pr in &prs {
+                if let Err(e) =
+                    github_pr_service::upsert_pr(&self.pool, link.id, mapping.task_id, pr).await
+                {
+                    tracing::warn!(
+                        pr_number = pr.pr_number,
+                        error = %e,
+                        "failed to upsert PR, skipping"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Run a full sync for one project: ensure labels, push, pull, detect PRs, update last_synced.
     pub async fn sync_project(&self, link: &GitHubLink) -> AppResult<SyncResult> {
         self.ensure_all_labels(&link.repo_owner, &link.repo_name)
             .await?;
@@ -190,6 +236,9 @@ impl SyncEngine {
 
         // Pull from GitHub
         let (pulled_created, pulled_updated) = self.pull_issues_from_github(link).await?;
+
+        // Detect linked PRs (soft failure)
+        self.detect_pull_requests(link).await;
 
         // Update last_synced_at
         github_link_service::update_last_synced(&self.pool, link.project_id).await?;
@@ -293,10 +342,11 @@ impl SyncEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::github::{CreateIssueRequest, GitHubIssue, UpdateIssueRequest};
+    use crate::models::github::{CreateIssueRequest, GitHubIssue, LinkedPr, UpdateIssueRequest};
     use crate::models::task::{Task, TaskPriority, TaskStatus};
     use chrono::{DateTime, Utc};
     use sqlx::sqlite::SqlitePoolOptions;
+    use std::collections::HashMap;
     use std::sync::Mutex;
     use uuid::Uuid;
 
@@ -309,6 +359,8 @@ mod tests {
         issues: Mutex<Vec<GitHubIssue>>,
         /// Next issue number to assign.
         next_number: Mutex<u64>,
+        /// PRs returned by list_prs_for_issue, keyed by issue number.
+        linked_prs: Mutex<HashMap<u64, Vec<LinkedPr>>>,
     }
 
     impl MockGitHubApi {
@@ -319,6 +371,7 @@ mod tests {
                 ensured_labels: Mutex::new(vec![]),
                 issues: Mutex::new(vec![]),
                 next_number: Mutex::new(1),
+                linked_prs: Mutex::new(HashMap::new()),
             }
         }
 
@@ -415,6 +468,21 @@ mod tests {
                 .unwrap()
                 .push((name.to_string(), color.to_string()));
             Ok(())
+        }
+
+        async fn list_prs_for_issue(
+            &self,
+            _owner: &str,
+            _repo: &str,
+            issue_number: u64,
+        ) -> AppResult<Vec<LinkedPr>> {
+            Ok(self
+                .linked_prs
+                .lock()
+                .unwrap()
+                .get(&issue_number)
+                .cloned()
+                .unwrap_or_default())
         }
     }
 
@@ -870,5 +938,131 @@ mod tests {
 
         let created = mock.created_issues.lock().unwrap();
         assert!(created.is_empty());
+    }
+
+    // --- detect_pull_requests tests ---
+
+    fn make_linked_pr(pr_number: u64, state: &str, is_merged: bool) -> LinkedPr {
+        LinkedPr {
+            pr_number,
+            title: format!("PR #{pr_number}"),
+            url: format!("https://github.com/owner/repo/pull/{pr_number}"),
+            state: state.to_string(),
+            is_merged,
+            author: Some("octocat".to_string()),
+        }
+    }
+
+    #[tokio::test]
+    async fn detect_prs_saves_prs_for_mapped_issues() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+        let task = make_task(project_id, TaskStatus::Todo, TaskPriority::Medium);
+        insert_task(&pool, &task).await;
+
+        // Create mapping: task <-> issue #10
+        github_sync_service::create_mapping(&pool, task.id, link.id, 10, Some(10000))
+            .await
+            .unwrap();
+
+        let mock = MockGitHubApi::new();
+        mock.linked_prs
+            .lock()
+            .unwrap()
+            .insert(10, vec![make_linked_pr(99, "open", false)]);
+        let engine = SyncEngine::new(Arc::new(mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        engine.detect_pull_requests(&link).await;
+
+        let prs = github_pr_service::list_prs_for_task(&pool, task.id)
+            .await
+            .unwrap();
+        assert_eq!(prs.len(), 1);
+        assert_eq!(prs[0].pr_number, 99);
+        assert_eq!(prs[0].author.as_deref(), Some("octocat"));
+    }
+
+    #[tokio::test]
+    async fn detect_prs_skips_unmapped_issues() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+
+        // No mappings exist — detect should do nothing
+        let mock = Arc::new(MockGitHubApi::new());
+        let engine = SyncEngine::new(mock as Arc<dyn GitHubApi>, pool.clone());
+
+        engine.detect_pull_requests(&link).await;
+        // No assertions needed beyond no-panic
+    }
+
+    #[tokio::test]
+    async fn detect_prs_updates_existing_pr() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+        let task = make_task(project_id, TaskStatus::Todo, TaskPriority::Medium);
+        insert_task(&pool, &task).await;
+
+        github_sync_service::create_mapping(&pool, task.id, link.id, 10, Some(10000))
+            .await
+            .unwrap();
+
+        // First detection: open PR
+        let mock = MockGitHubApi::new();
+        mock.linked_prs
+            .lock()
+            .unwrap()
+            .insert(10, vec![make_linked_pr(99, "open", false)]);
+        let engine = SyncEngine::new(Arc::new(mock) as Arc<dyn GitHubApi>, pool.clone());
+        engine.detect_pull_requests(&link).await;
+
+        // Second detection: same PR now merged
+        let mock2 = MockGitHubApi::new();
+        mock2
+            .linked_prs
+            .lock()
+            .unwrap()
+            .insert(10, vec![make_linked_pr(99, "closed", true)]);
+        let engine2 = SyncEngine::new(Arc::new(mock2) as Arc<dyn GitHubApi>, pool.clone());
+        engine2.detect_pull_requests(&link).await;
+
+        let prs = github_pr_service::list_prs_for_task(&pool, task.id)
+            .await
+            .unwrap();
+        assert_eq!(prs.len(), 1);
+        assert!(prs[0].is_merged);
+    }
+
+    #[tokio::test]
+    async fn sync_project_includes_pr_detection() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+        let task = make_task(project_id, TaskStatus::Todo, TaskPriority::Medium);
+        insert_task(&pool, &task).await;
+
+        // After push, the mock will create issue #1. Set up PR for issue #1.
+        let mock = MockGitHubApi::new();
+        mock.linked_prs
+            .lock()
+            .unwrap()
+            .insert(1, vec![make_linked_pr(50, "open", false)]);
+        let engine = SyncEngine::new(Arc::new(mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        let result = engine.sync_project(&link).await.unwrap();
+        assert_eq!(result.pushed, 1);
+
+        // PR should have been detected and saved
+        let prs = github_pr_service::list_prs_for_task(&pool, task.id)
+            .await
+            .unwrap();
+        assert_eq!(prs.len(), 1);
+        assert_eq!(prs[0].pr_number, 50);
     }
 }

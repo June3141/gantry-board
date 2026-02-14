@@ -5,6 +5,7 @@ pub mod health;
 pub mod previews;
 pub mod project_members;
 pub mod projects;
+pub mod pull_requests;
 pub mod task_comments;
 pub mod tasks;
 pub mod users;
