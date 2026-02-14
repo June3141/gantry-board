@@ -82,3 +82,38 @@ pub struct SyncResult {
     pub pushed: u32,
     pub pulled: u32,
 }
+
+/// Pull request state.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum PrState {
+    Open,
+    Closed,
+}
+
+/// A GitHub pull request linked to a task (DB / API response type).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct GitHubPullRequest {
+    pub id: Uuid,
+    pub github_link_id: Uuid,
+    pub task_id: Uuid,
+    pub pr_number: i64,
+    pub title: String,
+    pub url: String,
+    pub state: PrState,
+    pub is_merged: bool,
+    pub author: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Intermediate type representing a PR discovered from GitHub timeline events.
+#[derive(Debug, Clone)]
+pub struct LinkedPr {
+    pub pr_number: u64,
+    pub title: String,
+    pub url: String,
+    pub state: String,
+    pub is_merged: bool,
+    pub author: Option<String>,
+}
