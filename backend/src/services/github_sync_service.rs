@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{FromRow, SqlitePool};
 use uuid::Uuid;
 
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 use crate::models::github::GitHubIssueMapping;
 
 #[derive(FromRow)]
@@ -34,50 +34,119 @@ impl TryFrom<MappingRow> for GitHubIssueMapping {
     }
 }
 
+fn row_to_mapping(row: MappingRow) -> AppResult<GitHubIssueMapping> {
+    row.try_into()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+}
+
 /// Create a new issue mapping.
 pub async fn create_mapping(
-    _pool: &SqlitePool,
-    _task_id: Uuid,
-    _github_link_id: Uuid,
-    _issue_number: i64,
-    _issue_id: Option<i64>,
+    pool: &SqlitePool,
+    task_id: Uuid,
+    github_link_id: Uuid,
+    issue_number: i64,
+    issue_id: Option<i64>,
 ) -> AppResult<GitHubIssueMapping> {
-    todo!()
+    let id = Uuid::new_v4();
+    sqlx::query(
+        r#"
+        INSERT INTO github_issue_mappings (id, task_id, github_link_id, github_issue_number, github_issue_id)
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+    )
+    .bind(id.to_string())
+    .bind(task_id.to_string())
+    .bind(github_link_id.to_string())
+    .bind(issue_number)
+    .bind(issue_id)
+    .execute(pool)
+    .await?;
+
+    let row = sqlx::query_as::<_, MappingRow>(
+        "SELECT id, task_id, github_link_id, github_issue_number, github_issue_id, last_local_update, last_remote_update, created_at FROM github_issue_mappings WHERE id = $1",
+    )
+    .bind(id.to_string())
+    .fetch_one(pool)
+    .await?;
+
+    row_to_mapping(row)
 }
 
 /// Get a mapping by task ID.
 pub async fn get_mapping_by_task_id(
-    _pool: &SqlitePool,
-    _task_id: Uuid,
+    pool: &SqlitePool,
+    task_id: Uuid,
 ) -> AppResult<Option<GitHubIssueMapping>> {
-    todo!()
+    let row = sqlx::query_as::<_, MappingRow>(
+        "SELECT id, task_id, github_link_id, github_issue_number, github_issue_id, last_local_update, last_remote_update, created_at FROM github_issue_mappings WHERE task_id = $1",
+    )
+    .bind(task_id.to_string())
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(row_to_mapping).transpose()
 }
 
 /// Get a mapping by GitHub link ID and issue number.
 pub async fn get_mapping_by_issue_number(
-    _pool: &SqlitePool,
-    _github_link_id: Uuid,
-    _issue_number: i64,
+    pool: &SqlitePool,
+    github_link_id: Uuid,
+    issue_number: i64,
 ) -> AppResult<Option<GitHubIssueMapping>> {
-    todo!()
+    let row = sqlx::query_as::<_, MappingRow>(
+        "SELECT id, task_id, github_link_id, github_issue_number, github_issue_id, last_local_update, last_remote_update, created_at FROM github_issue_mappings WHERE github_link_id = $1 AND github_issue_number = $2",
+    )
+    .bind(github_link_id.to_string())
+    .bind(issue_number)
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(row_to_mapping).transpose()
 }
 
 /// List all mappings for a given GitHub link.
 pub async fn list_mappings_by_link(
-    _pool: &SqlitePool,
-    _github_link_id: Uuid,
+    pool: &SqlitePool,
+    github_link_id: Uuid,
 ) -> AppResult<Vec<GitHubIssueMapping>> {
-    todo!()
+    let rows = sqlx::query_as::<_, MappingRow>(
+        "SELECT id, task_id, github_link_id, github_issue_number, github_issue_id, last_local_update, last_remote_update, created_at FROM github_issue_mappings WHERE github_link_id = $1",
+    )
+    .bind(github_link_id.to_string())
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter().map(row_to_mapping).collect()
 }
 
 /// Update the local and remote timestamps on a mapping.
 pub async fn update_mapping_timestamps(
-    _pool: &SqlitePool,
-    _mapping_id: Uuid,
-    _last_local_update: Option<DateTime<Utc>>,
-    _last_remote_update: Option<DateTime<Utc>>,
+    pool: &SqlitePool,
+    mapping_id: Uuid,
+    last_local_update: Option<DateTime<Utc>>,
+    last_remote_update: Option<DateTime<Utc>>,
 ) -> AppResult<()> {
-    todo!()
+    let result = sqlx::query(
+        r#"
+        UPDATE github_issue_mappings
+        SET last_local_update = $2, last_remote_update = $3
+        WHERE id = $1
+        "#,
+    )
+    .bind(mapping_id.to_string())
+    .bind(last_local_update)
+    .bind(last_remote_update)
+    .execute(pool)
+    .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!(
+            "github issue mapping {} not found",
+            mapping_id
+        )));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
