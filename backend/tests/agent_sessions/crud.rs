@@ -1,0 +1,187 @@
+use axum::http::StatusCode;
+use serde_json::json;
+use uuid::Uuid;
+
+use crate::common::{create_project_and_task, create_test_server_with_repo as create_test_server};
+
+#[tokio::test]
+async fn test_create_agent_session_returns_created() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
+
+    let response = server
+        .post(&format!("/api/tasks/{}/sessions", task_id))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+
+    response.assert_status(StatusCode::CREATED);
+    let session: serde_json::Value = response.json();
+    assert_eq!(session["task_id"], task_id);
+    assert_eq!(session["agent_type"], "claude_code");
+    assert_eq!(session["status"], "pending");
+    assert!(session["started_at"].is_null());
+    assert!(session["finished_at"].is_null());
+}
+
+#[tokio::test]
+async fn test_create_agent_session_for_nonexistent_task_returns_404() {
+    let (_tmp, server) = create_test_server().await;
+    let fake_id = Uuid::new_v4();
+
+    let response = server
+        .post(&format!("/api/tasks/{}/sessions", fake_id))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+
+    response.assert_status(StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn test_list_agent_sessions_returns_empty() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
+
+    let response = server
+        .get(&format!("/api/tasks/{}/sessions", task_id))
+        .await;
+
+    response.assert_status_ok();
+    let sessions: Vec<serde_json::Value> = response.json();
+    assert!(sessions.is_empty());
+}
+
+#[tokio::test]
+async fn test_list_agent_sessions_returns_created_sessions() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
+
+    let resp1 = server
+        .post(&format!("/api/tasks/{}/sessions", task_id))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+    let session1: serde_json::Value = resp1.json();
+    let session1_id = session1["id"].as_str().unwrap();
+
+    server
+        .patch(&format!("/api/tasks/{}/sessions/{}", task_id, session1_id))
+        .json(&json!({ "status": "running" }))
+        .await;
+    server
+        .patch(&format!("/api/tasks/{}/sessions/{}", task_id, session1_id))
+        .json(&json!({ "status": "completed" }))
+        .await;
+
+    server
+        .post(&format!("/api/tasks/{}/sessions", task_id))
+        .json(&json!({ "agent_type": "gemini_cli" }))
+        .await;
+
+    let response = server
+        .get(&format!("/api/tasks/{}/sessions", task_id))
+        .await;
+
+    response.assert_status_ok();
+    let sessions: Vec<serde_json::Value> = response.json();
+    assert_eq!(sessions.len(), 2);
+}
+
+#[tokio::test]
+async fn test_get_agent_session_returns_existing() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
+
+    let create_response = server
+        .post(&format!("/api/tasks/{}/sessions", task_id))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+    let created: serde_json::Value = create_response.json();
+    let session_id = created["id"].as_str().unwrap();
+
+    let response = server
+        .get(&format!("/api/tasks/{}/sessions/{}", task_id, session_id))
+        .await;
+
+    response.assert_status_ok();
+    let session: serde_json::Value = response.json();
+    assert_eq!(session["id"], session_id);
+    assert_eq!(session["agent_type"], "claude_code");
+}
+
+#[tokio::test]
+async fn test_get_agent_session_returns_not_found() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
+    let fake_session_id = Uuid::new_v4();
+
+    let response = server
+        .get(&format!(
+            "/api/tasks/{}/sessions/{}",
+            task_id, fake_session_id
+        ))
+        .await;
+
+    response.assert_status(StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn test_update_agent_session_changes_status() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
+
+    let create_response = server
+        .post(&format!("/api/tasks/{}/sessions", task_id))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+    let created: serde_json::Value = create_response.json();
+    let session_id = created["id"].as_str().unwrap();
+
+    let response = server
+        .patch(&format!("/api/tasks/{}/sessions/{}", task_id, session_id))
+        .json(&json!({ "status": "running" }))
+        .await;
+
+    response.assert_status_ok();
+    let session: serde_json::Value = response.json();
+    assert_eq!(session["status"], "running");
+    assert!(!session["started_at"].is_null());
+}
+
+#[tokio::test]
+async fn test_get_session_under_wrong_task_returns_404() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_a) = create_project_and_task(&server).await;
+    let (_project_id2, task_b) = create_project_and_task(&server).await;
+
+    let create_response = server
+        .post(&format!("/api/tasks/{}/sessions", task_a))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+    let created: serde_json::Value = create_response.json();
+    let session_id = created["id"].as_str().unwrap();
+
+    let response = server
+        .get(&format!("/api/tasks/{}/sessions/{}", task_b, session_id))
+        .await;
+
+    response.assert_status(StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn test_invalid_status_transition_returns_400() {
+    let (_tmp, server) = create_test_server().await;
+    let (_project_id, task_id) = create_project_and_task(&server).await;
+
+    let create_response = server
+        .post(&format!("/api/tasks/{}/sessions", task_id))
+        .json(&json!({ "agent_type": "claude_code" }))
+        .await;
+    let created: serde_json::Value = create_response.json();
+    let session_id = created["id"].as_str().unwrap();
+
+    let response = server
+        .patch(&format!("/api/tasks/{}/sessions/{}", task_id, session_id))
+        .json(&json!({ "status": "completed" }))
+        .await;
+
+    response.assert_status(StatusCode::BAD_REQUEST);
+}
