@@ -114,3 +114,81 @@ pub async fn create_test_server_with_repo_and_pool() -> (tempfile::TempDir, Test
     let (server, pool) = create_test_server_impl(true, repo_path).await;
     (tmp, server, pool)
 }
+
+// ========== Auth Test Helpers ==========
+
+use axum::http::header;
+
+/// Register a user and return (user_id, session_cookie_header_value)
+pub async fn register_user(server: &TestServer, email: &str, name: &str) -> (String, String) {
+    let response = server
+        .post("/api/auth/register")
+        .json(&serde_json::json!({
+            "email": email,
+            "name": name,
+            "password": "Tr0ub4dor&3-correct-horse"
+        }))
+        .await;
+    response.assert_status(axum::http::StatusCode::CREATED);
+
+    let body: serde_json::Value = response.json();
+    let user_id = body["user"]["id"].as_str().unwrap().to_string();
+
+    let cookies = response
+        .headers()
+        .get("set-cookie")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    let cookie_value = cookies.split(';').next().unwrap().to_string();
+
+    (user_id, cookie_value)
+}
+
+/// Create a project and return its ID
+pub async fn create_project(server: &TestServer, cookie: &str, name: &str) -> String {
+    let response = server
+        .post("/api/projects")
+        .add_header(header::COOKIE, cookie)
+        .json(&serde_json::json!({ "name": name }))
+        .await;
+    response.assert_status(axum::http::StatusCode::CREATED);
+    let body: serde_json::Value = response.json();
+    body["id"].as_str().unwrap().to_string()
+}
+
+/// Add a member to a project with the given role
+pub async fn add_member(
+    server: &TestServer,
+    cookie: &str,
+    project_id: &str,
+    user_id: &str,
+    role: &str,
+) {
+    let response = server
+        .post(&format!("/api/projects/{}/members", project_id))
+        .add_header(header::COOKIE, cookie)
+        .json(&serde_json::json!({ "user_id": user_id, "role": role }))
+        .await;
+    response.assert_status(axum::http::StatusCode::CREATED);
+}
+
+/// Create a task in a project and return its ID
+pub async fn create_task_in_project(
+    server: &TestServer,
+    cookie: &str,
+    project_id: &str,
+    title: &str,
+) -> String {
+    let response = server
+        .post("/api/tasks")
+        .add_header(header::COOKIE, cookie)
+        .json(&serde_json::json!({
+            "project_id": project_id,
+            "title": title
+        }))
+        .await;
+    response.assert_status(axum::http::StatusCode::CREATED);
+    let body: serde_json::Value = response.json();
+    body["id"].as_str().unwrap().to_string()
+}
