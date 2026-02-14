@@ -131,9 +131,38 @@ pub async fn get_github_link_status(
     tag = "github-links"
 )]
 pub async fn sync_github_link(
-    State(_state): State<AppState>,
-    _auth: AuthUser,
-    Path(_project_id): Path<Uuid>,
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(project_id): Path<Uuid>,
 ) -> AppResult<Json<SyncResult>> {
-    todo!()
+    authorization_service::authorize_project(&state.pool, auth.user_id, project_id).await?;
+    let link = github_link_service::get_github_link(&state.pool, project_id).await?;
+
+    let github_client = state
+        .github_client
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| std::sync::Arc::new(crate::github::api::NoopGitHubClient));
+
+    let engine = crate::github::sync_engine::SyncEngine::new(github_client, state.pool.clone());
+
+    match engine.sync_project(&link).await {
+        Ok(result) => {
+            state
+                .sse_hub
+                .broadcast(crate::sse::event::SseEvent::github_sync_completed(
+                    result.clone(),
+                ));
+            Ok(Json(result))
+        }
+        Err(e) => {
+            state
+                .sse_hub
+                .broadcast(crate::sse::event::SseEvent::github_sync_failed(
+                    project_id,
+                    e.to_string(),
+                ));
+            Err(e)
+        }
+    }
 }
