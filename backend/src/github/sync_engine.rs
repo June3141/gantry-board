@@ -97,6 +97,25 @@ impl SyncEngine {
         }
     }
 
+    /// Pull issues from GitHub and create/update local tasks.
+    /// Returns (created_count, updated_count).
+    pub async fn pull_issues_from_github(&self, _link: &GitHubLink) -> AppResult<(u32, u32)> {
+        todo!()
+    }
+
+    /// Run a full sync for one project: ensure labels, push, pull, update last_synced.
+    pub async fn sync_project(
+        &self,
+        _link: &GitHubLink,
+    ) -> AppResult<crate::models::github::SyncResult> {
+        todo!()
+    }
+
+    /// Sync all projects that have sync enabled.
+    pub async fn sync_all(&self) -> AppResult<Vec<crate::models::github::SyncResult>> {
+        todo!()
+    }
+
     /// Ensure all gantry labels exist in the repository.
     pub async fn ensure_all_labels(&self, owner: &str, repo: &str) -> AppResult<()> {
         for def in label_mapping::all_label_definitions() {
@@ -123,6 +142,8 @@ mod tests {
         created_issues: Mutex<Vec<CreateIssueRequest>>,
         updated_issues: Mutex<Vec<(u64, UpdateIssueRequest)>>,
         ensured_labels: Mutex<Vec<(String, String)>>,
+        /// Issues returned by list_issues.
+        issues: Mutex<Vec<GitHubIssue>>,
         /// Next issue number to assign.
         next_number: Mutex<u64>,
     }
@@ -133,7 +154,15 @@ mod tests {
                 created_issues: Mutex::new(vec![]),
                 updated_issues: Mutex::new(vec![]),
                 ensured_labels: Mutex::new(vec![]),
+                issues: Mutex::new(vec![]),
                 next_number: Mutex::new(1),
+            }
+        }
+
+        fn with_issues(issues: Vec<GitHubIssue>) -> Self {
+            Self {
+                issues: Mutex::new(issues),
+                ..Self::new()
             }
         }
     }
@@ -151,7 +180,7 @@ mod tests {
             _since: Option<DateTime<Utc>>,
             _state: &str,
         ) -> AppResult<Vec<GitHubIssue>> {
-            Ok(vec![])
+            Ok(self.issues.lock().unwrap().clone())
         }
 
         async fn create_issue(
@@ -288,6 +317,25 @@ mod tests {
         .unwrap();
     }
 
+    fn status_to_db(status: &TaskStatus) -> &'static str {
+        match status {
+            TaskStatus::Backlog => "backlog",
+            TaskStatus::Todo => "todo",
+            TaskStatus::InProgress => "in_progress",
+            TaskStatus::InReview => "in_review",
+            TaskStatus::Done => "done",
+        }
+    }
+
+    fn priority_to_db(priority: &TaskPriority) -> &'static str {
+        match priority {
+            TaskPriority::Low => "low",
+            TaskPriority::Medium => "medium",
+            TaskPriority::High => "high",
+            TaskPriority::Urgent => "urgent",
+        }
+    }
+
     async fn insert_task(pool: &SqlitePool, task: &Task) {
         sqlx::query(
             "INSERT INTO tasks (id, project_id, title, description, status, priority, position) VALUES ($1, $2, $3, $4, $5, $6, $7)",
@@ -296,8 +344,8 @@ mod tests {
         .bind(task.project_id.to_string())
         .bind(&task.title)
         .bind(&task.description)
-        .bind(format!("{:?}", task.status).to_lowercase())
-        .bind(format!("{:?}", task.priority).to_lowercase())
+        .bind(status_to_db(&task.status))
+        .bind(priority_to_db(&task.priority))
         .bind(task.position)
         .execute(pool)
         .await
@@ -440,5 +488,187 @@ mod tests {
         assert_eq!(labels.len(), 9);
         assert!(labels.iter().any(|(n, _)| n == "status:todo"));
         assert!(labels.iter().any(|(n, _)| n == "priority:urgent"));
+    }
+
+    // --- pull_issues_from_github tests ---
+
+    fn make_github_issue(number: u64, title: &str, state: &str, labels: Vec<&str>) -> GitHubIssue {
+        GitHubIssue {
+            number,
+            id: number * 1000,
+            title: title.to_string(),
+            body: Some("Issue body".to_string()),
+            state: state.to_string(),
+            labels: labels.into_iter().map(String::from).collect(),
+            pull_request: false,
+            updated_at: Utc::now(),
+        }
+    }
+
+    #[tokio::test]
+    async fn pull_creates_task_for_new_issue() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+
+        let issue = make_github_issue(
+            10,
+            "New Issue",
+            "open",
+            vec!["status:todo", "priority:high"],
+        );
+        let mock = Arc::new(MockGitHubApi::with_issues(vec![issue]));
+        let engine = SyncEngine::new(Arc::clone(&mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        let (created, updated) = engine.pull_issues_from_github(&link).await.unwrap();
+        assert_eq!(created, 1);
+        assert_eq!(updated, 0);
+
+        // Verify mapping was created
+        let mapping = github_sync_service::get_mapping_by_issue_number(&pool, link.id, 10)
+            .await
+            .unwrap();
+        assert!(mapping.is_some());
+    }
+
+    #[tokio::test]
+    async fn pull_updates_task_when_remote_is_newer() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+        let task = make_task(project_id, TaskStatus::Todo, TaskPriority::Medium);
+        insert_task(&pool, &task).await;
+
+        // Create mapping with old local timestamp
+        let mapping = github_sync_service::create_mapping(&pool, task.id, link.id, 20, Some(20000))
+            .await
+            .unwrap();
+        let old_time = Utc::now() - chrono::Duration::hours(1);
+        github_sync_service::update_mapping_timestamps(&pool, mapping.id, Some(old_time), None)
+            .await
+            .unwrap();
+
+        // GitHub issue is newer
+        let issue = make_github_issue(
+            20,
+            "Updated Title",
+            "open",
+            vec!["status:in_progress", "priority:urgent"],
+        );
+        let mock = Arc::new(MockGitHubApi::with_issues(vec![issue]));
+        let engine = SyncEngine::new(Arc::clone(&mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        let (created, updated) = engine.pull_issues_from_github(&link).await.unwrap();
+        assert_eq!(created, 0);
+        assert_eq!(updated, 1);
+    }
+
+    #[tokio::test]
+    async fn pull_skips_when_local_is_newer() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+        let task = make_task(project_id, TaskStatus::InProgress, TaskPriority::High);
+        insert_task(&pool, &task).await;
+
+        // Create mapping with recent local timestamp
+        let mapping = github_sync_service::create_mapping(&pool, task.id, link.id, 30, Some(30000))
+            .await
+            .unwrap();
+        let recent = Utc::now() + chrono::Duration::hours(1);
+        github_sync_service::update_mapping_timestamps(&pool, mapping.id, Some(recent), None)
+            .await
+            .unwrap();
+
+        // GitHub issue is older
+        let mut issue = make_github_issue(30, "Old Title", "open", vec!["status:todo"]);
+        issue.updated_at = Utc::now() - chrono::Duration::hours(2);
+        let mock = Arc::new(MockGitHubApi::with_issues(vec![issue]));
+        let engine = SyncEngine::new(Arc::clone(&mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        let (created, updated) = engine.pull_issues_from_github(&link).await.unwrap();
+        assert_eq!(created, 0);
+        assert_eq!(updated, 0);
+    }
+
+    #[tokio::test]
+    async fn pull_skips_pull_requests() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+
+        let mut pr = make_github_issue(40, "A PR", "open", vec![]);
+        pr.pull_request = true;
+        let mock = Arc::new(MockGitHubApi::with_issues(vec![pr]));
+        let engine = SyncEngine::new(Arc::clone(&mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        let (created, updated) = engine.pull_issues_from_github(&link).await.unwrap();
+        assert_eq!(created, 0);
+        assert_eq!(updated, 0);
+    }
+
+    #[tokio::test]
+    async fn pull_marks_task_done_when_issue_is_closed() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+
+        let issue = make_github_issue(
+            50,
+            "Closed Issue",
+            "closed",
+            vec!["status:done", "priority:low"],
+        );
+        let mock = Arc::new(MockGitHubApi::with_issues(vec![issue]));
+        let engine = SyncEngine::new(Arc::clone(&mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        let (created, _updated) = engine.pull_issues_from_github(&link).await.unwrap();
+        assert_eq!(created, 1);
+
+        // Verify task was created with Done status
+        let mapping = github_sync_service::get_mapping_by_issue_number(&pool, link.id, 50)
+            .await
+            .unwrap()
+            .unwrap();
+        let task: (String,) = sqlx::query_as("SELECT status FROM tasks WHERE id = $1")
+            .bind(mapping.task_id.to_string())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(task.0, "done");
+    }
+
+    // --- sync_project tests ---
+
+    #[tokio::test]
+    async fn sync_project_returns_combined_result() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+
+        // One local task to push
+        let task = make_task(project_id, TaskStatus::Todo, TaskPriority::Medium);
+        insert_task(&pool, &task).await;
+
+        // One remote issue to pull
+        let issue = make_github_issue(
+            60,
+            "Remote Issue",
+            "open",
+            vec!["status:backlog", "priority:low"],
+        );
+        let mock = Arc::new(MockGitHubApi::with_issues(vec![issue]));
+        let engine = SyncEngine::new(Arc::clone(&mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        let result = engine.sync_project(&link).await.unwrap();
+        assert_eq!(result.project_id, project_id);
+        assert!(result.pushed >= 1);
+        assert!(result.pulled >= 1);
     }
 }
