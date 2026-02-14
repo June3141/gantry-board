@@ -200,6 +200,10 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/projects/{project_id}/github-link/status",
             get(handlers::github_links::get_github_link_status),
         )
+        .route(
+            "/projects/{project_id}/github-link/sync",
+            post(handlers::github_links::sync_github_link),
+        )
         // Preview endpoints
         .route("/previews", get(handlers::previews::list_previews))
         .route("/previews", post(handlers::previews::create_preview))

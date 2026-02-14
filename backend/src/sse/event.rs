@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::models::agent_session::AgentSession;
 use crate::models::docker_preview::DockerPreview;
+use crate::models::github::SyncResult;
 use crate::models::task::Task;
 use crate::models::task_comment::TaskComment;
 
@@ -21,6 +22,8 @@ pub enum SseEvent {
     CommentDeleted { comment_id: Uuid, task_id: Uuid },
     PreviewStatusChanged { preview: DockerPreview },
     PreviewDeleted { preview_id: Uuid },
+    GitHubSyncCompleted { result: SyncResult },
+    GitHubSyncFailed { project_id: Uuid, error: String },
 }
 
 impl SseEvent {
@@ -67,6 +70,14 @@ impl SseEvent {
         Self::PreviewDeleted { preview_id }
     }
 
+    pub fn github_sync_completed(result: SyncResult) -> Self {
+        Self::GitHubSyncCompleted { result }
+    }
+
+    pub fn github_sync_failed(project_id: Uuid, error: String) -> Self {
+        Self::GitHubSyncFailed { project_id, error }
+    }
+
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::TaskCreated { .. } => "task_created",
@@ -79,6 +90,8 @@ impl SseEvent {
             Self::CommentDeleted { .. } => "comment_deleted",
             Self::PreviewStatusChanged { .. } => "preview_status_changed",
             Self::PreviewDeleted { .. } => "preview_deleted",
+            Self::GitHubSyncCompleted { .. } => "github_sync_completed",
+            Self::GitHubSyncFailed { .. } => "github_sync_failed",
         }
     }
 }
@@ -176,6 +189,40 @@ mod tests {
         assert!(json.contains("\"type\":\"AgentOutput\""));
         assert!(json.contains("\"text\":\"test output\""));
         assert!(json.contains(&session_id.to_string()));
+    }
+
+    #[test]
+    fn test_github_sync_completed_event() {
+        let result = crate::models::github::SyncResult {
+            project_id: Uuid::new_v4(),
+            pushed: 3,
+            pulled: 2,
+        };
+        let event = SseEvent::github_sync_completed(result.clone());
+        assert_eq!(event.event_type(), "github_sync_completed");
+        if let SseEvent::GitHubSyncCompleted { result: r } = event {
+            assert_eq!(r.pushed, 3);
+            assert_eq!(r.pulled, 2);
+        } else {
+            panic!("Expected GitHubSyncCompleted event");
+        }
+    }
+
+    #[test]
+    fn test_github_sync_failed_event() {
+        let project_id = Uuid::new_v4();
+        let event = SseEvent::github_sync_failed(project_id, "API error".to_string());
+        assert_eq!(event.event_type(), "github_sync_failed");
+        if let SseEvent::GitHubSyncFailed {
+            project_id: pid,
+            error,
+        } = event
+        {
+            assert_eq!(pid, project_id);
+            assert_eq!(error, "API error");
+        } else {
+            panic!("Expected GitHubSyncFailed event");
+        }
     }
 
     #[test]

@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
-use crate::models::github::{CreateGitHubLinkRequest, GitHubLink, GitHubLinkStatus};
+use crate::models::github::{CreateGitHubLinkRequest, GitHubLink, GitHubLinkStatus, SyncResult};
 use crate::services::{authorization_service, github_link_service, project_service};
 use crate::AppState;
 
@@ -117,4 +117,23 @@ pub async fn get_github_link_status(
         connected,
         last_synced_at: link.last_synced_at,
     }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/projects/{project_id}/github-link/sync",
+    params(("project_id" = Uuid, Path, description = "Project ID")),
+    responses(
+        (status = 200, description = "Sync completed", body = SyncResult),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Not found")
+    ),
+    tag = "github-links"
+)]
+pub async fn sync_github_link(
+    State(_state): State<AppState>,
+    _auth: AuthUser,
+    Path(_project_id): Path<Uuid>,
+) -> AppResult<Json<SyncResult>> {
+    todo!()
 }
