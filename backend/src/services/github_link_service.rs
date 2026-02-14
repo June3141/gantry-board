@@ -120,7 +120,7 @@ pub async fn list_sync_enabled(pool: &SqlitePool) -> AppResult<Vec<GitHubLink>> 
 
 #[tracing::instrument(skip(pool), fields(project_id = %project_id))]
 pub async fn update_last_synced(pool: &SqlitePool, project_id: Uuid) -> AppResult<()> {
-    sqlx::query(
+    let result = sqlx::query(
         r#"
         UPDATE github_links
         SET last_synced_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
@@ -131,6 +131,13 @@ pub async fn update_last_synced(pool: &SqlitePool, project_id: Uuid) -> AppResul
     .bind(project_id.to_string())
     .execute(pool)
     .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!(
+            "github link for project {} not found",
+            project_id
+        )));
+    }
 
     Ok(())
 }

@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::github::{CreateGitHubLinkRequest, GitHubLink, GitHubLinkStatus};
-use crate::services::{authorization_service, github_link_service};
+use crate::services::{authorization_service, github_link_service, project_service};
 use crate::AppState;
 
 #[utoipa::path(
@@ -31,6 +31,7 @@ pub async fn create_github_link(
 ) -> AppResult<(StatusCode, Json<GitHubLink>)> {
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
+    project_service::get_project(&state.pool, project_id).await?;
     authorization_service::require_project_admin(&state.pool, auth.user_id, project_id).await?;
     let link = github_link_service::create_github_link(&state.pool, project_id, &body).await?;
     Ok((StatusCode::CREATED, Json(link)))
@@ -73,6 +74,7 @@ pub async fn delete_github_link(
     auth: AuthUser,
     Path(project_id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
+    project_service::get_project(&state.pool, project_id).await?;
     authorization_service::require_project_admin(&state.pool, auth.user_id, project_id).await?;
     github_link_service::delete_github_link(&state.pool, project_id).await?;
     Ok(StatusCode::NO_CONTENT)
@@ -98,7 +100,13 @@ pub async fn get_github_link_status(
     let link = github_link_service::get_github_link(&state.pool, project_id).await?;
 
     let connected = match &state.github_client {
-        Some(client) => client.check_connection().await.unwrap_or(false),
+        Some(client) => match client.check_connection().await {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::warn!(error = %e, "GitHub connection check failed");
+                false
+            }
+        },
         None => false,
     };
 
