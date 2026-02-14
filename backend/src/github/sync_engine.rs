@@ -248,8 +248,16 @@ impl SyncEngine {
     }
 
     /// Try to push a task to GitHub. No-op if project has no GitHub link.
-    pub async fn try_push_task(&self, _task: &Task) -> AppResult<()> {
-        todo!()
+    pub async fn try_push_task(&self, task: &Task) -> AppResult<()> {
+        let link = github_link_service::get_github_link(&self.pool, task.project_id).await;
+        match link {
+            Ok(link) => {
+                self.push_task_to_github(task, &link).await?;
+                Ok(())
+            }
+            Err(crate::error::AppError::NotFound(_)) => Ok(()),
+            Err(e) => Err(e),
+        }
     }
 
     /// Ensure all gantry labels exist in the repository.

@@ -103,6 +103,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let shutdown_orchestrator = Arc::clone(&orchestrator);
 
+    // Clone values needed by background tasks before moving into AppState
+    let sync_github_client = github_client.clone();
+    let sync_pool = pool.clone();
+    let sync_sse_hub = Arc::clone(&sse_hub);
+
     let state = AppState {
         pool,
         sse_hub,
@@ -160,6 +165,55 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+
+    // Spawn background GitHub sync polling (if enabled)
+    if let Some(sync_client) = sync_github_client {
+        let sync_interval_secs = config.github_sync_interval_secs.max(60);
+        let sync_hub = sync_sse_hub;
+        let sync_token = shutdown_token.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(sync_interval_secs));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            interval.tick().await; // skip the immediate first tick
+            loop {
+                tokio::select! {
+                    _ = interval.tick() => {}
+                    _ = sync_token.cancelled() => {
+                        tracing::info!("background GitHub sync task shutting down");
+                        return;
+                    }
+                }
+                let engine = gantry_board::github::sync_engine::SyncEngine::new(
+                    Arc::clone(&sync_client),
+                    sync_pool.clone(),
+                );
+                match engine.sync_all().await {
+                    Ok(results) => {
+                        for r in results {
+                            if r.pushed > 0 || r.pulled > 0 {
+                                tracing::info!(
+                                    project_id = %r.project_id,
+                                    pushed = r.pushed,
+                                    pulled = r.pulled,
+                                    "GitHub sync completed"
+                                );
+                            }
+                            sync_hub.broadcast(
+                                gantry_board::sse::event::SseEvent::github_sync_completed(r),
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(error = %e, "background GitHub sync failed");
+                    }
+                }
+            }
+        });
+        tracing::info!(
+            interval_secs = sync_interval_secs,
+            "background GitHub sync polling started"
+        );
+    }
 
     let listener = tokio::net::TcpListener::bind(&config.bind_addr).await?;
     tracing::info!("listening on {}", config.bind_addr);
