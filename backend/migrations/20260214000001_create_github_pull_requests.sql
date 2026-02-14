@@ -12,3 +12,6 @@ CREATE TABLE github_pull_requests (
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     UNIQUE(github_link_id, pr_number, task_id)
 );
+
+CREATE INDEX IF NOT EXISTS github_pull_requests_task_id_idx
+    ON github_pull_requests(task_id);

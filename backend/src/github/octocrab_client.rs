@@ -158,15 +158,31 @@ impl GitHubApi for OctocrabClient {
         repo: &str,
         issue_number: u64,
     ) -> AppResult<Vec<LinkedPr>> {
-        let url = format!("/repos/{owner}/{repo}/issues/{issue_number}/timeline?per_page=100");
-        let response: Vec<serde_json::Value> = self
-            .client
-            .get(&url, None::<&()>)
-            .await
-            .map_err(|e| AppError::Internal(format!("GitHub timeline API failed: {e}")))?;
+        let per_page = 100usize;
+        let mut page = 1u32;
+        let mut all_events: Vec<serde_json::Value> = Vec::new();
+
+        loop {
+            let url = format!(
+                "/repos/{owner}/{repo}/issues/{issue_number}/timeline?per_page={per_page}&page={page}"
+            );
+            let page_events: Vec<serde_json::Value> = self
+                .client
+                .get(&url, None::<&()>)
+                .await
+                .map_err(|e| AppError::Internal(format!("GitHub timeline API failed: {e}")))?;
+
+            let fetched = page_events.len();
+            all_events.extend(page_events);
+
+            if fetched < per_page {
+                break;
+            }
+            page += 1;
+        }
 
         let mut prs = Vec::new();
-        for event in response {
+        for event in all_events {
             if event.get("event").and_then(|v| v.as_str()) != Some("cross-referenced") {
                 continue;
             }
