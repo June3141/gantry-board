@@ -247,6 +247,11 @@ impl SyncEngine {
         task_service::update_task(&self.pool, task_id, &req).await
     }
 
+    /// Try to push a task to GitHub. No-op if project has no GitHub link.
+    pub async fn try_push_task(&self, _task: &Task) -> AppResult<()> {
+        todo!()
+    }
+
     /// Ensure all gantry labels exist in the repository.
     pub async fn ensure_all_labels(&self, owner: &str, repo: &str) -> AppResult<()> {
         for def in label_mapping::all_label_definitions() {
@@ -801,5 +806,42 @@ mod tests {
         assert_eq!(result.project_id, project_id);
         assert!(result.pushed >= 1);
         assert!(result.pulled >= 1);
+    }
+
+    // --- try_push_task tests ---
+
+    #[tokio::test]
+    async fn try_push_task_pushes_when_link_exists() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let link = make_link(project_id);
+        insert_link(&pool, &link).await;
+        let task = make_task(project_id, TaskStatus::Todo, TaskPriority::High);
+        insert_task(&pool, &task).await;
+
+        let mock = Arc::new(MockGitHubApi::new());
+        let engine = SyncEngine::new(Arc::clone(&mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        engine.try_push_task(&task).await.unwrap();
+
+        let created = mock.created_issues.lock().unwrap();
+        assert_eq!(created.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn try_push_task_noop_when_no_link() {
+        let pool = setup_db().await;
+        let project_id = create_project(&pool).await;
+        let task = make_task(project_id, TaskStatus::Todo, TaskPriority::High);
+        insert_task(&pool, &task).await;
+
+        let mock = Arc::new(MockGitHubApi::new());
+        let engine = SyncEngine::new(Arc::clone(&mock) as Arc<dyn GitHubApi>, pool.clone());
+
+        // Should succeed (no-op) without a link
+        engine.try_push_task(&task).await.unwrap();
+
+        let created = mock.created_issues.lock().unwrap();
+        assert!(created.is_empty());
     }
 }
