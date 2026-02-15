@@ -169,6 +169,22 @@ tasks:
     dir: "{{.FRONTEND_DIR}}"
     cmd: npm run dev
 
+  # ── Security ────────────────────────────────────
+  backend:deny:
+    desc: Run cargo-deny (advisories, licenses, bans, sources)
+    cmd: cargo deny check
+
+  frontend:audit:
+    desc: Run npm audit for frontend dependencies
+    dir: "{{.FRONTEND_DIR}}"
+    cmd: npm audit --audit-level=moderate
+
+  audit:
+    desc: Run security audits (backend + frontend)
+    deps:
+      - backend:deny
+      - frontend:audit
+
   # ── Gitmoji ───────────────────────────────────
   gitmoji:sync:
     desc: Sync gitmoji pattern from upstream

@@ -31,6 +31,7 @@ jobs:
               - 'backend/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
+              - 'deny.toml'
               - '.config/nextest.toml'
               - '.github/workflows/ci.yml'
             frontend:
@@ -146,3 +147,21 @@ jobs:
       - run: cd frontend && npx biome check src/
       - run: cd frontend && npx vitest run
       - run: cd frontend && npm run build
+
+  # ── Security (cargo-deny, npm audit) ───────────
+  security:
+    name: Security (cargo-deny, npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-deny
+      - run: cargo deny check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: cd frontend && npm ci
+      - run: cd frontend && npm audit --audit-level=moderate
+        continue-on-error: true

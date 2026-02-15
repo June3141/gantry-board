@@ -21,6 +21,7 @@
       "# Install cargo tools (first time only)",
       "if ! command -v sqlx > /dev/null 2>&1; then echo 'Installing sqlx-cli (first time only)...'; cargo install sqlx-cli --no-default-features --features sqlite --locked; fi",
       "if ! command -v cargo-watch > /dev/null 2>&1; then echo 'Installing cargo-watch (first time only)...'; cargo install cargo-watch --locked; fi",
+      "if ! command -v cargo-deny > /dev/null 2>&1; then echo 'Installing cargo-deny (first time only)...'; cargo install cargo-deny --locked; fi",
       "# Frontend dependencies",
       "if [ ! -d frontend/node_modules ]; then echo 'Installing frontend dependencies...'; (cd frontend && npm ci); fi",
       "echo 'Development environment ready!'",
