@@ -75,8 +75,9 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
     let agent_start_governor = governor!(10, 3)?;
     // Rate limit: agent restart — same as start.
     let agent_restart_governor = governor!(10, 3)?;
-    // Rate limit: SSE connections — 5 connections per 10 seconds per IP.
+    // Rate limit: SSE/WebSocket connections — 5 connections per 10 seconds per IP.
     let sse_governor = governor!(10, 5)?;
+    let ws_governor = governor!(10, 5)?;
 
     let api_routes = Router::new()
         // Auth endpoints (rate-limited)
@@ -241,6 +242,11 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         .merge(Router::new().route(
             "/events",
             get(sse::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
+        ))
+        // WebSocket route: no timeout (long-lived), own rate limit only
+        .merge(Router::new().route(
+            "/ws",
+            get(sse::ws_handler::ws_handler).layer(GovernorLayer::new(ws_governor)),
         ));
 
     let metric_handle = init_metrics();
