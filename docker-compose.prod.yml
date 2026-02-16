@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.prod
+    environment:
+      - GANTRY_BIND_ADDR=0.0.0.0:3000
+      - GANTRY_DATABASE_URL=sqlite:/data/gantry_board.db?mode=rwc
+      - GANTRY_CORS_ORIGIN=${GANTRY_CORS_ORIGIN:-http://localhost}
+      - GANTRY_AUTH_SECRET=${GANTRY_AUTH_SECRET}
+      - GANTRY_COOKIE_SECURE=${GANTRY_COOKIE_SECURE:-true}
+      - GANTRY_GITHUB_TOKEN=${GANTRY_GITHUB_TOKEN:-}
+    volumes:
+      - gantry-data:/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "${GANTRY_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  gantry-data:
