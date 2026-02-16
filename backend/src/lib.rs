@@ -258,6 +258,9 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
         )
+        .layer(axum::middleware::from_fn(
+            error::inject_request_id_into_errors,
+        ))
         .layer(prometheus_layer)
         .layer(build_cors_layer(&state.config)?)
         .layer(PropagateRequestIdLayer::x_request_id())

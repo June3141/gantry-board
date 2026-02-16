@@ -70,14 +70,28 @@ async fn test_conflict_error_response_structure() {
     // Create a project
     let response = server
         .post("/api/projects")
-        .json(&serde_json::json!({ "name": "Duplicate" }))
+        .json(&serde_json::json!({ "name": "GH Conflict Test" }))
+        .await;
+    response.assert_status(StatusCode::CREATED);
+    let project_id = response.json::<Value>()["id"].as_str().unwrap().to_string();
+
+    // Create a GitHub link
+    let response = server
+        .post(&format!("/api/projects/{}/github-link", project_id))
+        .json(&serde_json::json!({
+            "repo_owner": "owner",
+            "repo_name": "repo"
+        }))
         .await;
     response.assert_status(StatusCode::CREATED);
 
-    // Try to create same project name (unique constraint)
+    // Try to create same GitHub link (unique constraint on project_id)
     let response = server
-        .post("/api/projects")
-        .json(&serde_json::json!({ "name": "Duplicate" }))
+        .post(&format!("/api/projects/{}/github-link", project_id))
+        .json(&serde_json::json!({
+            "repo_owner": "owner",
+            "repo_name": "repo"
+        }))
         .await;
 
     response.assert_status(StatusCode::CONFLICT);

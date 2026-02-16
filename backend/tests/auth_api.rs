@@ -84,7 +84,7 @@ async fn test_register_duplicate_email_returns_generic_error() {
     response.assert_status(StatusCode::BAD_REQUEST);
 
     let error_body: serde_json::Value = response.json();
-    let error_msg = error_body["error"].as_str().unwrap_or("");
+    let error_msg = error_body["error"]["message"].as_str().unwrap_or("");
     assert!(
         !error_msg.contains("email"),
         "error message should not reveal email exists: {error_msg}"
