@@ -263,6 +263,10 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         ))
         .layer(prometheus_layer)
         .layer(build_cors_layer(&state.config)?)
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            auth::host_check::validate_host_header,
+        ))
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(TraceLayer::new_for_http().make_span_with(
             |request: &axum::http::Request<axum::body::Body>| {
