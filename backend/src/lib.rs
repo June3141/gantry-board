@@ -255,6 +255,12 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             get(move || async move { metric_handle.render() }),
         )
         .nest("/api", api_routes)
+        // Webhook route: no auth/CSRF, body limit 25MB
+        .route(
+            "/api/webhooks/github",
+            post(handlers::webhooks::github_webhook)
+                .layer(axum::extract::DefaultBodyLimit::max(25 * 1024 * 1024)),
+        )
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
         )

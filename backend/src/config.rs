@@ -96,6 +96,10 @@ pub struct Config {
     /// When empty, Host header validation is skipped.
     #[serde(default)]
     pub allowed_hosts: Vec<String>,
+
+    /// GitHub Webhook secret for signature verification (env: GANTRY_GITHUB_WEBHOOK_SECRET)
+    #[serde(default)]
+    pub github_webhook_secret: Option<String>,
 }
 
 fn default_bind_addr() -> String {
@@ -254,6 +258,7 @@ impl Default for Config {
             github_token: None,
             github_sync_interval_secs: default_github_sync_interval_secs(),
             allowed_hosts: Vec::new(),
+            github_webhook_secret: None,
         }
     }
 }
