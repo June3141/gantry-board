@@ -56,7 +56,7 @@ pub async fn github_webhook(
         .config
         .github_webhook_secret
         .as_deref()
-        .ok_or_else(|| AppError::Internal("webhook secret not configured".to_string()))?;
+        .ok_or(AppError::Unauthorized)?;
 
     let signature = headers
         .get("x-hub-signature-256")
