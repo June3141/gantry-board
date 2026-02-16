@@ -65,3 +65,4 @@ tasks:
   machete:
     desc: Detect unused Rust dependencies
     cmd: cargo machete
+    dir: "{{.ROOT_DIR}}"

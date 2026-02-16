@@ -149,6 +149,7 @@ jobs:
       - run: cd frontend && npm run build
 
   # ── Security (cargo-deny, npm audit) ───────────
+  # Runs unconditionally: vulnerability databases update independently of code changes
   security:
     name: Security (cargo-deny, npm audit)
     runs-on: ubuntu-latest
