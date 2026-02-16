@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::AppResult;
@@ -35,6 +36,95 @@ pub trait ProjectService: Send + Sync {
     async fn list_projects_for_user(&self, user_id: Uuid) -> AppResult<Vec<Project>>;
     async fn update_project(&self, id: Uuid, req: &UpdateProjectRequest) -> AppResult<Project>;
     async fn delete_project(&self, id: Uuid) -> AppResult<()>;
+}
+
+/// SQLite-backed [`TaskService`] that delegates to free functions.
+pub struct SqliteTaskService {
+    pool: SqlitePool,
+}
+
+impl SqliteTaskService {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl TaskService for SqliteTaskService {
+    async fn create_task(&self, req: &CreateTaskRequest) -> AppResult<Task> {
+        super::task_service::create_task(&self.pool, req).await
+    }
+
+    async fn get_task(&self, id: Uuid) -> AppResult<Task> {
+        super::task_service::get_task(&self.pool, id).await
+    }
+
+    async fn list_tasks(&self, project_id: Uuid) -> AppResult<Vec<Task>> {
+        super::task_service::list_tasks(&self.pool, project_id).await
+    }
+
+    async fn list_tasks_paginated(
+        &self,
+        project_id: Uuid,
+        limit: i64,
+        offset: i64,
+    ) -> AppResult<(Vec<Task>, i64)> {
+        super::task_service::list_tasks_paginated(&self.pool, project_id, limit, offset).await
+    }
+
+    async fn update_task(&self, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
+        super::task_service::update_task(&self.pool, id, req).await
+    }
+
+    async fn delete_task(&self, id: Uuid) -> AppResult<()> {
+        super::task_service::delete_task(&self.pool, id).await
+    }
+}
+
+/// SQLite-backed [`ProjectService`] that delegates to free functions.
+pub struct SqliteProjectService {
+    pool: SqlitePool,
+}
+
+impl SqliteProjectService {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl ProjectService for SqliteProjectService {
+    async fn create_project(&self, req: &CreateProjectRequest) -> AppResult<Project> {
+        super::project_service::create_project(&self.pool, req).await
+    }
+
+    async fn get_project(&self, id: Uuid) -> AppResult<Project> {
+        super::project_service::get_project(&self.pool, id).await
+    }
+
+    async fn list_projects(&self) -> AppResult<Vec<Project>> {
+        super::project_service::list_projects(&self.pool).await
+    }
+
+    async fn list_projects_paginated(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> AppResult<(Vec<Project>, i64)> {
+        super::project_service::list_projects_paginated(&self.pool, limit, offset).await
+    }
+
+    async fn list_projects_for_user(&self, user_id: Uuid) -> AppResult<Vec<Project>> {
+        super::project_service::list_projects_for_user(&self.pool, user_id).await
+    }
+
+    async fn update_project(&self, id: Uuid, req: &UpdateProjectRequest) -> AppResult<Project> {
+        super::project_service::update_project(&self.pool, id, req).await
+    }
+
+    async fn delete_project(&self, id: Uuid) -> AppResult<()> {
+        super::project_service::delete_project(&self.pool, id).await
+    }
 }
 
 #[cfg(test)]
