@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 
+import { logger } from '../lib/logger';
 import type {
   AgentSession,
   DockerPreview,
@@ -9,6 +10,7 @@ import type {
 } from '../api/generated/model';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const sseLog = logger.child({ module: 'sse' });
 
 export type SseEvent =
   | { type: 'TaskCreated'; task: Task }
@@ -43,7 +45,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
         handleTaskEvent();
       }
     } catch {
-      console.error('Failed to parse SSE event:', event.data);
+      sseLog.error({ data: event.data }, 'failed to parse SSE event');
     }
   };
 
@@ -66,7 +68,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
       }
       handleTaskEvent();
     } catch {
-      console.error('Failed to parse SSE event:', event.data);
+      sseLog.error({ data: event.data }, 'failed to parse SSE event');
     }
   };
   eventSource.addEventListener('agent_session_status_changed', handleAgentSessionEvent);
@@ -83,7 +85,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
         });
       }
     } catch {
-      console.error('Failed to parse SSE event:', event.data);
+      sseLog.error({ data: event.data }, 'failed to parse SSE event');
     }
   };
   eventSource.addEventListener('comment_created', handleCommentEvent);
@@ -112,7 +114,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
         },
       });
     } catch {
-      console.error('Failed to parse GitHub sync SSE event:', event.data);
+      sseLog.error({ data: event.data }, 'failed to parse GitHub sync SSE event');
     }
   };
   eventSource.addEventListener('github_sync_completed', handleGithubSyncEvent);
@@ -120,10 +122,10 @@ export function connectEventSource(queryClient: QueryClient): () => void {
 
   eventSource.onerror = (event: Event) => {
     const source = event.currentTarget as EventSource | null;
-    console.error('SSE connection error', {
-      type: event.type,
-      readyState: source?.readyState,
-    });
+    sseLog.error(
+      { type: event.type, readyState: source?.readyState },
+      'SSE connection error',
+    );
   };
 
   return () => {
