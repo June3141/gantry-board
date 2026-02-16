@@ -71,6 +71,9 @@ git2 = "0.20"
 async-trait = "0.1"
 tokio-util = { version = "0.7", features = ["rt"] }
 
+# Caching
+moka = { version = "0.12", features = ["future"] }
+
 # Docker
 bollard = "0.19"
 tar = "0.4"
