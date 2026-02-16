@@ -5,8 +5,10 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
+import type { ReadinessResponseDocker } from './readinessResponseDocker';
 
 export interface ReadinessResponse {
   db: string;
+  docker?: ReadinessResponseDocker;
   status: string;
 }
