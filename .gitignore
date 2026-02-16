@@ -12,6 +12,10 @@ node_modules/
 dist/
 .vite/
 
+# Coverage reports
+coverage/
+lcov.info
+
 # Environment
 .env
 .env.local

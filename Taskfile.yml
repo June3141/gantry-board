@@ -169,6 +169,28 @@ tasks:
     dir: "{{.FRONTEND_DIR}}"
     cmd: npm run dev
 
+  # ── Coverage ────────────────────────────────────
+  backend:coverage:
+    desc: Run Rust tests with code coverage (HTML report)
+    dir: "{{.BACKEND_DIR}}"
+    cmd: cargo llvm-cov nextest --html --open
+
+  backend:coverage:lcov:
+    desc: Run Rust tests with code coverage (lcov output for CI)
+    dir: "{{.BACKEND_DIR}}"
+    cmd: cargo llvm-cov nextest --lcov --output-path lcov.info
+
+  frontend:coverage:
+    desc: Run frontend tests with coverage
+    dir: "{{.FRONTEND_DIR}}"
+    cmd: npx vitest run --coverage
+
+  coverage:
+    desc: Run all tests with coverage
+    deps:
+      - backend:coverage:lcov
+      - frontend:coverage
+
   # ── Security ────────────────────────────────────
   backend:deny:
     desc: Run cargo-deny (advisories, licenses, bans, sources)
