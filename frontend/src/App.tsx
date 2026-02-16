@@ -29,7 +29,7 @@ function KanbanApp() {
   const openProjectSettings = useUiStore((s) => s.openProjectSettings);
   const openProjectMembers = useUiStore((s) => s.openProjectMembers);
 
-  // Connect to SSE for real-time updates
+  // Connect to real-time updates (WebSocket with SSE fallback)
   // biome-ignore lint/correctness/useExhaustiveDependencies: queryClient is stable from provider
   useEffect(() => {
     const cleanup = connectEventSource(queryClient);

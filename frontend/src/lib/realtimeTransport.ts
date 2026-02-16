@@ -44,7 +44,7 @@ class WebSocketAdapter implements EventSourceLike {
 
   addEventListener(type: string, handler: EventHandler): void {
     if (!this.listeners.has(type)) this.listeners.set(type, new Set());
-    this.listeners.get(type)!.add(handler);
+    this.listeners.get(type)?.add(handler);
   }
 
   removeEventListener(type: string, handler: EventHandler): void {
@@ -143,7 +143,7 @@ class RealtimeProxy implements EventSourceLike {
 
   addEventListener(type: string, handler: EventHandler): void {
     if (!this.handlers.has(type)) this.handlers.set(type, new Set());
-    this.handlers.get(type)!.add(handler);
+    this.handlers.get(type)?.add(handler);
     this.inner.addEventListener(type, handler);
   }
 

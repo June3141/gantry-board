@@ -2,6 +2,22 @@ import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _resetSharedEventSource, useAgentEvents } from './useAgentEvents';
 
+// Mock WebSocket (immediately fails → transport stays on SSE)
+class MockWebSocket {
+  readyState = 0;
+  onopen: ((e: Event) => void) | null = null;
+  onerror: ((e: Event) => void) | null = null;
+  onmessage: ((e: MessageEvent) => void) | null = null;
+  constructor(_url: string) {
+    setTimeout(() => this.onerror?.(new Event('error')), 0);
+  }
+  close() {
+    this.readyState = 3;
+  }
+  addEventListener() {}
+  removeEventListener() {}
+}
+
 class MockEventSource {
   static instances: MockEventSource[] = [];
   static CLOSED = 2;
@@ -43,6 +59,7 @@ class MockEventSource {
 describe('useAgentEvents', () => {
   beforeEach(() => {
     MockEventSource.instances = [];
+    vi.stubGlobal('WebSocket', MockWebSocket);
     vi.stubGlobal('EventSource', MockEventSource);
     _resetSharedEventSource();
   });
