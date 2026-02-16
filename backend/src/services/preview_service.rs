@@ -389,19 +389,30 @@ impl PreviewManager {
             }
         }
 
-        // 4. Allocate port atomically via BEGIN IMMEDIATE transaction
+        // 4. Allocate port atomically via BEGIN IMMEDIATE transaction.
+        // sqlx 0.8 defaults to BEGIN DEFERRED for SQLite, which only acquires
+        // a write lock on the first write statement. Using BEGIN IMMEDIATE
+        // acquires the write lock immediately, preventing SQLITE_BUSY errors
+        // when concurrent allocations race between BEGIN and the first write.
         let port = {
-            let mut tx = self.pool.begin().await?;
-            // BEGIN IMMEDIATE is enforced by sqlx for SQLite write transactions
-            let port = allocate_port_tx(
-                &mut tx,
+            let mut conn = self.pool.acquire().await?;
+            sqlx::query("BEGIN IMMEDIATE").execute(&mut *conn).await?;
+            let port = match allocate_port_tx(
+                &mut *conn,
                 preview_id,
                 self.config.preview_port_range_start,
                 self.config.preview_port_range_end,
                 &self.config.preview_base_url,
             )
-            .await?;
-            tx.commit().await?;
+            .await
+            {
+                Ok(port) => port,
+                Err(e) => {
+                    let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+                    return Err(e);
+                }
+            };
+            sqlx::query("COMMIT").execute(&mut *conn).await?;
             port
         };
 
