@@ -18,48 +18,13 @@ import { useAgentStore } from '../stores/agentStore';
 import { useAuthStore } from '../stores/authStore';
 import { useToastStore } from '../stores/toastStore';
 import { AgentOutputViewer } from './AgentOutputViewer';
-import {
-  AGENT_LABELS,
-  mergeTimeline,
-  STATUS_COLORS,
-  TERMINAL_STATUSES,
-  timeAgo,
-} from './timelineUtils';
+import { TimelineAgentSessionItem } from './TimelineAgentSessionItem';
+import { TimelineCommentItem } from './TimelineCommentItem';
+import { AGENT_LABELS, STATUS_COLORS, TERMINAL_STATUSES, mergeTimeline } from './timelineUtils';
+
+// Re-export for backward compatibility
 export { mergeTimeline } from './timelineUtils';
 export type { TimelineItem } from './timelineUtils';
-import { TimelineCommentItem } from './TimelineCommentItem';
-
-function TimelineAgentSessionItem({
-  session,
-  onView,
-}: {
-  session: AgentSession;
-  onView: (session: AgentSession) => void;
-}) {
-  return (
-    <button
-      type="button"
-      data-testid="timeline-session"
-      className="flex w-full items-center gap-3 rounded-md bg-gray-50 px-3 py-2 text-left hover:bg-gray-100"
-      onClick={() => onView(session)}
-    >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-800">
-        AI
-      </div>
-      <div className="flex flex-1 items-center gap-2">
-        <span className="text-sm font-medium text-gray-900">
-          {AGENT_LABELS[session.agent_type] ?? session.agent_type}
-        </span>
-        <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[session.status]}`}
-        >
-          {session.status}
-        </span>
-        <span className="text-xs text-gray-500">{timeAgo(session.created_at)}</span>
-      </div>
-    </button>
-  );
-}
 
 export function TaskTimeline({ taskId }: { taskId: string }) {
   const { data: comments, isLoading: commentsLoading } = useListComments(taskId);
