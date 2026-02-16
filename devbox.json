@@ -23,6 +23,8 @@
       "if ! command -v cargo-watch > /dev/null 2>&1; then echo 'Installing cargo-watch (first time only)...'; cargo install cargo-watch --locked; fi",
       "if ! command -v cargo-deny > /dev/null 2>&1; then echo 'Installing cargo-deny (first time only)...'; cargo install cargo-deny --locked; fi",
       "if ! command -v cargo-llvm-cov > /dev/null 2>&1; then echo 'Installing cargo-llvm-cov (first time only)...'; cargo install cargo-llvm-cov --locked; fi",
+      "if ! command -v cargo-outdated > /dev/null 2>&1; then echo 'Installing cargo-outdated (first time only)...'; cargo install cargo-outdated --locked; fi",
+      "if ! command -v cargo-machete > /dev/null 2>&1; then echo 'Installing cargo-machete (first time only)...'; cargo install cargo-machete --locked; fi",
       "rustup component add llvm-tools-preview 2>/dev/null || true",
       "# Frontend dependencies",
       "if [ ! -d frontend/node_modules ]; then echo 'Installing frontend dependencies...'; (cd frontend && npm ci); fi",

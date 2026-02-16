@@ -207,6 +207,22 @@ tasks:
       - backend:deny
       - frontend:audit
 
+  # ── Dependency health ────────────────────────────
+  backend:outdated:
+    desc: Check for outdated Rust dependencies
+    cmd: cargo outdated --workspace --root-deps-only
+
+  backend:machete:
+    desc: Detect unused Rust dependencies
+    dir: "{{.BACKEND_DIR}}"
+    cmd: cargo machete
+
+  deps:check:
+    desc: Check dependency health (outdated + unused)
+    cmds:
+      - task: backend:outdated
+      - task: backend:machete
+
   # ── Gitmoji ───────────────────────────────────
   gitmoji:sync:
     desc: Sync gitmoji pattern from upstream
