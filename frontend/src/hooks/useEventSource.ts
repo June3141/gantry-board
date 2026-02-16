@@ -1,6 +1,12 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import { logger } from '../lib/logger';
+import {
+  invalidateComments,
+  invalidatePreviews,
+  invalidateSessions,
+  invalidateTasks,
+} from '../services/queryInvalidation';
 import type {
   AgentSession,
   DockerPreview,
@@ -29,20 +35,11 @@ export type SseEvent =
 export function connectEventSource(queryClient: QueryClient): () => void {
   const eventSource = new EventSource(`${API_BASE_URL}/api/events`);
 
-  const handleTaskEvent = () => {
-    // Invalidate all task queries (including variants with project_id filter)
-    queryClient.invalidateQueries({
-      queryKey: ['/api/tasks'],
-      exact: false,
-    });
-  };
-
   const handleSseMessage = (event: MessageEvent) => {
     try {
-      // Validate JSON structure; parsed value used for type checking
       const parsed = JSON.parse(event.data) as SseEvent;
       if (parsed.type) {
-        handleTaskEvent();
+        invalidateTasks(queryClient);
       }
     } catch {
       sseLog.error({ data: event.data }, 'failed to parse SSE event');
@@ -61,12 +58,9 @@ export function connectEventSource(queryClient: QueryClient): () => void {
       }
       const { task_id: taskId } = parsed.session;
       if (taskId) {
-        queryClient.invalidateQueries({
-          queryKey: [`/api/tasks/${taskId}/sessions`],
-          exact: false,
-        });
+        invalidateSessions(queryClient, taskId);
       }
-      handleTaskEvent();
+      invalidateTasks(queryClient);
     } catch {
       sseLog.error({ data: event.data }, 'failed to parse SSE event');
     }
@@ -79,10 +73,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
       const taskId =
         'comment' in parsed ? parsed.comment.task_id : 'task_id' in parsed ? parsed.task_id : null;
       if (taskId) {
-        queryClient.invalidateQueries({
-          queryKey: [`/api/tasks/${taskId}/comments`],
-          exact: false,
-        });
+        invalidateComments(queryClient, taskId);
       }
     } catch {
       sseLog.error({ data: event.data }, 'failed to parse SSE event');
@@ -93,10 +84,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
   eventSource.addEventListener('comment_deleted', handleCommentEvent);
 
   const handlePreviewEvent = () => {
-    queryClient.invalidateQueries({
-      queryKey: ['/api/previews'],
-      exact: false,
-    });
+    invalidatePreviews(queryClient);
   };
   eventSource.addEventListener('preview_status_changed', handlePreviewEvent);
   eventSource.addEventListener('preview_deleted', handlePreviewEvent);
