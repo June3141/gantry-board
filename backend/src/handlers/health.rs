@@ -66,9 +66,11 @@ pub async fn liveness() -> Json<LivenessResponse> {
 pub struct ReadinessResponse {
     pub status: String,
     pub db: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docker: Option<String>,
 }
 
-/// Readiness probe — checks database connectivity.
+/// Readiness probe — checks database connectivity and Docker health.
 #[utoipa::path(
     get,
     path = "/health/ready",
@@ -81,7 +83,18 @@ pub struct ReadinessResponse {
 pub async fn readiness(State(state): State<AppState>) -> (StatusCode, Json<ReadinessResponse>) {
     let db_ok = sqlx::query("SELECT 1").execute(&state.pool).await.is_ok();
 
-    let status_code = if db_ok {
+    let docker_status = state.preview_manager.as_ref().map(|pm| {
+        if pm.is_docker_healthy() {
+            "healthy"
+        } else {
+            "circuit_breaker_open"
+        }
+        .to_string()
+    });
+
+    let all_ok = db_ok && docker_status.as_deref() != Some("circuit_breaker_open");
+
+    let status_code = if all_ok {
         StatusCode::OK
     } else {
         StatusCode::SERVICE_UNAVAILABLE
@@ -90,8 +103,9 @@ pub async fn readiness(State(state): State<AppState>) -> (StatusCode, Json<Readi
     (
         status_code,
         Json(ReadinessResponse {
-            status: if db_ok { "ready" } else { "not_ready" }.to_string(),
+            status: if all_ok { "ready" } else { "not_ready" }.to_string(),
             db: if db_ok { "connected" } else { "error" }.to_string(),
+            docker: docker_status,
         }),
     )
 }

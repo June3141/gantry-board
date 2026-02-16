@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
 #[allow(deprecated)]
@@ -17,6 +18,7 @@ use futures_util::StreamExt;
 use http_body_util::Full;
 use sqlx::prelude::FromRow;
 use sqlx::{SqliteConnection, SqlitePool};
+use tokio::sync::Semaphore;
 use tracing::info;
 use uuid::Uuid;
 
@@ -25,6 +27,78 @@ use crate::error::{AppError, AppResult};
 use crate::models::docker_preview::{DockerPreview, PreviewStatus};
 use crate::sse::event::SseEvent;
 use crate::sse::hub::SseHub;
+
+/// Circuit breaker for Docker operations.
+/// Opens after `FAILURE_THRESHOLD` consecutive failures and stays open
+/// for `RECOVERY_WINDOW` seconds before allowing a single probe request.
+pub struct DockerCircuitBreaker {
+    consecutive_failures: AtomicU32,
+    last_failure_epoch: std::sync::atomic::AtomicU64,
+}
+
+const FAILURE_THRESHOLD: u32 = 3;
+const RECOVERY_WINDOW_SECS: u64 = 30;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CircuitState {
+    Closed,
+    Open,
+    HalfOpen,
+}
+
+impl DockerCircuitBreaker {
+    pub fn new() -> Self {
+        Self {
+            consecutive_failures: AtomicU32::new(0),
+            last_failure_epoch: std::sync::atomic::AtomicU64::new(0),
+        }
+    }
+
+    pub fn state(&self) -> CircuitState {
+        let failures = self.consecutive_failures.load(Ordering::Relaxed);
+        if failures < FAILURE_THRESHOLD {
+            return CircuitState::Closed;
+        }
+        let last = self.last_failure_epoch.load(Ordering::Relaxed);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        if now.saturating_sub(last) >= RECOVERY_WINDOW_SECS {
+            CircuitState::HalfOpen
+        } else {
+            CircuitState::Open
+        }
+    }
+
+    pub fn check(&self) -> AppResult<()> {
+        match self.state() {
+            CircuitState::Closed | CircuitState::HalfOpen => Ok(()),
+            CircuitState::Open => Err(AppError::Internal(
+                "Docker operations temporarily unavailable (circuit breaker open)".to_string(),
+            )),
+        }
+    }
+
+    pub fn record_success(&self) {
+        self.consecutive_failures.store(0, Ordering::Relaxed);
+    }
+
+    pub fn record_failure(&self) {
+        self.consecutive_failures.fetch_add(1, Ordering::Relaxed);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        self.last_failure_epoch.store(now, Ordering::Relaxed);
+    }
+}
+
+impl Default for DockerCircuitBreaker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[derive(FromRow)]
 struct DockerPreviewRow {
@@ -215,6 +289,9 @@ pub async fn allocate_port_tx(
     Ok(port)
 }
 
+/// Maximum concurrent Docker operations.
+const MAX_CONCURRENT_DOCKER_OPS: usize = 3;
+
 /// Manages Docker container lifecycle for preview environments.
 pub struct PreviewManager {
     docker: Docker,
@@ -222,6 +299,8 @@ pub struct PreviewManager {
     sse_hub: Arc<SseHub>,
     config: Arc<Config>,
     repo_path: PathBuf,
+    circuit_breaker: DockerCircuitBreaker,
+    semaphore: Semaphore,
 }
 
 impl PreviewManager {
@@ -245,13 +324,30 @@ impl PreviewManager {
             sse_hub,
             config,
             repo_path,
+            circuit_breaker: DockerCircuitBreaker::new(),
+            semaphore: Semaphore::new(MAX_CONCURRENT_DOCKER_OPS),
         })
     }
 
     /// Build and start a Docker container for a preview.
     /// This runs as a background task; callers should `tokio::spawn` it.
+    /// Check Docker circuit breaker state. Returns `true` if Docker is healthy.
+    pub fn is_docker_healthy(&self) -> bool {
+        self.circuit_breaker.state() != CircuitState::Open
+    }
+
     #[tracing::instrument(skip(self), fields(%preview_id))]
     pub async fn build_and_start(&self, preview_id: Uuid) -> AppResult<()> {
+        // Check circuit breaker before starting
+        self.circuit_breaker.check()?;
+
+        // Limit concurrent Docker operations
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| AppError::Internal("Docker semaphore closed".to_string()))?;
+
         // 1. Get preview record
         let preview = get_preview(&self.pool, preview_id).await?;
 
@@ -274,8 +370,11 @@ impl PreviewManager {
         let image_tag = format!("gantry-preview-{}", preview.worktree_name);
 
         match self.build_image(&worktree_path, &image_tag).await {
-            Ok(()) => {}
+            Ok(()) => {
+                self.circuit_breaker.record_success();
+            }
             Err(e) => {
+                self.circuit_breaker.record_failure();
                 let mut conn = self.pool.acquire().await?;
                 let updated = update_status_tx(
                     &mut conn,
@@ -314,6 +413,7 @@ impl PreviewManager {
             .await
         {
             Ok(container_id) => {
+                self.circuit_breaker.record_success();
                 let mut conn = self.pool.acquire().await?;
                 update_container_id_tx(&mut conn, preview_id, &container_id).await?;
                 let updated =
@@ -322,6 +422,7 @@ impl PreviewManager {
                     .broadcast(SseEvent::preview_status_changed(updated));
             }
             Err(e) => {
+                self.circuit_breaker.record_failure();
                 let mut conn = self.pool.acquire().await?;
                 let updated = update_status_tx(
                     &mut conn,
