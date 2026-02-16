@@ -398,7 +398,7 @@ impl PreviewManager {
             let mut conn = self.pool.acquire().await?;
             sqlx::query("BEGIN IMMEDIATE").execute(&mut *conn).await?;
             let port = match allocate_port_tx(
-                &mut *conn,
+                &mut conn,
                 preview_id,
                 self.config.preview_port_range_start,
                 self.config.preview_port_range_end,
