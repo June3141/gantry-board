@@ -1,0 +1,67 @@
+version: "3"
+
+tasks:
+  fmt:
+    desc: Format Rust code
+    cmd: cargo fmt
+
+  fmt:check:
+    desc: Check Rust formatting
+    cmd: cargo fmt --check
+
+  lint:
+    desc: Run clippy
+    cmd: cargo clippy --all-targets -- -D warnings
+
+  build:
+    desc: Build Rust backend
+    cmd: cargo build
+
+  test:
+    desc: Run all Rust tests (unit + integration)
+    cmd: '{{if .HAS_NEXTEST}}cargo nextest run{{else}}cargo test{{end}}'
+    vars:
+      HAS_NEXTEST:
+        sh: command -v cargo-nextest >/dev/null 2>&1 && echo "true" || echo ""
+
+  test:unit:
+    desc: Run unit tests only (fast, no DB/HTTP)
+    cmd: '{{if .HAS_NEXTEST}}cargo nextest run --lib{{else}}cargo test --lib{{end}}'
+    vars:
+      HAS_NEXTEST:
+        sh: command -v cargo-nextest >/dev/null 2>&1 && echo "true" || echo ""
+
+  test:integration:
+    desc: Run integration tests only (API endpoints)
+    cmd: '{{if .HAS_NEXTEST}}cargo nextest run --test "*"{{else}}cargo test --test "*"{{end}}'
+    vars:
+      HAS_NEXTEST:
+        sh: command -v cargo-nextest >/dev/null 2>&1 && echo "true" || echo ""
+
+  run:
+    desc: Run backend server
+    cmd: cargo run
+    env:
+      RUST_LOG: info
+
+  coverage:
+    desc: Run Rust tests with code coverage (HTML report)
+    cmd: cargo llvm-cov nextest --html --open
+
+  coverage:lcov:
+    desc: Run Rust tests with code coverage (lcov output for CI)
+    cmd: cargo llvm-cov nextest --lcov --output-path lcov.info
+
+  deny:
+    desc: Run cargo-deny (advisories, licenses, bans, sources)
+    cmd: cargo deny check
+    dir: "{{.ROOT_DIR}}"
+
+  outdated:
+    desc: Check for outdated Rust dependencies
+    cmd: cargo outdated --workspace --root-deps-only
+    dir: "{{.ROOT_DIR}}"
+
+  machete:
+    desc: Detect unused Rust dependencies
+    cmd: cargo machete

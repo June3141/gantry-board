@@ -1,11 +1,21 @@
 version: "3"
 
-vars:
-  FRONTEND_DIR: frontend
-  BACKEND_DIR: backend
+includes:
+  backend:
+    taskfile: ./taskfiles/backend.yml
+    dir: backend
+  frontend:
+    taskfile: ./taskfiles/frontend.yml
+    dir: frontend
+  db:
+    taskfile: ./taskfiles/db.yml
+    dir: backend
+  api:
+    taskfile: ./taskfiles/api.yml
+    dir: frontend
 
 tasks:
-  # ── 全体 ──────────────────────────────────────
+  # ── Orchestration ───────────────────────────────
   check:
     desc: Run all checks (fmt, lint, build, test)
     cmds:
@@ -57,165 +67,17 @@ tasks:
       - backend:test
       - frontend:test
 
-  # ── Backend (Rust) ────────────────────────────
-  backend:fmt:
-    desc: Format Rust code
-    dir: "{{.BACKEND_DIR}}"
-    cmd: cargo fmt
-
-  backend:fmt:check:
-    desc: Check Rust formatting
-    dir: "{{.BACKEND_DIR}}"
-    cmd: cargo fmt --check
-
-  backend:lint:
-    desc: Run clippy
-    dir: "{{.BACKEND_DIR}}"
-    cmd: cargo clippy --all-targets -- -D warnings
-
-  backend:build:
-    desc: Build Rust backend
-    dir: "{{.BACKEND_DIR}}"
-    cmd: cargo build
-
-  backend:test:
-    desc: Run all Rust tests (unit + integration)
-    dir: "{{.BACKEND_DIR}}"
-    cmd: '{{if .HAS_NEXTEST}}cargo nextest run{{else}}cargo test{{end}}'
-    vars:
-      HAS_NEXTEST:
-        sh: command -v cargo-nextest >/dev/null 2>&1 && echo "true" || echo ""
-
-  backend:test:unit:
-    desc: Run unit tests only (fast, no DB/HTTP)
-    dir: "{{.BACKEND_DIR}}"
-    cmd: '{{if .HAS_NEXTEST}}cargo nextest run --lib{{else}}cargo test --lib{{end}}'
-    vars:
-      HAS_NEXTEST:
-        sh: command -v cargo-nextest >/dev/null 2>&1 && echo "true" || echo ""
-
-  backend:test:integration:
-    desc: Run integration tests only (API endpoints)
-    dir: "{{.BACKEND_DIR}}"
-    cmd: '{{if .HAS_NEXTEST}}cargo nextest run --test "*"{{else}}cargo test --test "*"{{end}}'
-    vars:
-      HAS_NEXTEST:
-        sh: command -v cargo-nextest >/dev/null 2>&1 && echo "true" || echo ""
-
-  backend:run:
-    desc: Run backend server
-    dir: "{{.BACKEND_DIR}}"
-    cmd: cargo run
-    env:
-      RUST_LOG: info
-
-  # ── Database (sqlx) ──────────────────────────────
-  db:create:
-    desc: Create SQLite database
-    dir: "{{.BACKEND_DIR}}"
-    cmd: sqlx database create
-
-  db:migrate:
-    desc: Run database migrations
-    dir: "{{.BACKEND_DIR}}"
-    cmd: sqlx migrate run
-
-  db:migrate:add:
-    desc: "Create a new migration (usage: task db:migrate:add -- <name>)"
-    dir: "{{.BACKEND_DIR}}"
-    cmd: sqlx migrate add {{.CLI_ARGS}}
-
-  db:migrate:info:
-    desc: Show migration status
-    dir: "{{.BACKEND_DIR}}"
-    cmd: sqlx migrate info
-
-  db:reset:
-    desc: Drop and recreate database
-    dir: "{{.BACKEND_DIR}}"
-    cmds:
-      - sqlx database drop -y
-      - sqlx database create
-      - sqlx migrate run
-
-  # ── Frontend (React/TypeScript) ───────────────
-  frontend:fmt:
-    desc: Format frontend code with Biome
-    dir: "{{.FRONTEND_DIR}}"
-    cmd: npx biome format --write src/
-
-  frontend:fmt:check:
-    desc: Check frontend formatting
-    dir: "{{.FRONTEND_DIR}}"
-    cmd: npx biome format src/
-
-  frontend:lint:
-    desc: Lint frontend code
-    dir: "{{.FRONTEND_DIR}}"
-    cmd: npx biome lint src/
-
-  frontend:build:
-    desc: Build frontend
-    dir: "{{.FRONTEND_DIR}}"
-    cmd: npm run build
-
-  frontend:test:
-    desc: Run frontend tests
-    dir: "{{.FRONTEND_DIR}}"
-    cmd: npx vitest run
-
-  frontend:dev:
-    desc: Start Vite dev server
-    dir: "{{.FRONTEND_DIR}}"
-    cmd: npm run dev
-
-  # ── Coverage ────────────────────────────────────
-  backend:coverage:
-    desc: Run Rust tests with code coverage (HTML report)
-    dir: "{{.BACKEND_DIR}}"
-    cmd: cargo llvm-cov nextest --html --open
-
-  backend:coverage:lcov:
-    desc: Run Rust tests with code coverage (lcov output for CI)
-    dir: "{{.BACKEND_DIR}}"
-    cmd: cargo llvm-cov nextest --lcov --output-path lcov.info
-
-  frontend:coverage:
-    desc: Run frontend tests with coverage
-    dir: "{{.FRONTEND_DIR}}"
-    cmd: npx vitest run --coverage
-
   coverage:
     desc: Run all tests with coverage
     deps:
       - backend:coverage:lcov
       - frontend:coverage
 
-  # ── Security ────────────────────────────────────
-  backend:deny:
-    desc: Run cargo-deny (advisories, licenses, bans, sources)
-    cmd: cargo deny check
-
-  frontend:audit:
-    desc: Run npm audit for frontend dependencies
-    dir: "{{.FRONTEND_DIR}}"
-    cmd: npm audit --audit-level=moderate
-
   audit:
     desc: Run security audits (backend + frontend)
     deps:
       - backend:deny
       - frontend:audit
-
-  # ── Dependency health ────────────────────────────
-  backend:outdated:
-    desc: Check for outdated Rust dependencies
-    cmd: cargo outdated --workspace --root-deps-only
-
-  backend:machete:
-    desc: Detect unused Rust dependencies
-    dir: "{{.BACKEND_DIR}}"
-    cmd: cargo machete
 
   deps:check:
     desc: Check dependency health (outdated + unused)
@@ -227,25 +89,3 @@ tasks:
   gitmoji:sync:
     desc: Sync gitmoji pattern from upstream
     cmd: .claude/hooks/sync-gitmoji-pattern.sh
-
-  # ── API (OpenAPI / orval) ─────────────────────
-  api:export:
-    desc: Export OpenAPI spec from Rust tests
-    dir: "{{.BACKEND_DIR}}"
-    cmd: cargo test --test export_openapi -- --nocapture
-    generates:
-      - openapi.json
-
-  api:generate:
-    desc: Generate TypeScript client from OpenAPI spec
-    dir: "{{.FRONTEND_DIR}}"
-    deps: [api:export]
-    cmds:
-      - npx orval
-      - npx biome check --write src/api/generated/
-
-  api:diff:
-    desc: Check if generated API client is up to date
-    dir: "{{.FRONTEND_DIR}}"
-    deps: [api:generate]
-    cmd: git diff --exit-code src/api/generated/
