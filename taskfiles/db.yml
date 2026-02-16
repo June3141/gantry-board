@@ -1,0 +1,25 @@
+version: "3"
+
+tasks:
+  create:
+    desc: Create SQLite database
+    cmd: sqlx database create
+
+  migrate:
+    desc: Run database migrations
+    cmd: sqlx migrate run
+
+  migrate:add:
+    desc: "Create a new migration (usage: task db:migrate:add -- <name>)"
+    cmd: sqlx migrate add {{.CLI_ARGS}}
+
+  migrate:info:
+    desc: Show migration status
+    cmd: sqlx migrate info
+
+  reset:
+    desc: Drop and recreate database
+    cmds:
+      - sqlx database drop -y
+      - sqlx database create
+      - sqlx migrate run

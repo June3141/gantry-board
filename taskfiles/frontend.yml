@@ -1,0 +1,34 @@
+version: "3"
+
+tasks:
+  fmt:
+    desc: Format frontend code with Biome
+    cmd: npx biome format --write src/
+
+  fmt:check:
+    desc: Check frontend formatting
+    cmd: npx biome format src/
+
+  lint:
+    desc: Lint frontend code
+    cmd: npx biome lint src/
+
+  build:
+    desc: Build frontend
+    cmd: npm run build
+
+  test:
+    desc: Run frontend tests
+    cmd: npx vitest run
+
+  dev:
+    desc: Start Vite dev server
+    cmd: npm run dev
+
+  coverage:
+    desc: Run frontend tests with coverage
+    cmd: npx vitest run --coverage
+
+  audit:
+    desc: Run npm audit for frontend dependencies
+    cmd: npm audit --audit-level=moderate

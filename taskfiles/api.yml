@@ -1,0 +1,21 @@
+version: "3"
+
+tasks:
+  export:
+    desc: Export OpenAPI spec from Rust tests
+    dir: "{{.ROOT_DIR}}/backend"
+    cmd: cargo test --test export_openapi -- --nocapture
+    generates:
+      - openapi.json
+
+  generate:
+    desc: Generate TypeScript client from OpenAPI spec
+    deps: [export]
+    cmds:
+      - npx orval
+      - npx biome check --write src/api/generated/
+
+  diff:
+    desc: Check if generated API client is up to date
+    deps: [generate]
+    cmd: git diff --exit-code src/api/generated/

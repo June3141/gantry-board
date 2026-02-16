@@ -18,6 +18,9 @@ description: Taskfile commands for code quality checks and formatting
 | API export | `task api:export` | After modifying utoipa annotations |
 | API generate | `task api:generate` | After OpenAPI spec changes |
 | API diff | `task api:diff` | CI — verify generated code is up to date |
+| Security audit | `task audit` | Before release / periodic |
+| Coverage | `task coverage` | After major changes |
+| Dep health | `task deps:check` | Periodic maintenance |
 
 ## Layer-specific Commands
 
@@ -25,6 +28,21 @@ description: Taskfile commands for code quality checks and formatting
 |-------|--------|------|-------|------|
 | Backend | `task backend:fmt` | `task backend:lint` | `task backend:build` | `task backend:test` |
 | Frontend | `task frontend:fmt` | `task frontend:lint` | `task frontend:build` | `task frontend:test` |
+
+## Security & Maintenance Commands
+
+| Check | Command | Description |
+|-------|---------|-------------|
+| cargo-deny | `task backend:deny` | Advisories, licenses, bans, sources |
+| npm audit | `task frontend:audit` | Frontend dependency vulnerabilities |
+| Security (all) | `task audit` | Both backend + frontend security |
+| Backend coverage | `task backend:coverage` | HTML report (opens in browser) |
+| Backend coverage (CI) | `task backend:coverage:lcov` | lcov output for CI |
+| Frontend coverage | `task frontend:coverage` | Vitest with v8 coverage |
+| Coverage (all) | `task coverage` | Both backend + frontend coverage |
+| Outdated deps | `task backend:outdated` | Check for outdated Rust deps |
+| Unused deps | `task backend:machete` | Detect unused Rust deps |
+| Dep health (all) | `task deps:check` | Outdated + unused check |
 
 ## Automated Hooks
 
