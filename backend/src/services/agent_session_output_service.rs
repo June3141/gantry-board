@@ -1,5 +1,8 @@
+use std::time::Duration;
+
 use chrono::Utc;
 use sqlx::SqlitePool;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
@@ -112,6 +115,121 @@ pub async fn cleanup_old_outputs(pool: &SqlitePool, retention_days: u64) -> AppR
     .execute(pool)
     .await?;
     Ok(result.rows_affected())
+}
+
+/// Pending output waiting to be flushed.
+struct PendingOutput {
+    session_id: Uuid,
+    sequence: i64,
+    content: String,
+}
+
+/// Buffers agent outputs and flushes them in bulk to reduce DB write contention.
+/// Flushes every `flush_interval` or when the buffer reaches `batch_size`.
+pub struct OutputBuffer {
+    pool: SqlitePool,
+    buffer: Mutex<Vec<PendingOutput>>,
+    batch_size: usize,
+}
+
+const DEFAULT_BATCH_SIZE: usize = 100;
+const DEFAULT_FLUSH_INTERVAL_MS: u64 = 500;
+
+impl OutputBuffer {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self {
+            pool,
+            buffer: Mutex::new(Vec::new()),
+            batch_size: DEFAULT_BATCH_SIZE,
+        }
+    }
+
+    /// Add an output to the buffer. Flushes automatically when batch_size is reached.
+    pub async fn add(&self, session_id: Uuid, sequence: i64, content: String) -> AppResult<()> {
+        if content.len() > MAX_CONTENT_SIZE {
+            return Err(AppError::Validation(format!(
+                "output content exceeds maximum size of {} bytes",
+                MAX_CONTENT_SIZE
+            )));
+        }
+        if sequence >= MAX_OUTPUTS_PER_SESSION {
+            return Err(AppError::Validation(format!(
+                "session output limit reached ({MAX_OUTPUTS_PER_SESSION} records)"
+            )));
+        }
+
+        let should_flush = {
+            let mut buf = self.buffer.lock().await;
+            buf.push(PendingOutput {
+                session_id,
+                sequence,
+                content,
+            });
+            buf.len() >= self.batch_size
+        };
+
+        if should_flush {
+            self.flush().await?;
+        }
+
+        Ok(())
+    }
+
+    /// Flush all pending outputs to the database in a single transaction.
+    pub async fn flush(&self) -> AppResult<()> {
+        let items = {
+            let mut buf = self.buffer.lock().await;
+            std::mem::take(&mut *buf)
+        };
+
+        if items.is_empty() {
+            return Ok(());
+        }
+
+        let mut tx = self.pool.begin().await?;
+        for item in &items {
+            sqlx::query(
+                "INSERT INTO agent_session_outputs (session_id, sequence, content) VALUES ($1, $2, $3)",
+            )
+            .bind(item.session_id.to_string())
+            .bind(item.sequence)
+            .bind(&item.content)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+
+        tracing::debug!(count = items.len(), "flushed output buffer");
+        Ok(())
+    }
+
+    /// Spawn a periodic flush task that runs until the token is cancelled.
+    pub fn spawn_periodic_flush(
+        self: &std::sync::Arc<Self>,
+        cancel: tokio_util::sync::CancellationToken,
+    ) {
+        let buf = std::sync::Arc::clone(self);
+        tokio::spawn(async move {
+            let mut interval =
+                tokio::time::interval(Duration::from_millis(DEFAULT_FLUSH_INTERVAL_MS));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            loop {
+                tokio::select! {
+                    _ = interval.tick() => {}
+                    _ = cancel.cancelled() => {
+                        // Final flush on shutdown
+                        if let Err(e) = buf.flush().await {
+                            tracing::warn!(error = %e, "final output buffer flush failed");
+                        }
+                        return;
+                    }
+                }
+                if let Err(e) = buf.flush().await {
+                    tracing::warn!(error = %e, "periodic output buffer flush failed");
+                }
+            }
+        });
+    }
 }
 
 #[cfg(test)]

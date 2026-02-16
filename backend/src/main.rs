@@ -111,6 +111,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sync_pool = pool.clone();
     let sync_sse_hub = Arc::clone(&sse_hub);
 
+    let output_buffer = Arc::new(
+        gantry_board::services::agent_session_output_service::OutputBuffer::new(pool.clone()),
+    );
+
     let state = AppState {
         pool,
         sse_hub,
@@ -118,12 +122,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         orchestrator,
         preview_manager,
         github_client,
+        output_buffer: Arc::clone(&output_buffer),
         started_at: std::time::Instant::now(),
     };
     let app = gantry_board::app(state)?;
 
     // Cancellation token for graceful shutdown of background tasks
     let shutdown_token = CancellationToken::new();
+
+    // Spawn periodic output buffer flush
+    output_buffer.spawn_periodic_flush(shutdown_token.clone());
 
     // Spawn background task for periodic session cleanup
     let cleanup_interval_secs = config.session_cleanup_interval_secs.max(1);

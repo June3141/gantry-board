@@ -11,6 +11,7 @@ use gantry_board::agent::executor::{AgentExecutor, NoopExecutor};
 use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::models::agent_session::AgentType;
+use gantry_board::services::agent_session_output_service::OutputBuffer;
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
 use sqlx::sqlite::SqlitePoolOptions;
@@ -43,6 +44,7 @@ async fn create_server_with_allowed_hosts(hosts: Vec<String>) -> TestServer {
         PathBuf::from("."),
         Arc::clone(&sse_hub),
     ));
+    let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
     let state = AppState {
         pool,
         sse_hub,
@@ -50,6 +52,7 @@ async fn create_server_with_allowed_hosts(hosts: Vec<String>) -> TestServer {
         orchestrator,
         preview_manager: None,
         github_client: None,
+        output_buffer,
         started_at: std::time::Instant::now(),
     };
 

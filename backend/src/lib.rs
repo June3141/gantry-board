@@ -32,6 +32,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::agent::orchestrator::AgentOrchestrator;
 use crate::github::api::GitHubApi;
+use crate::services::agent_session_output_service::OutputBuffer;
 use crate::services::preview_service::PreviewManager;
 use crate::sse::hub::SseHub;
 
@@ -43,6 +44,7 @@ pub struct AppState {
     pub orchestrator: Arc<AgentOrchestrator>,
     pub preview_manager: Option<Arc<PreviewManager>>,
     pub github_client: Option<Arc<dyn GitHubApi>>,
+    pub output_buffer: Arc<OutputBuffer>,
     pub started_at: std::time::Instant,
 }
 

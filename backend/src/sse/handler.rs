@@ -65,6 +65,7 @@ mod tests {
     use crate::agent::orchestrator::AgentOrchestrator;
     use crate::auth::middleware::AuthUser;
     use crate::config::Config;
+    use crate::services::agent_session_output_service::OutputBuffer;
     use crate::sse::event::SseEvent;
     use crate::sse::hub::SseHub;
     use sqlx::sqlite::SqlitePoolOptions;
@@ -95,6 +96,7 @@ mod tests {
             PathBuf::from("."),
             Arc::clone(&sse_hub),
         ));
+        let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
         AppState {
             pool,
             sse_hub,
@@ -102,6 +104,7 @@ mod tests {
             orchestrator,
             preview_manager: None,
             github_client: None,
+            output_buffer,
             started_at: std::time::Instant::now(),
         }
     }
