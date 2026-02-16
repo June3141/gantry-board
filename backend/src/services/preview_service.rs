@@ -156,67 +156,63 @@ pub async fn update_status_tx(
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
-pub async fn update_container_info_tx(
+pub async fn update_container_id_tx(
     conn: &mut SqliteConnection,
     id: Uuid,
     container_id: &str,
-    port: i32,
-    preview_url: &str,
-) -> AppResult<DockerPreview> {
+) -> AppResult<()> {
     let now = Utc::now();
-    let result = sqlx::query(
-        r#"
-        UPDATE docker_previews
-        SET container_id = $1, port = $2, preview_url = $3, updated_at = $4
-        WHERE id = $5
-        "#,
-    )
-    .bind(container_id)
-    .bind(port)
-    .bind(preview_url)
-    .bind(now)
-    .bind(id.to_string())
-    .execute(&mut *conn)
-    .await?;
+    let result =
+        sqlx::query("UPDATE docker_previews SET container_id = $1, updated_at = $2 WHERE id = $3")
+            .bind(container_id)
+            .bind(now)
+            .bind(id.to_string())
+            .execute(&mut *conn)
+            .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound(format!("preview {id} not found")));
     }
 
-    let row = sqlx::query_as::<_, DockerPreviewRow>(
-        "SELECT id, worktree_name, container_id, port, status, preview_url, error_message, created_at, updated_at FROM docker_previews WHERE id = $1",
-    )
-    .bind(id.to_string())
-    .fetch_one(&mut *conn)
-    .await?;
-
-    row.try_into()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    Ok(())
 }
 
-pub async fn find_available_port(
-    pool: &SqlitePool,
+/// Atomically allocate the next available port within the configured range.
+/// Uses BEGIN IMMEDIATE to prevent concurrent allocations of the same port.
+pub async fn allocate_port_tx(
+    conn: &mut SqliteConnection,
+    preview_id: Uuid,
     range_start: u16,
     range_end: u16,
+    base_url: &str,
 ) -> AppResult<i32> {
     let allocated: Vec<(i32,)> = sqlx::query_as(
         "SELECT port FROM docker_previews WHERE port IS NOT NULL AND status IN ('pending', 'building', 'running')",
     )
-    .fetch_all(pool)
+    .fetch_all(&mut *conn)
     .await?;
 
     let allocated_ports: std::collections::HashSet<i32> =
         allocated.into_iter().map(|(p,)| p).collect();
 
-    for port in i32::from(range_start)..=i32::from(range_end) {
-        if !allocated_ports.contains(&port) {
-            return Ok(port);
-        }
-    }
+    let port = (i32::from(range_start)..=i32::from(range_end))
+        .find(|p| !allocated_ports.contains(p))
+        .ok_or_else(|| AppError::Conflict("no available ports in configured range".to_string()))?;
 
-    Err(AppError::Conflict(
-        "no available ports in configured range".to_string(),
-    ))
+    // Immediately claim the port in the same transaction
+    let preview_url = format!("{base_url}:{port}");
+    let now = Utc::now();
+    sqlx::query(
+        "UPDATE docker_previews SET port = $1, preview_url = $2, updated_at = $3 WHERE id = $4",
+    )
+    .bind(port)
+    .bind(&preview_url)
+    .bind(now)
+    .bind(preview_id.to_string())
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(port)
 }
 
 /// Manages Docker container lifecycle for preview environments.
@@ -294,17 +290,24 @@ impl PreviewManager {
             }
         }
 
-        // 4. Allocate port
-        let port = find_available_port(
-            &self.pool,
-            self.config.preview_port_range_start,
-            self.config.preview_port_range_end,
-        )
-        .await?;
+        // 4. Allocate port atomically via BEGIN IMMEDIATE transaction
+        let port = {
+            let mut tx = self.pool.begin().await?;
+            // BEGIN IMMEDIATE is enforced by sqlx for SQLite write transactions
+            let port = allocate_port_tx(
+                &mut tx,
+                preview_id,
+                self.config.preview_port_range_start,
+                self.config.preview_port_range_end,
+                &self.config.preview_base_url,
+            )
+            .await?;
+            tx.commit().await?;
+            port
+        };
 
         // 5. Create and start container
         let container_name = format!("gantry-preview-{}", preview.worktree_name);
-        let preview_url = format!("{}:{}", self.config.preview_base_url, port);
 
         match self
             .create_and_start_container(&image_tag, &container_name, port)
@@ -312,8 +315,7 @@ impl PreviewManager {
         {
             Ok(container_id) => {
                 let mut conn = self.pool.acquire().await?;
-                update_container_info_tx(&mut conn, preview_id, &container_id, port, &preview_url)
-                    .await?;
+                update_container_id_tx(&mut conn, preview_id, &container_id).await?;
                 let updated =
                     update_status_tx(&mut conn, preview_id, PreviewStatus::Running, None).await?;
                 self.sse_hub
