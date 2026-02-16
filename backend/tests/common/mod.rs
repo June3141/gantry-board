@@ -42,13 +42,14 @@ async fn create_test_server_impl(
     let sse_hub = Arc::new(SseHub::default());
     let mut executors: HashMap<AgentType, Arc<dyn AgentExecutor>> = HashMap::new();
     executors.insert(AgentType::ClaudeCode, Arc::new(NoopExecutor));
+    let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
     let orchestrator = Arc::new(AgentOrchestrator::new(
         executors,
         pool.clone(),
         repo_path,
         Arc::clone(&sse_hub),
+        Arc::clone(&output_buffer),
     ));
-    let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
     let state = AppState {
         pool: pool.clone(),
         sse_hub,

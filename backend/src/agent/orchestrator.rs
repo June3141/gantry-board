@@ -12,7 +12,8 @@ use crate::error::{AppError, AppResult};
 use crate::models::agent_session::{
     AgentSessionStatus, AgentType, CreateAgentSessionRequest, UpdateAgentSessionRequest,
 };
-use crate::services::{agent_session_output_service, agent_session_service, worktree_service};
+use crate::services::agent_session_output_service::OutputBuffer;
+use crate::services::{agent_session_service, worktree_service};
 use crate::sse::event::SseEvent;
 use crate::sse::hub::SseHub;
 
@@ -43,6 +44,7 @@ pub struct AgentOrchestrator {
     pool: SqlitePool,
     repo_path: PathBuf,
     sse_hub: Arc<SseHub>,
+    output_buffer: Arc<OutputBuffer>,
     /// Per-task lock to prevent concurrent start_session for the same task.
     task_locks: Mutex<HashMap<Uuid, Arc<Mutex<()>>>>,
     /// Currently running sessions, keyed by session_id.
@@ -55,12 +57,14 @@ impl AgentOrchestrator {
         pool: SqlitePool,
         repo_path: PathBuf,
         sse_hub: Arc<SseHub>,
+        output_buffer: Arc<OutputBuffer>,
     ) -> Self {
         Self {
             executors,
             pool,
             repo_path,
             sse_hub,
+            output_buffer,
             task_locks: Mutex::new(HashMap::new()),
             running: Arc::new(Mutex::new(HashMap::new())),
         }
@@ -335,10 +339,12 @@ impl AgentOrchestrator {
         let pool = self.pool.clone();
         let running = Arc::clone(&self.running);
         let sse_hub = Arc::clone(&self.sse_hub);
+        let output_buffer = Arc::clone(&self.output_buffer);
         tokio::spawn(async move {
             // Track terminal event to determine final status
             let mut final_status = AgentSessionStatus::Completed;
             let mut sequence: i64 = 0;
+            let mut persist = true;
 
             // Drain output events until the channel closes
             while let Some(event) = output_rx.recv().await {
@@ -350,25 +356,29 @@ impl AgentOrchestrator {
                     }
                     AgentOutputEvent::Output { text } => {
                         sse_hub.broadcast(SseEvent::agent_output(session_id, text.clone()));
-                        // Best-effort persistence (after broadcast to avoid delaying SSE)
-                        match agent_session_output_service::append_output(
-                            &pool, session_id, sequence, &text,
-                        )
-                        .await
-                        {
-                            Ok(_) => {}
-                            Err(crate::error::AppError::Validation(ref msg))
-                                if msg.contains("limit reached") =>
-                            {
-                                warn!("output limit reached for session {session_id}, stopping persistence");
-                            }
-                            Err(e) => {
-                                warn!("failed to persist output for session {session_id} seq {sequence}: {e}");
+                        // Best-effort buffered persistence (after broadcast to avoid delaying SSE)
+                        if persist {
+                            match output_buffer.add(session_id, sequence, text).await {
+                                Ok(()) => {}
+                                Err(crate::error::AppError::Validation(ref msg))
+                                    if msg.contains("limit reached") =>
+                                {
+                                    warn!("output limit reached for session {session_id}, stopping persistence");
+                                    persist = false;
+                                }
+                                Err(e) => {
+                                    warn!("failed to buffer output for session {session_id} seq {sequence}: {e}");
+                                }
                             }
                         }
                         sequence += 1;
                     }
                 }
+            }
+
+            // Flush any remaining buffered outputs before status update
+            if let Err(e) = output_buffer.flush().await {
+                warn!("failed to flush output buffer for session {session_id}: {e}");
             }
 
             // Wait for the executor task to finish
@@ -530,7 +540,8 @@ mod tests {
     ) -> AgentOrchestrator {
         let mut executors = HashMap::new();
         executors.insert(AgentType::ClaudeCode, executor);
-        AgentOrchestrator::new(executors, pool, repo_path, sse_hub)
+        let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
+        AgentOrchestrator::new(executors, pool, repo_path, sse_hub, output_buffer)
     }
 
     #[tokio::test]

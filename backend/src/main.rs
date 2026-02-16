@@ -53,6 +53,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_deref()
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
+    let output_buffer = Arc::new(
+        gantry_board::services::agent_session_output_service::OutputBuffer::new(pool.clone()),
+    );
+
     let mut executors: HashMap<AgentType, Arc<dyn AgentExecutor>> = HashMap::new();
     executors.insert(AgentType::ClaudeCode, Arc::new(ClaudeCodeExecutor));
     executors.insert(AgentType::GeminiCli, Arc::new(GeminiCliExecutor));
@@ -61,6 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pool.clone(),
         repo_path.clone(),
         Arc::clone(&sse_hub),
+        Arc::clone(&output_buffer),
     ));
 
     let cleanup_pool = pool.clone();
@@ -110,10 +115,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sync_github_client = github_client.clone();
     let sync_pool = pool.clone();
     let sync_sse_hub = Arc::clone(&sse_hub);
-
-    let output_buffer = Arc::new(
-        gantry_board::services::agent_session_output_service::OutputBuffer::new(pool.clone()),
-    );
 
     let state = AppState {
         pool,

@@ -90,13 +90,14 @@ mod tests {
             crate::models::agent_session::AgentType::ClaudeCode,
             Arc::new(NoopExecutor) as Arc<dyn crate::agent::executor::AgentExecutor>,
         );
+        let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
         let orchestrator = Arc::new(AgentOrchestrator::new(
             executors,
             pool.clone(),
             PathBuf::from("."),
             Arc::clone(&sse_hub),
+            Arc::clone(&output_buffer),
         ));
-        let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
         AppState {
             pool,
             sse_hub,

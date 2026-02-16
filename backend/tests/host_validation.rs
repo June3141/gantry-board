@@ -38,13 +38,14 @@ async fn create_server_with_allowed_hosts(hosts: Vec<String>) -> TestServer {
     let sse_hub = Arc::new(SseHub::default());
     let mut executors: HashMap<AgentType, Arc<dyn AgentExecutor>> = HashMap::new();
     executors.insert(AgentType::ClaudeCode, Arc::new(NoopExecutor));
+    let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
     let orchestrator = Arc::new(AgentOrchestrator::new(
         executors,
         pool.clone(),
         PathBuf::from("."),
         Arc::clone(&sse_hub),
+        Arc::clone(&output_buffer),
     ));
-    let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
     let state = AppState {
         pool,
         sse_hub,
