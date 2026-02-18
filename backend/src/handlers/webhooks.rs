@@ -167,4 +167,32 @@ mod tests {
     fn test_reject_missing_prefix() {
         assert!(!verify_signature("secret", b"payload", "invalid"));
     }
+
+    #[test]
+    fn test_reject_empty_signature_header() {
+        assert!(!verify_signature("secret", b"payload", ""));
+    }
+
+    #[test]
+    fn test_reject_invalid_hex_after_prefix() {
+        assert!(!verify_signature("secret", b"payload", "sha256=not-hex!!"));
+    }
+
+    #[test]
+    fn test_reject_truncated_signature() {
+        // Valid hex but wrong length — HMAC comparison should fail
+        assert!(!verify_signature("secret", b"payload", "sha256=abcd"));
+    }
+
+    #[test]
+    fn test_empty_payload_with_valid_signature() {
+        let secret = "test-secret";
+        let payload = b"";
+        let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
+        mac.update(payload);
+        let sig = hex::encode(mac.finalize().into_bytes());
+        let header = format!("sha256={sig}");
+
+        assert!(verify_signature(secret, payload, &header));
+    }
 }
