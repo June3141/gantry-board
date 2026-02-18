@@ -20,11 +20,11 @@ import { useToastStore } from '../stores/toastStore';
 import { AgentOutputViewer } from './AgentOutputViewer';
 import { TimelineAgentSessionItem } from './TimelineAgentSessionItem';
 import { TimelineCommentItem } from './TimelineCommentItem';
-import { AGENT_LABELS, STATUS_COLORS, TERMINAL_STATUSES, mergeTimeline } from './timelineUtils';
+import { AGENT_LABELS, mergeTimeline, STATUS_COLORS, TERMINAL_STATUSES } from './timelineUtils';
 
+export type { TimelineItem } from './timelineUtils';
 // Re-export for backward compatibility
 export { mergeTimeline } from './timelineUtils';
-export type { TimelineItem } from './timelineUtils';
 
 export function TaskTimeline({ taskId }: { taskId: string }) {
   const { data: comments, isLoading: commentsLoading } = useListComments(taskId);

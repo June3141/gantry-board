@@ -1,7 +1,7 @@
 import type {
+  AgentSession,
   AgentSessionStatus,
   AgentType,
-  AgentSession,
   TaskComment,
 } from '../api/generated/model';
 
