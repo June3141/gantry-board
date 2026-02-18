@@ -1,19 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as membersApi from '../api/generated/endpoints/project-members/project-members';
-import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
-import type { Task } from '../api/generated/model';
-import { TaskPriority, TaskStatus } from '../api/generated/model';
-import { useBoardStore } from '../stores/boardStore';
+import * as membersApi from '@/api/generated/endpoints/project-members/project-members';
+import * as tasksApi from '@/api/generated/endpoints/tasks/tasks';
+import type { Task } from '@/api/generated/model';
+import { TaskPriority, TaskStatus } from '@/api/generated/model';
+import { useBoardStore } from '@/stores/boardStore';
 import { KanbanBoard } from './KanbanBoard';
 
-vi.mock('../api/generated/endpoints/tasks/tasks', () => ({
+vi.mock('@/api/generated/endpoints/tasks/tasks', () => ({
   useListTasks: vi.fn(),
   useUpdateTask: vi.fn(),
 }));
 
-vi.mock('../api/generated/endpoints/project-members/project-members', () => ({
+vi.mock('@/api/generated/endpoints/project-members/project-members', () => ({
   useListMembers: vi.fn(),
 }));
 

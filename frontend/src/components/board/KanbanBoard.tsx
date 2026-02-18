@@ -9,15 +9,15 @@ import {
 } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
+import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import {
   getListTasksQueryKey,
   useListTasks,
   useUpdateTask,
-} from '../api/generated/endpoints/tasks/tasks';
-import type { PaginatedResponseTask, Task } from '../api/generated/model';
-import { TaskStatus } from '../api/generated/model';
-import { useBoardStore } from '../stores/boardStore';
+} from '@/api/generated/endpoints/tasks/tasks';
+import type { PaginatedResponseTask, Task } from '@/api/generated/model';
+import { TaskStatus } from '@/api/generated/model';
+import { useBoardStore } from '@/stores/boardStore';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
 import { TaskFilterBar } from './TaskFilterBar';

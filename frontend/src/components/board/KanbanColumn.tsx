@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
-import type { ProjectMember, Task } from '../api/generated/model';
-import { TaskStatus } from '../api/generated/model';
-import { useUiStore } from '../stores/uiStore';
+import type { ProjectMember, Task } from '@/api/generated/model';
+import { TaskStatus } from '@/api/generated/model';
+import { useUiStore } from '@/stores/uiStore';
 import { TaskCard } from './TaskCard';
 
 interface KanbanColumnProps {

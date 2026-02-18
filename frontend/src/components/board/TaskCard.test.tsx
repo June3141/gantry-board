@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { ProjectMember, Task } from '../api/generated/model';
-import { MemberRole, TaskPriority, TaskStatus } from '../api/generated/model';
-import { useUiStore } from '../stores/uiStore';
+import type { ProjectMember, Task } from '@/api/generated/model';
+import { MemberRole, TaskPriority, TaskStatus } from '@/api/generated/model';
+import { useUiStore } from '@/stores/uiStore';
 import { TaskCard } from './TaskCard';
 
 const createMockTask = (overrides: Partial<Task> = {}): Task => ({

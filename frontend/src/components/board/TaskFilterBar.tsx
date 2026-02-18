@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { ProjectMember } from '../api/generated/model';
-import { TaskPriority } from '../api/generated/model';
-import { useBoardStore } from '../stores/boardStore';
+import type { ProjectMember } from '@/api/generated/model';
+import { TaskPriority } from '@/api/generated/model';
+import { useBoardStore } from '@/stores/boardStore';
 
 interface TaskFilterBarProps {
   members?: ProjectMember[];

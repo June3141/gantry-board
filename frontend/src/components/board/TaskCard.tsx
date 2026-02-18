@@ -1,8 +1,8 @@
 import { useDraggable } from '@dnd-kit/core';
 import { useRef } from 'react';
-import type { ProjectMember, Task } from '../api/generated/model';
-import { TaskPriority } from '../api/generated/model';
-import { useUiStore } from '../stores/uiStore';
+import type { ProjectMember, Task } from '@/api/generated/model';
+import { TaskPriority } from '@/api/generated/model';
+import { useUiStore } from '@/stores/uiStore';
 
 interface TaskCardProps {
   task: Task;
