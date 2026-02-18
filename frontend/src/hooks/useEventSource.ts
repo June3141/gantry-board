@@ -1,12 +1,4 @@
 import type { QueryClient } from '@tanstack/react-query';
-
-import { logger } from '../lib/logger';
-import {
-  invalidateComments,
-  invalidatePreviews,
-  invalidateSessions,
-  invalidateTasks,
-} from '../services/queryInvalidation';
 import type {
   AgentSession,
   DockerPreview,
@@ -14,6 +6,13 @@ import type {
   Task,
   TaskComment,
 } from '../api/generated/model';
+import { logger } from '../lib/logger';
+import {
+  invalidateComments,
+  invalidatePreviews,
+  invalidateSessions,
+  invalidateTasks,
+} from '../services/queryInvalidation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 const sseLog = logger.child({ module: 'sse' });
@@ -110,10 +109,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
 
   eventSource.onerror = (event: Event) => {
     const source = event.currentTarget as EventSource | null;
-    sseLog.error(
-      { type: event.type, readyState: source?.readyState },
-      'SSE connection error',
-    );
+    sseLog.error({ type: event.type, readyState: source?.readyState }, 'SSE connection error');
   };
 
   return () => {

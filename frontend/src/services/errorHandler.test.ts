@@ -23,7 +23,11 @@ describe('extractErrorMessage', () => {
   it('handles nested error.error.message structure', () => {
     const error = new Error(
       JSON.stringify({
-        error: { message: 'Validation failed', code: 'VALIDATION_FAILED', details: ['field required'] },
+        error: {
+          message: 'Validation failed',
+          code: 'VALIDATION_FAILED',
+          details: ['field required'],
+        },
       }),
     );
     expect(extractErrorMessage(error)).toBe('Validation failed');

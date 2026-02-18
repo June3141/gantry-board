@@ -6,10 +6,7 @@ const DEFAULT_MESSAGE = 'An unexpected error occurred.';
  * Handles both the standardized `{ error: { message, code } }` format
  * and the legacy `{ error: "string" }` format.
  */
-export function extractErrorMessage(
-  error: unknown,
-  fallback: string = DEFAULT_MESSAGE,
-): string {
+export function extractErrorMessage(error: unknown, fallback: string = DEFAULT_MESSAGE): string {
   if (error instanceof Error) {
     try {
       const body = JSON.parse(error.message);
