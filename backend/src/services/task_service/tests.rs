@@ -1,6 +1,7 @@
 use super::*;
-use crate::models::project::CreateProjectRequest;
-use crate::services::project_service;
+use crate::models::project::{AddMemberRequest, CreateProjectRequest, MemberRole};
+use crate::models::user::RegisterRequest;
+use crate::services::{member_service, project_service, user_service};
 use crate::test_helpers::setup_test_db;
 
 async fn create_test_project(pool: &SqlitePool) -> Uuid {
@@ -12,6 +13,28 @@ async fn create_test_project(pool: &SqlitePool) -> Uuid {
         .await
         .expect("Failed to create project");
     project.id
+}
+
+async fn create_test_user(pool: &SqlitePool, email: &str) -> Uuid {
+    let req = RegisterRequest {
+        email: email.to_string(),
+        name: email.split('@').next().unwrap().to_string(),
+        password: "password123".to_string(),
+    };
+    user_service::create_user(pool, &req)
+        .await
+        .expect("Failed to create user")
+        .id
+}
+
+async fn add_project_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) {
+    let req = AddMemberRequest {
+        user_id,
+        role: MemberRole::Member,
+    };
+    member_service::add_member(pool, project_id, &req)
+        .await
+        .expect("Failed to add member");
 }
 
 #[tokio::test]
@@ -677,4 +700,93 @@ async fn test_update_task_with_parent_in_different_project_returns_validation_er
     .await;
 
     assert!(matches!(result, Err(AppError::Validation(_))));
+}
+
+#[tokio::test]
+async fn test_create_task_assigned_to_non_member_returns_validation_error() {
+    let pool = setup_test_db().await;
+    let project_id = create_test_project(&pool).await;
+    // User exists but is NOT a member of the project
+    let non_member = create_test_user(&pool, "outsider@test.com").await;
+
+    let req = CreateTaskRequest {
+        project_id,
+        title: "Task".to_string(),
+        description: None,
+        status: None,
+        priority: None,
+        parent_id: None,
+        assigned_to: Some(non_member),
+    };
+    let result = create_task(&pool, &req).await;
+
+    assert!(
+        matches!(result, Err(AppError::Validation(ref msg)) if msg.contains("not a member")),
+        "expected Validation error about non-member, got: {result:?}"
+    );
+}
+
+#[tokio::test]
+async fn test_create_task_assigned_to_project_member_succeeds() {
+    let pool = setup_test_db().await;
+    let project_id = create_test_project(&pool).await;
+    let member = create_test_user(&pool, "member@test.com").await;
+    add_project_member(&pool, project_id, member).await;
+
+    let req = CreateTaskRequest {
+        project_id,
+        title: "Task".to_string(),
+        description: None,
+        status: None,
+        priority: None,
+        parent_id: None,
+        assigned_to: Some(member),
+    };
+    let task = create_task(&pool, &req)
+        .await
+        .expect("assigning to project member should succeed");
+
+    assert_eq!(task.assigned_to, Some(member));
+}
+
+#[tokio::test]
+async fn test_update_task_assigned_to_non_member_returns_validation_error() {
+    let pool = setup_test_db().await;
+    let project_id = create_test_project(&pool).await;
+    let non_member = create_test_user(&pool, "outsider@test.com").await;
+
+    let created = create_task(
+        &pool,
+        &CreateTaskRequest {
+            project_id,
+            title: "Task".to_string(),
+            description: None,
+            status: None,
+            priority: None,
+            parent_id: None,
+            assigned_to: None,
+        },
+    )
+    .await
+    .expect("task creation should succeed");
+
+    let result = update_task(
+        &pool,
+        created.id,
+        &UpdateTaskRequest {
+            title: None,
+            description: None,
+            status: None,
+            priority: None,
+            parent_id: None,
+            assigned_to: Some(non_member),
+            position: None,
+        },
+    )
+    .await;
+
+    assert!(
+        matches!(result, Err(AppError::Validation(ref msg)) if msg.contains("not a member")),
+        "expected Validation error about non-member, got: {result:?}"
+    );
 }
