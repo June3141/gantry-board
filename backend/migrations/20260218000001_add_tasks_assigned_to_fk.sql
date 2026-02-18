@@ -30,6 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to);
 
 -- Recreate composite indexes from migration 20260216000001
+CREATE INDEX IF NOT EXISTS idx_tasks_project_position ON tasks(project_id, position, created_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_project_status ON tasks(project_id, status);
 CREATE INDEX IF NOT EXISTS idx_tasks_project_assigned ON tasks(project_id, assigned_to);
 
