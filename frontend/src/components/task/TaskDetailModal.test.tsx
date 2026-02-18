@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as tasksApi from '@/api/generated/endpoints/tasks/tasks';
 import { useUiStore } from '@/stores/uiStore';
-import { mockTask, renderWithProviders, setupMocks } from './taskDetailModalSetup';
 import { TaskDetailModal } from './TaskDetailModal';
+import { mockTask, renderWithProviders, setupMocks } from './taskDetailModalSetup';
 
 vi.mock('@/api/generated/endpoints/tasks/tasks', () => ({
   useGetTask: vi.fn(),

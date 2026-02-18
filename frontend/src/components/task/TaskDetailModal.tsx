@@ -5,8 +5,8 @@ import type { TaskPriority, TaskStatus } from '@/api/generated/model';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useUiStore } from '@/stores/uiStore';
 import { PullRequestList } from '../github/PullRequestList';
-import { TaskTimeline } from './TaskTimeline';
 import { WorktreePanel } from '../preview/WorktreePanel';
+import { TaskTimeline } from './TaskTimeline';
 
 export function TaskDetailModal() {
   const selectedTaskId = useUiStore((s) => s.selectedTaskId);
