@@ -5,7 +5,7 @@ import {
   useCreateWorktree,
   useDeleteWorktree,
   useListWorktrees,
-} from '../api/generated/endpoints/worktrees/worktrees';
+} from '@/api/generated/endpoints/worktrees/worktrees';
 
 export function WorktreePanel() {
   const [name, setName] = useState('');

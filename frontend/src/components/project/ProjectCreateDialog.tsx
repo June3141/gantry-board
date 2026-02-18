@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useCreateProject } from '../api/generated/endpoints/projects/projects';
-import { useEscapeKey } from '../hooks/useEscapeKey';
-import { useUiStore } from '../stores/uiStore';
+import { useCreateProject } from '@/api/generated/endpoints/projects/projects';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useUiStore } from '@/stores/uiStore';
 
 export function ProjectCreateDialog() {
   const isOpen = useUiStore((s) => s.isProjectModalOpen);

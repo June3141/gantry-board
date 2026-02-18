@@ -1,5 +1,5 @@
-import { useListPullRequests } from '../api/generated/endpoints/pull-requests/pull-requests';
-import type { GitHubPullRequest } from '../api/generated/model';
+import { useListPullRequests } from '@/api/generated/endpoints/pull-requests/pull-requests';
+import type { GitHubPullRequest } from '@/api/generated/model';
 
 export function PullRequestList({ taskId }: { taskId: string }) {
   const { data: pullRequests, isLoading, isError } = useListPullRequests(taskId);

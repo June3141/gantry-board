@@ -4,10 +4,10 @@ import {
   useListAgentSessions,
   useStartAgentSession,
   useStopAgentSession,
-} from '../api/generated/endpoints/agent-sessions/agent-sessions';
-import type { AgentSession, AgentSessionStatus, AgentType } from '../api/generated/model';
-import { useAgentEvents } from '../hooks/useAgentEvents';
-import { useAgentStore } from '../stores/agentStore';
+} from '@/api/generated/endpoints/agent-sessions/agent-sessions';
+import type { AgentSession, AgentSessionStatus, AgentType } from '@/api/generated/model';
+import { useAgentEvents } from '@/hooks/useAgentEvents';
+import { useAgentStore } from '@/stores/agentStore';
 import { AgentOutputViewer } from './AgentOutputViewer';
 
 interface AgentPanelProps {

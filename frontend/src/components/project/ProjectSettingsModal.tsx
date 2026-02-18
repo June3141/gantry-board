@@ -1,19 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
+import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import {
   getGetProjectQueryKey,
   getListProjectsQueryKey,
   useDeleteProject,
   useGetProject,
   useUpdateProject,
-} from '../api/generated/endpoints/projects/projects';
-import { MemberRole } from '../api/generated/model';
-import { useEscapeKey } from '../hooks/useEscapeKey';
-import { useAuthStore } from '../stores/authStore';
-import { useToastStore } from '../stores/toastStore';
-import { useUiStore } from '../stores/uiStore';
-import { GitHubLinkSettings } from './GitHubLinkSettings';
+} from '@/api/generated/endpoints/projects/projects';
+import { MemberRole } from '@/api/generated/model';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useAuthStore } from '@/stores/authStore';
+import { useToastStore } from '@/stores/toastStore';
+import { useUiStore } from '@/stores/uiStore';
+import { GitHubLinkSettings } from '../github/GitHubLinkSettings';
 
 export function ProjectSettingsModal({
   projectId,

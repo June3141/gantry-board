@@ -6,14 +6,14 @@ import {
   useListMembers,
   useRemoveMember,
   useUpdateMember,
-} from '../api/generated/endpoints/project-members/project-members';
-import { useSearchUsers } from '../api/generated/endpoints/users/users';
-import type { MemberRole as MemberRoleType } from '../api/generated/model';
-import { MemberRole } from '../api/generated/model';
-import { useEscapeKey } from '../hooks/useEscapeKey';
-import { useAuthStore } from '../stores/authStore';
-import { useToastStore } from '../stores/toastStore';
-import { useUiStore } from '../stores/uiStore';
+} from '@/api/generated/endpoints/project-members/project-members';
+import { useSearchUsers } from '@/api/generated/endpoints/users/users';
+import type { MemberRole as MemberRoleType } from '@/api/generated/model';
+import { MemberRole } from '@/api/generated/model';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useAuthStore } from '@/stores/authStore';
+import { useToastStore } from '@/stores/toastStore';
+import { useUiStore } from '@/stores/uiStore';
 
 export function ProjectMembersPanel({ projectId }: { projectId: string }) {
   const isOpen = useUiStore((s) => s.isProjectMembersOpen);

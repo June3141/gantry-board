@@ -2,10 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as worktreesApi from '../api/generated/endpoints/worktrees/worktrees';
+import * as worktreesApi from '@/api/generated/endpoints/worktrees/worktrees';
 import { WorktreePanel } from './WorktreePanel';
 
-vi.mock('../api/generated/endpoints/worktrees/worktrees', () => ({
+vi.mock('@/api/generated/endpoints/worktrees/worktrees', () => ({
   useListWorktrees: vi.fn(),
   useCreateWorktree: vi.fn(),
   useDeleteWorktree: vi.fn(),

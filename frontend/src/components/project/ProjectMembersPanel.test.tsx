@@ -2,15 +2,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as membersApi from '../api/generated/endpoints/project-members/project-members';
-import * as usersApi from '../api/generated/endpoints/users/users';
-import type { ProjectMember, User } from '../api/generated/model';
-import { MemberRole } from '../api/generated/model';
-import { useAuthStore } from '../stores/authStore';
-import { useUiStore } from '../stores/uiStore';
+import * as membersApi from '@/api/generated/endpoints/project-members/project-members';
+import * as usersApi from '@/api/generated/endpoints/users/users';
+import type { ProjectMember, User } from '@/api/generated/model';
+import { MemberRole } from '@/api/generated/model';
+import { useAuthStore } from '@/stores/authStore';
+import { useUiStore } from '@/stores/uiStore';
 import { ProjectMembersPanel } from './ProjectMembersPanel';
 
-vi.mock('../api/generated/endpoints/project-members/project-members', () => ({
+vi.mock('@/api/generated/endpoints/project-members/project-members', () => ({
   useListMembers: vi.fn(),
   useAddMember: vi.fn(),
   useUpdateMember: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock('../api/generated/endpoints/project-members/project-members', () => ({
   getListMembersQueryKey: vi.fn(() => ['/api/projects/project-1/members']),
 }));
 
-vi.mock('../api/generated/endpoints/users/users', () => ({
+vi.mock('@/api/generated/endpoints/users/users', () => ({
   useSearchUsers: vi.fn(),
 }));
 

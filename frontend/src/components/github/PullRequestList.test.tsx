@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as pullRequestsApi from '../api/generated/endpoints/pull-requests/pull-requests';
-import type { GitHubPullRequest } from '../api/generated/model';
-import { PrState } from '../api/generated/model';
+import * as pullRequestsApi from '@/api/generated/endpoints/pull-requests/pull-requests';
+import type { GitHubPullRequest } from '@/api/generated/model';
+import { PrState } from '@/api/generated/model';
 import { PullRequestList } from './PullRequestList';
 
-vi.mock('../api/generated/endpoints/pull-requests/pull-requests', () => ({
+vi.mock('@/api/generated/endpoints/pull-requests/pull-requests', () => ({
   useListPullRequests: vi.fn(),
 }));
 

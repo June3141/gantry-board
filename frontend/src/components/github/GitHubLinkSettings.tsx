@@ -6,8 +6,8 @@ import {
   useDeleteGithubLink,
   useGetGithubLink,
   useSyncGithubLink,
-} from '../api/generated/endpoints/github-links/github-links';
-import { useToastStore } from '../stores/toastStore';
+} from '@/api/generated/endpoints/github-links/github-links';
+import { useToastStore } from '@/stores/toastStore';
 
 export function GitHubLinkSettings({ projectId }: { projectId: string }) {
   const { data: link, isLoading, isError } = useGetGithubLink(projectId);

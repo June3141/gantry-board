@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as githubLinksApi from '../api/generated/endpoints/github-links/github-links';
-import type { GitHubLink } from '../api/generated/model';
+import * as githubLinksApi from '@/api/generated/endpoints/github-links/github-links';
+import type { GitHubLink } from '@/api/generated/model';
 import { GitHubLinkSettings } from './GitHubLinkSettings';
 
-vi.mock('../api/generated/endpoints/github-links/github-links', () => ({
+vi.mock('@/api/generated/endpoints/github-links/github-links', () => ({
   useGetGithubLink: vi.fn(),
   useCreateGithubLink: vi.fn(),
   useDeleteGithubLink: vi.fn(),

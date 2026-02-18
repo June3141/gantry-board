@@ -6,8 +6,8 @@ import {
   useRestartPreview,
   useStartPreview,
   useStopPreview,
-} from '../api/generated/endpoints/previews/previews';
-import type { DockerPreview } from '../api/generated/model';
+} from '@/api/generated/endpoints/previews/previews';
+import type { DockerPreview } from '@/api/generated/model';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
