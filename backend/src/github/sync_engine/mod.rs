@@ -1,15 +1,13 @@
-use chrono::Utc;
+mod pull;
+mod push;
+
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
 use super::api::GitHubApi;
-use super::label_mapping;
 use crate::error::AppResult;
-use crate::models::github::{
-    CreateIssueRequest, GitHubIssue, GitHubIssueMapping, GitHubLink, SyncResult, UpdateIssueRequest,
-};
-use crate::models::task::{CreateTaskRequest, Task, TaskPriority, TaskStatus, UpdateTaskRequest};
-use crate::services::{github_link_service, github_pr_service, github_sync_service, task_service};
+use crate::models::github::{GitHubLink, SyncResult};
+use crate::services::{github_link_service, github_sync_service, task_service};
 
 pub struct SyncEngine {
     pub(crate) github_client: Arc<dyn GitHubApi>,
@@ -21,200 +19,6 @@ impl SyncEngine {
         Self {
             github_client,
             pool,
-        }
-    }
-
-    /// Push a local task to GitHub as an issue. Creates or updates the issue.
-    pub async fn push_task_to_github(
-        &self,
-        task: &Task,
-        link: &GitHubLink,
-    ) -> AppResult<GitHubIssueMapping> {
-        let labels = label_mapping::build_labels_for_task(&task.status, &task.priority);
-        let is_done = task.status == TaskStatus::Done;
-        let existing = github_sync_service::get_mapping_by_task_id(&self.pool, task.id).await?;
-
-        match existing {
-            Some(mapping) => {
-                let state = if is_done { "closed" } else { "open" };
-                let req = UpdateIssueRequest {
-                    title: Some(task.title.clone()),
-                    body: task.description.clone(),
-                    state: Some(state.to_string()),
-                    labels: Some(labels),
-                };
-                self.github_client
-                    .update_issue(
-                        &link.repo_owner,
-                        &link.repo_name,
-                        mapping.github_issue_number as u64,
-                        &req,
-                    )
-                    .await?;
-                let now = Utc::now();
-                github_sync_service::update_mapping_timestamps(
-                    &self.pool,
-                    mapping.id,
-                    Some(now),
-                    Some(now),
-                )
-                .await?;
-                Ok(mapping)
-            }
-            None => {
-                let req = CreateIssueRequest {
-                    title: task.title.clone(),
-                    body: task.description.clone(),
-                    labels,
-                };
-                let issue = self
-                    .github_client
-                    .create_issue(&link.repo_owner, &link.repo_name, &req)
-                    .await?;
-
-                let mapping = github_sync_service::create_mapping(
-                    &self.pool,
-                    task.id,
-                    link.id,
-                    issue.number as i64,
-                    Some(issue.id as i64),
-                )
-                .await?;
-
-                // Close the issue if the task is done
-                if is_done {
-                    let close_req = UpdateIssueRequest {
-                        title: None,
-                        body: None,
-                        state: Some("closed".to_string()),
-                        labels: None,
-                    };
-                    self.github_client
-                        .update_issue(&link.repo_owner, &link.repo_name, issue.number, &close_req)
-                        .await?;
-                }
-
-                let now = Utc::now();
-                github_sync_service::update_mapping_timestamps(
-                    &self.pool,
-                    mapping.id,
-                    Some(now),
-                    Some(now),
-                )
-                .await?;
-
-                Ok(mapping)
-            }
-        }
-    }
-
-    /// Pull issues from GitHub and create/update local tasks.
-    /// Returns (created_count, updated_count).
-    pub async fn pull_issues_from_github(&self, link: &GitHubLink) -> AppResult<(u32, u32)> {
-        let issues = self
-            .github_client
-            .list_issues(
-                &link.repo_owner,
-                &link.repo_name,
-                link.last_synced_at,
-                "all",
-            )
-            .await?;
-
-        let mut created = 0u32;
-        let mut updated = 0u32;
-
-        for issue in issues {
-            if issue.pull_request {
-                continue;
-            }
-
-            let existing = github_sync_service::get_mapping_by_issue_number(
-                &self.pool,
-                link.id,
-                issue.number as i64,
-            )
-            .await?;
-
-            match existing {
-                Some(mapping) => {
-                    // Last-write-wins: skip if local is newer
-                    if let Some(local_time) = mapping.last_local_update {
-                        if local_time >= issue.updated_at {
-                            continue;
-                        }
-                    }
-                    self.update_task_from_issue(&issue, mapping.task_id).await?;
-                    github_sync_service::update_mapping_timestamps(
-                        &self.pool,
-                        mapping.id,
-                        None,
-                        Some(issue.updated_at),
-                    )
-                    .await?;
-                    updated += 1;
-                }
-                None => {
-                    let task = self.create_task_from_issue(&issue, link.project_id).await?;
-                    github_sync_service::create_mapping(
-                        &self.pool,
-                        task.id,
-                        link.id,
-                        issue.number as i64,
-                        Some(issue.id as i64),
-                    )
-                    .await?;
-                    created += 1;
-                }
-            }
-        }
-
-        Ok((created, updated))
-    }
-
-    /// Detect pull requests linked to mapped issues and save them to DB.
-    /// Soft failure: logs a warning and continues on error.
-    pub async fn detect_pull_requests(&self, link: &GitHubLink) {
-        let mappings = match github_sync_service::list_mappings_by_link(&self.pool, link.id).await {
-            Ok(m) => m,
-            Err(e) => {
-                tracing::warn!(error = %e, "failed to list mappings for PR detection");
-                return;
-            }
-        };
-
-        for mapping in &mappings {
-            let prs = match self
-                .github_client
-                .list_prs_for_issue(
-                    &link.repo_owner,
-                    &link.repo_name,
-                    mapping.github_issue_number as u64,
-                )
-                .await
-            {
-                Ok(prs) => prs,
-                Err(e) => {
-                    tracing::warn!(
-                        issue_number = mapping.github_issue_number,
-                        error = %e,
-                        "failed to list PRs for issue, skipping"
-                    );
-                    continue;
-                }
-            };
-
-            for pr in &prs {
-                if let Err(e) =
-                    github_pr_service::upsert_pr(&self.pool, link.id, mapping.task_id, pr).await
-                {
-                    tracing::warn!(
-                        pr_number = pr.pr_number,
-                        error = %e,
-                        "failed to upsert PR, skipping"
-                    );
-                }
-            }
         }
     }
 
@@ -269,74 +73,6 @@ impl SyncEngine {
         }
         Ok(results)
     }
-
-    fn extract_status(issue: &GitHubIssue) -> TaskStatus {
-        if issue.state == "closed" {
-            return TaskStatus::Done;
-        }
-        label_mapping::extract_status_from_labels(&issue.labels).unwrap_or(TaskStatus::Backlog)
-    }
-
-    fn extract_priority(issue: &GitHubIssue) -> TaskPriority {
-        label_mapping::extract_priority_from_labels(&issue.labels).unwrap_or(TaskPriority::Medium)
-    }
-
-    async fn create_task_from_issue(
-        &self,
-        issue: &GitHubIssue,
-        project_id: uuid::Uuid,
-    ) -> AppResult<Task> {
-        let req = CreateTaskRequest {
-            project_id,
-            title: issue.title.clone(),
-            description: issue.body.clone(),
-            status: Some(Self::extract_status(issue)),
-            priority: Some(Self::extract_priority(issue)),
-            parent_id: None,
-            assigned_to: None,
-        };
-        task_service::create_task(&self.pool, &req).await
-    }
-
-    async fn update_task_from_issue(
-        &self,
-        issue: &GitHubIssue,
-        task_id: uuid::Uuid,
-    ) -> AppResult<Task> {
-        let req = UpdateTaskRequest {
-            title: Some(issue.title.clone()),
-            description: issue.body.clone(),
-            status: Some(Self::extract_status(issue)),
-            priority: Some(Self::extract_priority(issue)),
-            parent_id: None,
-            assigned_to: None,
-            position: None,
-        };
-        task_service::update_task(&self.pool, task_id, &req).await
-    }
-
-    /// Try to push a task to GitHub. No-op if project has no GitHub link.
-    pub async fn try_push_task(&self, task: &Task) -> AppResult<()> {
-        let link = github_link_service::get_github_link(&self.pool, task.project_id).await;
-        match link {
-            Ok(link) => {
-                self.push_task_to_github(task, &link).await?;
-                Ok(())
-            }
-            Err(crate::error::AppError::NotFound(_)) => Ok(()),
-            Err(e) => Err(e),
-        }
-    }
-
-    /// Ensure all gantry labels exist in the repository.
-    pub async fn ensure_all_labels(&self, owner: &str, repo: &str) -> AppResult<()> {
-        for def in label_mapping::all_label_definitions() {
-            self.github_client
-                .ensure_label(owner, repo, def.name, def.color)
-                .await?;
-        }
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -344,6 +80,7 @@ mod tests {
     use super::*;
     use crate::models::github::{CreateIssueRequest, GitHubIssue, LinkedPr, UpdateIssueRequest};
     use crate::models::task::{Task, TaskPriority, TaskStatus};
+    use crate::services::{github_pr_service, github_sync_service};
     use chrono::{DateTime, Utc};
     use sqlx::sqlite::SqlitePoolOptions;
     use std::collections::HashMap;

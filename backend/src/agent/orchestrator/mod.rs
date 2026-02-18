@@ -1,13 +1,15 @@
+mod lifecycle;
+mod monitor;
+
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use sqlx::SqlitePool;
 use tokio::sync::Mutex;
-use tracing::warn;
 use uuid::Uuid;
 
-use crate::agent::executor::{AgentConfig, AgentExecutor, AgentOutputEvent};
+use crate::agent::executor::{AgentConfig, AgentExecutor};
 use crate::error::{AppError, AppResult};
 use crate::models::agent_session::{
     AgentSessionStatus, AgentType, CreateAgentSessionRequest, UpdateAgentSessionRequest,
@@ -222,202 +224,6 @@ impl AgentOrchestrator {
         Ok(StartSessionResult {
             session_id: session.id,
             worktree_path,
-        })
-    }
-
-    /// Stop a running agent session.
-    ///
-    /// 1. Cancel the agent process
-    /// 2. Update DB session (Cancelled)
-    /// 3. Remove from running map only after DB update succeeds
-    pub async fn stop_session(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
-        // Step 1: Check session exists and cancel it (keep in map)
-        {
-            let running = self.running.lock().await;
-            let session = running.get(&session_id).ok_or_else(|| {
-                AppError::NotFound(format!("no running session found: {session_id}"))
-            })?;
-            session.cancel.cancel();
-        }
-
-        // Step 2: Update DB session to Cancelled
-        agent_session_service::update_agent_session(
-            &self.pool,
-            task_id,
-            session_id,
-            &UpdateAgentSessionRequest {
-                status: AgentSessionStatus::Cancelled,
-            },
-        )
-        .await?;
-
-        // Step 3: Remove from running map after DB success
-        {
-            let mut running = self.running.lock().await;
-            running.remove(&session_id);
-            metrics::gauge!("gantry_agent_sessions_active").set(running.len() as f64);
-        }
-
-        Ok(())
-    }
-
-    pub async fn is_running(&self, session_id: Uuid) -> bool {
-        let running = self.running.lock().await;
-        running.contains_key(&session_id)
-    }
-
-    /// Gracefully shut down all running agent sessions.
-    ///
-    /// Cancels every running session and waits for their monitor tasks to finish
-    /// (which handles DB status updates and worktree cleanup).
-    pub async fn shutdown_gracefully(&self) {
-        let sessions: Vec<(Uuid, RunningSession)> = {
-            let mut running = self.running.lock().await;
-            let drained = running.drain().collect();
-            metrics::gauge!("gantry_agent_sessions_active").set(0.0);
-            drained
-        };
-
-        if sessions.is_empty() {
-            return;
-        }
-
-        tracing::info!(
-            count = sessions.len(),
-            "shutting down running agent sessions"
-        );
-
-        let mut handles = Vec::new();
-        for (session_id, session) in sessions {
-            tracing::info!(%session_id, "cancelling agent session");
-            session.cancel.cancel();
-            handles.push(session._monitor_handle);
-        }
-
-        for handle in handles {
-            let _ = handle.await;
-        }
-
-        tracing::info!("all agent sessions shut down");
-    }
-
-    async fn mark_session_cancelled(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
-        // Pending -> Failed is not a valid transition; use Pending -> Cancelled.
-        agent_session_service::update_agent_session(
-            &self.pool,
-            task_id,
-            session_id,
-            &UpdateAgentSessionRequest {
-                status: AgentSessionStatus::Cancelled,
-            },
-        )
-        .await?;
-        Ok(())
-    }
-
-    async fn delete_worktree_blocking(repo_path: &Path, name: &str) -> AppResult<()> {
-        let repo = repo_path.to_path_buf();
-        let n = name.to_string();
-        tokio::task::spawn_blocking(move || worktree_service::delete_worktree(&repo, &n))
-            .await
-            .map_err(|e| AppError::Internal(format!("worktree delete task panicked: {e}")))?
-    }
-
-    /// Spawn a background task that drains `output_rx` and updates DB status
-    /// when the agent completes or fails naturally (not via stop_session).
-    #[allow(clippy::too_many_arguments)]
-    fn spawn_session_monitor(
-        &self,
-        mut output_rx: tokio::sync::mpsc::Receiver<AgentOutputEvent>,
-        join_handle: tokio::task::JoinHandle<AppResult<()>>,
-        cancel: tokio_util::sync::CancellationToken,
-        task_id: Uuid,
-        session_id: Uuid,
-        repo_path: PathBuf,
-        worktree_name: String,
-    ) -> tokio::task::JoinHandle<()> {
-        let pool = self.pool.clone();
-        let running = Arc::clone(&self.running);
-        let sse_hub = Arc::clone(&self.sse_hub);
-        let output_buffer = Arc::clone(&self.output_buffer);
-        tokio::spawn(async move {
-            // Track terminal event to determine final status
-            let mut final_status = AgentSessionStatus::Completed;
-            let mut sequence: i64 = 0;
-            let mut persist = true;
-
-            // Drain output events until the channel closes
-            while let Some(event) = output_rx.recv().await {
-                match event {
-                    AgentOutputEvent::Completed => break,
-                    AgentOutputEvent::Failed { .. } => {
-                        final_status = AgentSessionStatus::Failed;
-                        break;
-                    }
-                    AgentOutputEvent::Output { text } => {
-                        sse_hub.broadcast(SseEvent::agent_output(session_id, text.clone()));
-                        // Best-effort buffered persistence (after broadcast to avoid delaying SSE)
-                        if persist {
-                            match output_buffer.add(session_id, sequence, text).await {
-                                Ok(()) => {}
-                                Err(crate::error::AppError::Validation(ref msg))
-                                    if msg.contains("limit reached") =>
-                                {
-                                    warn!("output limit reached for session {session_id}, stopping persistence");
-                                    persist = false;
-                                }
-                                Err(e) => {
-                                    warn!("failed to buffer output for session {session_id} seq {sequence}: {e}");
-                                }
-                            }
-                        }
-                        sequence += 1;
-                    }
-                }
-            }
-
-            // Flush any remaining buffered outputs before status update
-            if let Err(e) = output_buffer.flush().await {
-                warn!("failed to flush output buffer for session {session_id}: {e}");
-            }
-
-            // Wait for the executor task to finish
-            let _ = join_handle.await;
-
-            // If cancelled by stop_session, don't update DB (stop_session handles it)
-            if cancel.is_cancelled() {
-                return;
-            }
-
-            // Natural completion: update DB and broadcast (best-effort)
-            match agent_session_service::update_agent_session(
-                &pool,
-                task_id,
-                session_id,
-                &UpdateAgentSessionRequest {
-                    status: final_status.clone(),
-                },
-            )
-            .await
-            {
-                Ok(session) => {
-                    sse_hub.broadcast(SseEvent::agent_session_status_changed(session));
-                }
-                Err(e) => {
-                    warn!("failed to update session {session_id} status: {e}");
-                }
-            }
-
-            // Cleanup worktree after session completion
-            let rp = repo_path;
-            let wn = worktree_name;
-            if let Err(e) = Self::delete_worktree_blocking(&rp, &wn).await {
-                warn!("failed to cleanup worktree {wn} after session completion: {e}");
-            }
-
-            // Remove from running map
-            let mut map = running.lock().await;
-            map.remove(&session_id);
         })
     }
 }
