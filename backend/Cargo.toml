@@ -40,6 +40,7 @@ async-trait = { workspace = true }
 tokio-util = { workspace = true }
 tower_governor = { workspace = true }
 zxcvbn = { workspace = true }
+moka = { workspace = true }
 bollard = { workspace = true }
 octocrab = { workspace = true }
 tar = { workspace = true }

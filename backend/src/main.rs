@@ -86,8 +86,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(token) if !token.is_empty() => {
             match gantry_board::github::octocrab_client::OctocrabClient::new(token) {
                 Ok(client) => {
-                    tracing::info!("GitHub integration initialized");
-                    Some(Arc::new(client) as Arc<dyn gantry_board::github::api::GitHubApi>)
+                    let inner = Arc::new(client) as Arc<dyn gantry_board::github::api::GitHubApi>;
+                    let cached =
+                        gantry_board::github::octocrab_client::CachedGitHubClient::new(inner);
+                    tracing::info!("GitHub integration initialized (with API cache)");
+                    Some(Arc::new(cached) as Arc<dyn gantry_board::github::api::GitHubApi>)
                 }
                 Err(e) => {
                     tracing::warn!(%e, "GitHub client initialization failed — GitHub features disabled");

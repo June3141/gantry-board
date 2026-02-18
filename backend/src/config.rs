@@ -91,6 +91,11 @@ pub struct Config {
     /// GitHub sync interval in seconds (default: 300 = 5 minutes)
     #[serde(default = "default_github_sync_interval_secs")]
     pub github_sync_interval_secs: u64,
+
+    /// Allowed Host header values (e.g. ["localhost:3000", "gantry.example.com"]).
+    /// When empty, Host header validation is skipped.
+    #[serde(default)]
+    pub allowed_hosts: Vec<String>,
 }
 
 fn default_bind_addr() -> String {
@@ -183,6 +188,25 @@ impl Config {
             return Err(ConfigError::MissingCorsOriginInRelease);
         }
 
+        // Warn when auth is enabled but CORS origin is not configured (debug builds)
+        #[cfg(debug_assertions)]
+        if !self.auth_disabled && self.cors_origin.is_none() {
+            tracing::warn!(
+                "CORS origin not configured with authentication enabled. \
+                 This is a security risk in production deployments. \
+                 Set GANTRY_CORS_ORIGIN to your frontend URL."
+            );
+        }
+
+        // Reject wildcard CORS origin
+        if let Some(ref origin) = self.cors_origin {
+            if origin == "*" {
+                return Err(ConfigError::InvalidCorsOrigin(
+                    "wildcard '*' is not allowed; specify an explicit origin".to_string(),
+                ));
+            }
+        }
+
         Ok(())
     }
 
@@ -229,6 +253,7 @@ impl Default for Config {
             preview_base_url: default_preview_base_url(),
             github_token: None,
             github_sync_interval_secs: default_github_sync_interval_secs(),
+            allowed_hosts: Vec::new(),
         }
     }
 }
@@ -335,5 +360,21 @@ mod tests {
     fn test_request_timeout_defaults_to_60() {
         let config = Config::default();
         assert_eq!(config.request_timeout_secs, 60);
+    }
+
+    #[test]
+    fn test_validate_rejects_wildcard_cors_origin() {
+        let config = Config {
+            cors_origin: Some("*".to_string()),
+            ..Default::default()
+        };
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("wildcard"));
+    }
+
+    #[test]
+    fn test_allowed_hosts_defaults_to_empty() {
+        let config = Config::default();
+        assert!(config.allowed_hosts.is_empty());
     }
 }

@@ -1,5 +1,6 @@
 use utoipa::OpenApi;
 
+use crate::error;
 use crate::handlers;
 use crate::models;
 use crate::sse;
@@ -104,6 +105,9 @@ use crate::sse;
         models::docker_preview::DockerPreview,
         models::docker_preview::PreviewStatus,
         models::docker_preview::CreatePreviewRequest,
+        error::ErrorResponse,
+        error::ErrorDetail,
+        error::ErrorCode,
     )),
     tags(
         (name = "health", description = "Health check"),

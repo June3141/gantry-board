@@ -194,7 +194,7 @@ export function useLiveness<TData = Awaited<ReturnType<typeof liveness>>, TError
 }
 
 /**
- * @summary Readiness probe — checks database connectivity.
+ * @summary Readiness probe — checks database connectivity and Docker health.
  */
 export const readiness = (signal?: AbortSignal) => {
   return customInstance<ReadinessResponse>({ url: `/health/ready`, method: 'GET', signal });
@@ -271,7 +271,7 @@ export function useReadiness<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Readiness probe — checks database connectivity.
+ * @summary Readiness probe — checks database connectivity and Docker health.
  */
 
 export function useReadiness<

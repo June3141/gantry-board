@@ -1,4 +1,8 @@
+use std::sync::Arc;
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
+use moka::future::Cache;
 
 use super::api::GitHubApi;
 use crate::error::{AppError, AppResult};
@@ -232,5 +236,114 @@ impl GitHubApi for OctocrabClient {
         }
 
         Ok(prs)
+    }
+}
+
+/// Caching wrapper around any `GitHubApi` implementation.
+/// Caches `list_issues` results with a configurable TTL (default 5 minutes).
+pub struct CachedGitHubClient {
+    inner: Arc<dyn GitHubApi>,
+    issues_cache: Cache<String, Vec<GitHubIssue>>,
+    label_cache: Cache<String, ()>,
+}
+
+impl CachedGitHubClient {
+    pub fn new(inner: Arc<dyn GitHubApi>) -> Self {
+        Self {
+            inner,
+            issues_cache: Cache::builder()
+                .time_to_live(Duration::from_secs(300)) // 5 minutes
+                .max_capacity(100)
+                .build(),
+            label_cache: Cache::builder()
+                .time_to_live(Duration::from_secs(300))
+                .max_capacity(500)
+                .build(),
+        }
+    }
+
+    /// Invalidate all cached data (e.g. after a webhook event).
+    pub fn invalidate_all(&self) {
+        self.issues_cache.invalidate_all();
+        self.label_cache.invalidate_all();
+    }
+}
+
+#[async_trait::async_trait]
+impl GitHubApi for CachedGitHubClient {
+    async fn check_connection(&self) -> AppResult<bool> {
+        self.inner.check_connection().await
+    }
+
+    async fn list_issues(
+        &self,
+        owner: &str,
+        repo: &str,
+        since: Option<DateTime<Utc>>,
+        state: &str,
+    ) -> AppResult<Vec<GitHubIssue>> {
+        let cache_key = format!(
+            "{owner}/{repo}:{}:{state}",
+            since.map_or("none".to_string(), |d| d.to_rfc3339())
+        );
+
+        if let Some(cached) = self.issues_cache.get(&cache_key).await {
+            tracing::debug!(%cache_key, "GitHub issues cache hit");
+            return Ok(cached);
+        }
+
+        let result = self.inner.list_issues(owner, repo, since, state).await?;
+        self.issues_cache.insert(cache_key, result.clone()).await;
+        Ok(result)
+    }
+
+    async fn create_issue(
+        &self,
+        owner: &str,
+        repo: &str,
+        req: &CreateIssueRequest,
+    ) -> AppResult<GitHubIssue> {
+        // Invalidate cache on write
+        self.issues_cache.invalidate_all();
+        self.inner.create_issue(owner, repo, req).await
+    }
+
+    async fn update_issue(
+        &self,
+        owner: &str,
+        repo: &str,
+        number: u64,
+        req: &UpdateIssueRequest,
+    ) -> AppResult<GitHubIssue> {
+        self.issues_cache.invalidate_all();
+        self.inner.update_issue(owner, repo, number, req).await
+    }
+
+    async fn ensure_label(
+        &self,
+        owner: &str,
+        repo: &str,
+        name: &str,
+        color: &str,
+    ) -> AppResult<()> {
+        let cache_key = format!("{owner}/{repo}:{name}");
+        if self.label_cache.get(&cache_key).await.is_some() {
+            return Ok(());
+        }
+        self.inner.ensure_label(owner, repo, name, color).await?;
+        self.label_cache.insert(cache_key, ()).await;
+        Ok(())
+    }
+
+    async fn list_prs_for_issue(
+        &self,
+        owner: &str,
+        repo: &str,
+        issue_number: u64,
+    ) -> AppResult<Vec<LinkedPr>> {
+        // PR lists are not cached — they're infrequent and need fresh data
+        self.inner
+            .list_prs_for_issue(owner, repo, issue_number)
+            .await
     }
 }
