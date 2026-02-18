@@ -2,11 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { logger } from './logger';
 
 describe('logger', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
     // pino browser mode writes to console
-    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(console, 'info').mockImplementation(() => {});
