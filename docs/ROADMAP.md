@@ -90,9 +90,9 @@
 - [x] Service 層 trait 化 + DI (#201)
 - [x] 大規模ファイル分割 (#191)
 - [x] unwrap() 削除 (#193)
-- [ ] 本番 Docker 設定 (#186)
-- [ ] WebSocket fallback for SSE (#203)
-- [ ] ドキュメント整備 (#187, #205)
+- [x] 本番 Docker 設定 (#186)
+- [x] WebSocket fallback for SSE (#203)
+- [x] ドキュメント整備 (#187, #205)
 
 ---
 
