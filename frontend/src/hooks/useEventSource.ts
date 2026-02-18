@@ -7,6 +7,7 @@ import type {
   TaskComment,
 } from '../api/generated/model';
 import { logger } from '../lib/logger';
+import { createRealtimeTransport } from '../lib/realtimeTransport';
 import {
   invalidateComments,
   invalidatePreviews,
@@ -32,7 +33,7 @@ export type SseEvent =
   | { type: 'GitHubSyncFailed'; project_id: string; error: string };
 
 export function connectEventSource(queryClient: QueryClient): () => void {
-  const eventSource = new EventSource(`${API_BASE_URL}/api/events`);
+  const eventSource = createRealtimeTransport(`${API_BASE_URL}/api/events`);
 
   const handleSseMessage = (event: MessageEvent) => {
     try {
@@ -108,8 +109,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
   eventSource.addEventListener('github_sync_failed', handleGithubSyncEvent);
 
   eventSource.onerror = (event: Event) => {
-    const source = event.currentTarget as EventSource | null;
-    sseLog.error({ type: event.type, readyState: source?.readyState }, 'SSE connection error');
+    sseLog.error({ type: event.type }, 'Realtime connection error');
   };
 
   return () => {

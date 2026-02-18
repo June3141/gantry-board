@@ -3,6 +3,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SseEvent } from './useEventSource';
 import { connectEventSource } from './useEventSource';
 
+// Mock WebSocket (immediately fails → transport stays on SSE)
+class MockWebSocket {
+  readyState = 0;
+  onopen: ((e: Event) => void) | null = null;
+  onerror: ((e: Event) => void) | null = null;
+  onmessage: ((e: MessageEvent) => void) | null = null;
+  constructor(_url: string) {
+    setTimeout(() => this.onerror?.(new Event('error')), 0);
+  }
+  close() {
+    this.readyState = 3;
+  }
+  addEventListener() {}
+  removeEventListener() {}
+}
+
 // Mock EventSource
 class MockEventSource {
   static instances: MockEventSource[] = [];
@@ -48,6 +64,7 @@ describe('connectEventSource', () => {
 
   beforeEach(() => {
     MockEventSource.instances = [];
+    vi.stubGlobal('WebSocket', MockWebSocket);
     vi.stubGlobal('EventSource', MockEventSource);
     queryClient = new QueryClient({
       defaultOptions: {

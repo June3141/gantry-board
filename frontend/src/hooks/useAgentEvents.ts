@@ -1,32 +1,35 @@
 import { useEffect, useRef } from 'react';
+import { createRealtimeTransport, type EventSourceLike } from '../lib/realtimeTransport';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
-// Module-level shared EventSource with reference counting
-let sharedEventSource: EventSource | null = null;
+const CLOSED = 2;
+
+// Module-level shared transport with reference counting
+let sharedTransport: EventSourceLike | null = null;
 let listenerCount = 0;
 
-function acquireEventSource(): EventSource {
-  if (!sharedEventSource || sharedEventSource.readyState === EventSource.CLOSED) {
-    sharedEventSource = new EventSource(`${API_BASE_URL}/api/events`);
+function acquireTransport(): EventSourceLike {
+  if (!sharedTransport || sharedTransport.readyState === CLOSED) {
+    sharedTransport = createRealtimeTransport(`${API_BASE_URL}/api/events`);
   }
   listenerCount++;
-  return sharedEventSource;
+  return sharedTransport;
 }
 
-function releaseEventSource(): void {
+function releaseTransport(): void {
   listenerCount--;
   if (listenerCount <= 0) {
-    sharedEventSource?.close();
-    sharedEventSource = null;
+    sharedTransport?.close();
+    sharedTransport = null;
     listenerCount = 0;
   }
 }
 
 /** Reset shared state — only for testing. */
 export function _resetSharedEventSource(): void {
-  sharedEventSource?.close();
-  sharedEventSource = null;
+  sharedTransport?.close();
+  sharedTransport = null;
   listenerCount = 0;
 }
 
@@ -37,7 +40,7 @@ export function useAgentEvents(sessionId: string | null, onOutput: (text: string
   useEffect(() => {
     if (!sessionId) return;
 
-    const es = acquireEventSource();
+    const es = acquireTransport();
 
     const handler = (event: MessageEvent) => {
       try {
@@ -54,7 +57,7 @@ export function useAgentEvents(sessionId: string | null, onOutput: (text: string
 
     return () => {
       es.removeEventListener('agent_output', handler);
-      releaseEventSource();
+      releaseTransport();
     };
   }, [sessionId]);
 }
