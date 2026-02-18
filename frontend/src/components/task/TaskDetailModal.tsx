@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react';
-import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
-import { useDeleteTask, useGetTask, useUpdateTask } from '../api/generated/endpoints/tasks/tasks';
-import type { TaskPriority, TaskStatus } from '../api/generated/model';
-import { useEscapeKey } from '../hooks/useEscapeKey';
-import { useUiStore } from '../stores/uiStore';
-import { PullRequestList } from './PullRequestList';
+import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
+import { useDeleteTask, useGetTask, useUpdateTask } from '@/api/generated/endpoints/tasks/tasks';
+import type { TaskPriority, TaskStatus } from '@/api/generated/model';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useUiStore } from '@/stores/uiStore';
+import { PullRequestList } from '../github/PullRequestList';
 import { TaskTimeline } from './TaskTimeline';
-import { WorktreePanel } from './WorktreePanel';
+import { WorktreePanel } from '../preview/WorktreePanel';
 
 export function TaskDetailModal() {
   const selectedTaskId = useUiStore((s) => s.selectedTaskId);

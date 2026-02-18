@@ -1,42 +1,42 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
-import { useUiStore } from '../stores/uiStore';
-import { mockTask, renderWithProviders, setupMocks } from './__tests__/taskDetailModalSetup';
+import * as tasksApi from '@/api/generated/endpoints/tasks/tasks';
+import { useUiStore } from '@/stores/uiStore';
+import { mockTask, renderWithProviders, setupMocks } from './taskDetailModalSetup';
 import { TaskDetailModal } from './TaskDetailModal';
 
-vi.mock('../api/generated/endpoints/tasks/tasks', () => ({
+vi.mock('@/api/generated/endpoints/tasks/tasks', () => ({
   useGetTask: vi.fn(),
   useUpdateTask: vi.fn(),
   useDeleteTask: vi.fn(),
 }));
 
-vi.mock('../api/generated/endpoints/agent-sessions/agent-sessions', () => ({
+vi.mock('@/api/generated/endpoints/agent-sessions/agent-sessions', () => ({
   useListAgentSessions: vi.fn(),
   useStartAgentSession: vi.fn(),
   useStopAgentSession: vi.fn(),
   useGetAgentSessionOutputs: vi.fn(),
 }));
 
-vi.mock('../api/generated/endpoints/worktrees/worktrees', () => ({
+vi.mock('@/api/generated/endpoints/worktrees/worktrees', () => ({
   useListWorktrees: vi.fn(),
   useCreateWorktree: vi.fn(),
   useDeleteWorktree: vi.fn(),
 }));
 
-vi.mock('../api/generated/endpoints/project-members/project-members', () => ({
+vi.mock('@/api/generated/endpoints/project-members/project-members', () => ({
   useListMembers: vi.fn(),
 }));
 
-vi.mock('../api/generated/endpoints/task-comments/task-comments', () => ({
+vi.mock('@/api/generated/endpoints/task-comments/task-comments', () => ({
   useListComments: vi.fn(),
   useCreateComment: vi.fn(),
   useUpdateComment: vi.fn(),
   useDeleteComment: vi.fn(),
 }));
 
-vi.mock('../hooks/useAgentEvents', () => ({
+vi.mock('@/hooks/useAgentEvents', () => ({
   useAgentEvents: vi.fn(),
 }));
 

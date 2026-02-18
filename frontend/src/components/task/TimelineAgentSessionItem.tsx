@@ -1,4 +1,4 @@
-import type { AgentSession } from '../api/generated/model';
+import type { AgentSession } from '@/api/generated/model';
 import { AGENT_LABELS, STATUS_COLORS, timeAgo } from './timelineUtils';
 
 export function TimelineAgentSessionItem({

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useListMembers } from '../api/generated/endpoints/project-members/project-members';
-import { useCreateTask } from '../api/generated/endpoints/tasks/tasks';
-import { TaskPriority, TaskStatus } from '../api/generated/model';
-import { useEscapeKey } from '../hooks/useEscapeKey';
-import { useUiStore } from '../stores/uiStore';
+import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
+import { useCreateTask } from '@/api/generated/endpoints/tasks/tasks';
+import { TaskPriority, TaskStatus } from '@/api/generated/model';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useUiStore } from '@/stores/uiStore';
 
 interface TaskCreateDialogProps {
   projectId: string;

@@ -6,18 +6,18 @@ import {
   useListAgentSessions,
   useStartAgentSession,
   useStopAgentSession,
-} from '../api/generated/endpoints/agent-sessions/agent-sessions';
+} from '@/api/generated/endpoints/agent-sessions/agent-sessions';
 import {
   getListCommentsQueryKey,
   useCreateComment,
   useListComments,
-} from '../api/generated/endpoints/task-comments/task-comments';
-import type { AgentSession, AgentType } from '../api/generated/model';
-import { useAgentEvents } from '../hooks/useAgentEvents';
-import { useAgentStore } from '../stores/agentStore';
-import { useAuthStore } from '../stores/authStore';
-import { useToastStore } from '../stores/toastStore';
-import { AgentOutputViewer } from './AgentOutputViewer';
+} from '@/api/generated/endpoints/task-comments/task-comments';
+import type { AgentSession, AgentType } from '@/api/generated/model';
+import { useAgentEvents } from '@/hooks/useAgentEvents';
+import { useAgentStore } from '@/stores/agentStore';
+import { useAuthStore } from '@/stores/authStore';
+import { useToastStore } from '@/stores/toastStore';
+import { AgentOutputViewer } from '../agent/AgentOutputViewer';
 import { TimelineAgentSessionItem } from './TimelineAgentSessionItem';
 import { TimelineCommentItem } from './TimelineCommentItem';
 import { AGENT_LABELS, mergeTimeline, STATUS_COLORS, TERMINAL_STATUSES } from './timelineUtils';

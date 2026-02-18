@@ -4,9 +4,9 @@ import {
   getListCommentsQueryKey,
   useDeleteComment,
   useUpdateComment,
-} from '../api/generated/endpoints/task-comments/task-comments';
-import type { TaskComment } from '../api/generated/model';
-import { useToastStore } from '../stores/toastStore';
+} from '@/api/generated/endpoints/task-comments/task-comments';
+import type { TaskComment } from '@/api/generated/model';
+import { useToastStore } from '@/stores/toastStore';
 import { getInitials, timeAgo } from './timelineUtils';
 
 export function TimelineCommentItem({

@@ -3,7 +3,7 @@ import type {
   AgentSessionStatus,
   AgentType,
   TaskComment,
-} from '../api/generated/model';
+} from '@/api/generated/model';
 
 export type TimelineItem =
   | { type: 'comment'; data: TaskComment }

@@ -2,14 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import React from 'react';
 import { vi } from 'vitest';
-import * as agentSessionsApi from '../../api/generated/endpoints/agent-sessions/agent-sessions';
-import * as membersApi from '../../api/generated/endpoints/project-members/project-members';
-import * as commentsApi from '../../api/generated/endpoints/task-comments/task-comments';
-import * as tasksApi from '../../api/generated/endpoints/tasks/tasks';
-import * as worktreesApi from '../../api/generated/endpoints/worktrees/worktrees';
-import type { ProjectMember, Task } from '../../api/generated/model';
-import { MemberRole, TaskPriority, TaskStatus } from '../../api/generated/model';
-import { useUiStore } from '../../stores/uiStore';
+import * as agentSessionsApi from '@/api/generated/endpoints/agent-sessions/agent-sessions';
+import * as membersApi from '@/api/generated/endpoints/project-members/project-members';
+import * as commentsApi from '@/api/generated/endpoints/task-comments/task-comments';
+import * as tasksApi from '@/api/generated/endpoints/tasks/tasks';
+import * as worktreesApi from '@/api/generated/endpoints/worktrees/worktrees';
+import type { ProjectMember, Task } from '@/api/generated/model';
+import { MemberRole, TaskPriority, TaskStatus } from '@/api/generated/model';
+import { useUiStore } from '@/stores/uiStore';
 
 export const mockMembers: ProjectMember[] = [
   {

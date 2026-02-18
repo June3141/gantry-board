@@ -2,14 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as agentSessionsApi from '../api/generated/endpoints/agent-sessions/agent-sessions';
-import * as commentsApi from '../api/generated/endpoints/task-comments/task-comments';
-import type { AgentSession, TaskComment } from '../api/generated/model';
-import { AgentSessionStatus, AgentType } from '../api/generated/model';
-import { useAuthStore } from '../stores/authStore';
+import * as agentSessionsApi from '@/api/generated/endpoints/agent-sessions/agent-sessions';
+import * as commentsApi from '@/api/generated/endpoints/task-comments/task-comments';
+import type { AgentSession, TaskComment } from '@/api/generated/model';
+import { AgentSessionStatus, AgentType } from '@/api/generated/model';
+import { useAuthStore } from '@/stores/authStore';
 import { mergeTimeline, TaskTimeline, type TimelineItem } from './TaskTimeline';
 
-vi.mock('../api/generated/endpoints/task-comments/task-comments', () => ({
+vi.mock('@/api/generated/endpoints/task-comments/task-comments', () => ({
   useListComments: vi.fn(),
   useCreateComment: vi.fn(),
   useUpdateComment: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock('../api/generated/endpoints/task-comments/task-comments', () => ({
   getListCommentsQueryKey: vi.fn(() => ['comments']),
 }));
 
-vi.mock('../api/generated/endpoints/agent-sessions/agent-sessions', () => ({
+vi.mock('@/api/generated/endpoints/agent-sessions/agent-sessions', () => ({
   useListAgentSessions: vi.fn(),
   useStartAgentSession: vi.fn(),
   useStopAgentSession: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('../api/generated/endpoints/agent-sessions/agent-sessions', () => ({
   getListAgentSessionsQueryKey: vi.fn(() => ['agent-sessions']),
 }));
 
-vi.mock('../hooks/useAgentEvents', () => ({
+vi.mock('@/hooks/useAgentEvents', () => ({
   useAgentEvents: vi.fn(),
 }));
 

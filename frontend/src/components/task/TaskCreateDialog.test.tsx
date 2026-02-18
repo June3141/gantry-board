@@ -2,18 +2,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as membersApi from '../api/generated/endpoints/project-members/project-members';
-import * as tasksApi from '../api/generated/endpoints/tasks/tasks';
-import type { ProjectMember } from '../api/generated/model';
-import { MemberRole, TaskStatus } from '../api/generated/model';
-import { useUiStore } from '../stores/uiStore';
+import * as membersApi from '@/api/generated/endpoints/project-members/project-members';
+import * as tasksApi from '@/api/generated/endpoints/tasks/tasks';
+import type { ProjectMember } from '@/api/generated/model';
+import { MemberRole, TaskStatus } from '@/api/generated/model';
+import { useUiStore } from '@/stores/uiStore';
 import { TaskCreateDialog } from './TaskCreateDialog';
 
-vi.mock('../api/generated/endpoints/tasks/tasks', () => ({
+vi.mock('@/api/generated/endpoints/tasks/tasks', () => ({
   useCreateTask: vi.fn(),
 }));
 
-vi.mock('../api/generated/endpoints/project-members/project-members', () => ({
+vi.mock('@/api/generated/endpoints/project-members/project-members', () => ({
   useListMembers: vi.fn(),
 }));
 
