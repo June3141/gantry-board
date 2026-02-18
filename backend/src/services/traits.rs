@@ -130,6 +130,7 @@ impl ProjectService for SqliteProjectService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::project::Project;
     use crate::models::task::{TaskPriority, TaskStatus};
     use chrono::Utc;
     use std::sync::Arc;
@@ -272,5 +273,124 @@ mod tests {
 
         // Original still usable
         assert!(svc.list_tasks(Uuid::new_v4()).await.unwrap().is_empty());
+    }
+
+    // ------------------------------------------------------------------
+    // MockProjectService
+    // ------------------------------------------------------------------
+
+    /// Mock implementation demonstrating the DI pattern for projects.
+    struct MockProjectService {
+        projects: Vec<Project>,
+    }
+
+    #[async_trait]
+    impl ProjectService for MockProjectService {
+        async fn create_project(&self, req: &CreateProjectRequest) -> AppResult<Project> {
+            Ok(Project {
+                id: Uuid::new_v4(),
+                name: req.name.clone(),
+                description: req.description.clone(),
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            })
+        }
+
+        async fn get_project(&self, id: Uuid) -> AppResult<Project> {
+            self.projects
+                .iter()
+                .find(|p| p.id == id)
+                .cloned()
+                .ok_or_else(|| crate::error::AppError::NotFound(format!("Project {id}")))
+        }
+
+        async fn list_projects(&self) -> AppResult<Vec<Project>> {
+            Ok(self.projects.clone())
+        }
+
+        async fn list_projects_paginated(
+            &self,
+            limit: i64,
+            offset: i64,
+        ) -> AppResult<(Vec<Project>, i64)> {
+            let total = self.projects.len() as i64;
+            let page = self
+                .projects
+                .iter()
+                .skip(offset as usize)
+                .take(limit as usize)
+                .cloned()
+                .collect();
+            Ok((page, total))
+        }
+
+        async fn list_projects_for_user(&self, _user_id: Uuid) -> AppResult<Vec<Project>> {
+            Ok(self.projects.clone())
+        }
+
+        async fn update_project(
+            &self,
+            id: Uuid,
+            _req: &UpdateProjectRequest,
+        ) -> AppResult<Project> {
+            self.get_project(id).await
+        }
+
+        async fn delete_project(&self, _id: Uuid) -> AppResult<()> {
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_mock_project_service_create() {
+        let svc: Arc<dyn ProjectService> = Arc::new(MockProjectService { projects: vec![] });
+
+        let req = CreateProjectRequest {
+            name: "Test project".to_string(),
+            description: Some("A description".to_string()),
+        };
+
+        let project = svc.create_project(&req).await.unwrap();
+        assert_eq!(project.name, "Test project");
+        assert_eq!(project.description, Some("A description".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_mock_project_service_list() {
+        let project = Project {
+            id: Uuid::new_v4(),
+            name: "P1".to_string(),
+            description: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let svc: Arc<dyn ProjectService> = Arc::new(MockProjectService {
+            projects: vec![project.clone()],
+        });
+
+        let projects = svc.list_projects().await.unwrap();
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].id, project.id);
+    }
+
+    #[tokio::test]
+    async fn test_mock_project_service_not_found() {
+        let svc: Arc<dyn ProjectService> = Arc::new(MockProjectService { projects: vec![] });
+        let result = svc.get_project(Uuid::new_v4()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_project_trait_object_can_be_stored_in_arc() {
+        let svc: Arc<dyn ProjectService> = Arc::new(MockProjectService { projects: vec![] });
+        let svc_clone = Arc::clone(&svc);
+
+        let handle = tokio::spawn(async move { svc_clone.list_projects().await.unwrap() });
+
+        let result = handle.await.unwrap();
+        assert!(result.is_empty());
+
+        // Original still usable
+        assert!(svc.list_projects().await.unwrap().is_empty());
     }
 }

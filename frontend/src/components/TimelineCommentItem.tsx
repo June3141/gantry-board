@@ -92,6 +92,7 @@ export function TimelineCommentItem({
         {editing ? (
           <div className="mt-1 space-y-1">
             <textarea
+              aria-label="Edit comment"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               rows={2}
