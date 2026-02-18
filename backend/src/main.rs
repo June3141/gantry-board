@@ -53,6 +53,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_deref()
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
+    let output_buffer = Arc::new(
+        gantry_board::services::agent_session_output_service::OutputBuffer::new(pool.clone()),
+    );
+
     let mut executors: HashMap<AgentType, Arc<dyn AgentExecutor>> = HashMap::new();
     executors.insert(AgentType::ClaudeCode, Arc::new(ClaudeCodeExecutor));
     executors.insert(AgentType::GeminiCli, Arc::new(GeminiCliExecutor));
@@ -61,6 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pool.clone(),
         repo_path.clone(),
         Arc::clone(&sse_hub),
+        Arc::clone(&output_buffer),
     ));
 
     let cleanup_pool = pool.clone();
@@ -118,12 +123,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         orchestrator,
         preview_manager,
         github_client,
+        output_buffer: Arc::clone(&output_buffer),
         started_at: std::time::Instant::now(),
     };
     let app = gantry_board::app(state)?;
 
     // Cancellation token for graceful shutdown of background tasks
     let shutdown_token = CancellationToken::new();
+
+    // Spawn periodic output buffer flush
+    output_buffer.spawn_periodic_flush(shutdown_token.clone());
 
     // Spawn background task for periodic session cleanup
     let cleanup_interval_secs = config.session_cleanup_interval_secs.max(1);

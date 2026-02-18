@@ -118,6 +118,35 @@ pub async fn list_sync_enabled(pool: &SqlitePool) -> AppResult<Vec<GitHubLink>> 
         .collect()
 }
 
+/// Find a GitHub link by repo owner/name (for webhook routing).
+pub async fn find_by_repo(
+    pool: &SqlitePool,
+    repo_owner: &str,
+    repo_name: &str,
+) -> AppResult<Option<GitHubLink>> {
+    let row = sqlx::query_as::<_, GitHubLinkRow>(
+        r#"
+        SELECT id, project_id, repo_owner, repo_name, sync_enabled,
+               last_synced_at, created_at, updated_at
+        FROM github_links
+        WHERE repo_owner = $1 AND repo_name = $2 AND sync_enabled = 1
+        "#,
+    )
+    .bind(repo_owner)
+    .bind(repo_name)
+    .fetch_optional(pool)
+    .await?;
+
+    match row {
+        Some(r) => {
+            Ok(Some(r.try_into().map_err(|e: uuid::Error| {
+                AppError::Internal(e.to_string())
+            })?))
+        }
+        None => Ok(None),
+    }
+}
+
 #[tracing::instrument(skip(pool), fields(project_id = %project_id))]
 pub async fn update_last_synced(pool: &SqlitePool, project_id: Uuid) -> AppResult<()> {
     let result = sqlx::query(

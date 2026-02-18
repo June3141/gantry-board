@@ -151,10 +151,14 @@ impl IntoResponse for AppError {
                     return AppError::NotFound("resource not found".to_string()).into_response();
                 }
                 git2::ErrorCode::Exists => {
-                    return AppError::Conflict(err.message().to_string()).into_response();
+                    tracing::debug!(%err, "git conflict details");
+                    return AppError::Conflict("git resource already exists".to_string())
+                        .into_response();
                 }
                 git2::ErrorCode::InvalidSpec | git2::ErrorCode::Invalid => {
-                    return AppError::Validation(err.message().to_string()).into_response();
+                    tracing::debug!(%err, "git validation error details");
+                    return AppError::Validation("invalid git reference".to_string())
+                        .into_response();
                 }
                 _ => {
                     tracing::debug!(%err, "git error details");

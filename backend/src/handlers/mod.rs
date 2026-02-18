@@ -9,4 +9,5 @@ pub mod pull_requests;
 pub mod task_comments;
 pub mod tasks;
 pub mod users;
+pub mod webhooks;
 pub mod worktrees;

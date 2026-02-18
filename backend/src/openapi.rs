@@ -60,6 +60,7 @@ use crate::sse;
         handlers::previews::start_preview,
         handlers::previews::stop_preview,
         handlers::previews::restart_preview,
+        handlers::webhooks::github_webhook,
     ),
     components(schemas(
         models::task::Task,
@@ -122,6 +123,7 @@ use crate::sse;
         (name = "github-links", description = "GitHub link management"),
         (name = "pull-requests", description = "Pull request management"),
         (name = "previews", description = "Docker preview management"),
+        (name = "webhooks", description = "Webhook endpoints"),
     ),
     info(
         title = "Gantry Board API",

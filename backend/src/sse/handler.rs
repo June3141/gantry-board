@@ -65,6 +65,7 @@ mod tests {
     use crate::agent::orchestrator::AgentOrchestrator;
     use crate::auth::middleware::AuthUser;
     use crate::config::Config;
+    use crate::services::agent_session_output_service::OutputBuffer;
     use crate::sse::event::SseEvent;
     use crate::sse::hub::SseHub;
     use sqlx::sqlite::SqlitePoolOptions;
@@ -89,11 +90,13 @@ mod tests {
             crate::models::agent_session::AgentType::ClaudeCode,
             Arc::new(NoopExecutor) as Arc<dyn crate::agent::executor::AgentExecutor>,
         );
+        let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
         let orchestrator = Arc::new(AgentOrchestrator::new(
             executors,
             pool.clone(),
             PathBuf::from("."),
             Arc::clone(&sse_hub),
+            Arc::clone(&output_buffer),
         ));
         AppState {
             pool,
@@ -102,6 +105,7 @@ mod tests {
             orchestrator,
             preview_manager: None,
             github_client: None,
+            output_buffer,
             started_at: std::time::Instant::now(),
         }
     }

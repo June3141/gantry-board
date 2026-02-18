@@ -1,5 +1,4 @@
 import type { QueryClient } from '@tanstack/react-query';
-
 import type {
   AgentSession,
   DockerPreview,
@@ -7,8 +6,16 @@ import type {
   Task,
   TaskComment,
 } from '../api/generated/model';
+import { logger } from '../lib/logger';
+import {
+  invalidateComments,
+  invalidatePreviews,
+  invalidateSessions,
+  invalidateTasks,
+} from '../services/queryInvalidation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const sseLog = logger.child({ module: 'sse' });
 
 export type SseEvent =
   | { type: 'TaskCreated'; task: Task }
@@ -27,23 +34,14 @@ export type SseEvent =
 export function connectEventSource(queryClient: QueryClient): () => void {
   const eventSource = new EventSource(`${API_BASE_URL}/api/events`);
 
-  const handleTaskEvent = () => {
-    // Invalidate all task queries (including variants with project_id filter)
-    queryClient.invalidateQueries({
-      queryKey: ['/api/tasks'],
-      exact: false,
-    });
-  };
-
   const handleSseMessage = (event: MessageEvent) => {
     try {
-      // Validate JSON structure; parsed value used for type checking
       const parsed = JSON.parse(event.data) as SseEvent;
       if (parsed.type) {
-        handleTaskEvent();
+        invalidateTasks(queryClient);
       }
     } catch {
-      console.error('Failed to parse SSE event:', event.data);
+      sseLog.error({ data: event.data }, 'failed to parse SSE event');
     }
   };
 
@@ -59,14 +57,11 @@ export function connectEventSource(queryClient: QueryClient): () => void {
       }
       const { task_id: taskId } = parsed.session;
       if (taskId) {
-        queryClient.invalidateQueries({
-          queryKey: [`/api/tasks/${taskId}/sessions`],
-          exact: false,
-        });
+        invalidateSessions(queryClient, taskId);
       }
-      handleTaskEvent();
+      invalidateTasks(queryClient);
     } catch {
-      console.error('Failed to parse SSE event:', event.data);
+      sseLog.error({ data: event.data }, 'failed to parse SSE event');
     }
   };
   eventSource.addEventListener('agent_session_status_changed', handleAgentSessionEvent);
@@ -77,13 +72,10 @@ export function connectEventSource(queryClient: QueryClient): () => void {
       const taskId =
         'comment' in parsed ? parsed.comment.task_id : 'task_id' in parsed ? parsed.task_id : null;
       if (taskId) {
-        queryClient.invalidateQueries({
-          queryKey: [`/api/tasks/${taskId}/comments`],
-          exact: false,
-        });
+        invalidateComments(queryClient, taskId);
       }
     } catch {
-      console.error('Failed to parse SSE event:', event.data);
+      sseLog.error({ data: event.data }, 'failed to parse SSE event');
     }
   };
   eventSource.addEventListener('comment_created', handleCommentEvent);
@@ -91,10 +83,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
   eventSource.addEventListener('comment_deleted', handleCommentEvent);
 
   const handlePreviewEvent = () => {
-    queryClient.invalidateQueries({
-      queryKey: ['/api/previews'],
-      exact: false,
-    });
+    invalidatePreviews(queryClient);
   };
   eventSource.addEventListener('preview_status_changed', handlePreviewEvent);
   eventSource.addEventListener('preview_deleted', handlePreviewEvent);
@@ -112,7 +101,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
         },
       });
     } catch {
-      console.error('Failed to parse GitHub sync SSE event:', event.data);
+      sseLog.error({ data: event.data }, 'failed to parse GitHub sync SSE event');
     }
   };
   eventSource.addEventListener('github_sync_completed', handleGithubSyncEvent);
@@ -120,10 +109,7 @@ export function connectEventSource(queryClient: QueryClient): () => void {
 
   eventSource.onerror = (event: Event) => {
     const source = event.currentTarget as EventSource | null;
-    console.error('SSE connection error', {
-      type: event.type,
-      readyState: source?.readyState,
-    });
+    sseLog.error({ type: event.type, readyState: source?.readyState }, 'SSE connection error');
   };
 
   return () => {

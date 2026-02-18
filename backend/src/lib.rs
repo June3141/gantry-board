@@ -32,6 +32,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::agent::orchestrator::AgentOrchestrator;
 use crate::github::api::GitHubApi;
+use crate::services::agent_session_output_service::OutputBuffer;
 use crate::services::preview_service::PreviewManager;
 use crate::sse::hub::SseHub;
 
@@ -43,6 +44,7 @@ pub struct AppState {
     pub orchestrator: Arc<AgentOrchestrator>,
     pub preview_manager: Option<Arc<PreviewManager>>,
     pub github_client: Option<Arc<dyn GitHubApi>>,
+    pub output_buffer: Arc<OutputBuffer>,
     pub started_at: std::time::Instant,
 }
 
@@ -255,6 +257,12 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             get(move || async move { metric_handle.render() }),
         )
         .nest("/api", api_routes)
+        // Webhook route: no auth/CSRF, body limit 25MB
+        .route(
+            "/api/webhooks/github",
+            post(handlers::webhooks::github_webhook)
+                .layer(axum::extract::DefaultBodyLimit::max(25 * 1024 * 1024)),
+        )
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
         )
