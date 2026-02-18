@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useRegister } from '../api/generated/endpoints/auth/auth';
-import { useAuthStore } from '../stores/authStore';
+import { useRegister } from '@/api/generated/endpoints/auth/auth';
+import { useAuthStore } from '@/stores/authStore';
 
 export function RegisterPage() {
   const navigate = useNavigate();

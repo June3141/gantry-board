@@ -2,12 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as commentsApi from '../api/generated/endpoints/task-comments/task-comments';
-import type { TaskComment } from '../api/generated/model';
-import { useAuthStore } from '../stores/authStore';
+import * as commentsApi from '@/api/generated/endpoints/task-comments/task-comments';
+import type { TaskComment } from '@/api/generated/model';
+import { useAuthStore } from '@/stores/authStore';
 import { CommentSection } from './CommentSection';
 
-vi.mock('../api/generated/endpoints/task-comments/task-comments', () => ({
+vi.mock('@/api/generated/endpoints/task-comments/task-comments', () => ({
   useListComments: vi.fn(),
   useCreateComment: vi.fn(),
   useUpdateComment: vi.fn(),

@@ -6,9 +6,9 @@ import {
   useDeleteComment,
   useListComments,
   useUpdateComment,
-} from '../api/generated/endpoints/task-comments/task-comments';
-import { useAuthStore } from '../stores/authStore';
-import { useToastStore } from '../stores/toastStore';
+} from '@/api/generated/endpoints/task-comments/task-comments';
+import { useAuthStore } from '@/stores/authStore';
+import { useToastStore } from '@/stores/toastStore';
 
 function timeAgo(dateStr: string): string {
   const now = Date.now();

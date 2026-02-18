@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { useToastStore } from '../stores/toastStore';
+import { useToastStore } from '@/stores/toastStore';
 import { ToastContainer } from './ToastContainer';
 
 describe('ToastContainer', () => {

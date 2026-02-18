@@ -1,4 +1,4 @@
-import { useToastStore } from '../stores/toastStore';
+import { useToastStore } from '@/stores/toastStore';
 
 const typeStyles = {
   success: 'bg-green-50 border-green-400 text-green-800',
