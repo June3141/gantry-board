@@ -38,6 +38,7 @@ axum-extra = { workspace = true }
 git2 = { workspace = true }
 async-trait = { workspace = true }
 tokio-util = { workspace = true }
+nix = { workspace = true }
 tower_governor = { workspace = true }
 zxcvbn = { workspace = true }
 moka = { workspace = true }

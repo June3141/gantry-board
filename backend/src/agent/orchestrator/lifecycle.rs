@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use nix::sys::signal::{self, Signal};
+use nix::unistd::Pid;
 use uuid::Uuid;
 
 use super::{AgentOrchestrator, RunningSession};
@@ -8,18 +10,23 @@ use crate::models::agent_session::{AgentSessionStatus, UpdateAgentSessionRequest
 use crate::services::{agent_session_service, worktree_service};
 
 impl AgentOrchestrator {
-    /// Stop a running agent session.
+    /// Stop a running or paused agent session.
     ///
-    /// 1. Cancel the agent process
-    /// 2. Update DB session (Cancelled)
-    /// 3. Remove from running map only after DB update succeeds
+    /// 1. If paused, send SIGCONT first so the process can be killed
+    /// 2. Cancel the agent process
+    /// 3. Update DB session (Cancelled)
+    /// 4. Remove from running map only after DB update succeeds
     pub async fn stop_session(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
-        // Step 1: Check session exists and cancel it (keep in map)
+        // Step 1: Check session exists, resume if paused, then cancel
         {
             let running = self.running.lock().await;
             let session = running.get(&session_id).ok_or_else(|| {
                 AppError::NotFound(format!("no running session found: {session_id}"))
             })?;
+            // Send SIGCONT before killing, in case the process is stopped
+            if let Some(pid) = session.pid {
+                let _ = signal::kill(Pid::from_raw(pid as i32), Signal::SIGCONT);
+            }
             session.cancel.cancel();
         }
 
@@ -40,6 +47,62 @@ impl AgentOrchestrator {
             running.remove(&session_id);
             metrics::gauge!("gantry_agent_sessions_active").set(running.len() as f64);
         }
+
+        Ok(())
+    }
+
+    /// Pause a running agent session by sending SIGSTOP to the child process.
+    pub async fn pause_session(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
+        let pid = {
+            let running = self.running.lock().await;
+            let session = running.get(&session_id).ok_or_else(|| {
+                AppError::NotFound(format!("no running session found: {session_id}"))
+            })?;
+            session.pid.ok_or_else(|| {
+                AppError::Internal("cannot pause session: no PID available".into())
+            })?
+        };
+
+        signal::kill(Pid::from_raw(pid as i32), Signal::SIGSTOP)
+            .map_err(|e| AppError::Internal(format!("failed to pause process {pid}: {e}")))?;
+
+        agent_session_service::update_agent_session(
+            &self.pool,
+            task_id,
+            session_id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Paused,
+            },
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Resume a paused agent session by sending SIGCONT to the child process.
+    pub async fn resume_session(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
+        let pid = {
+            let running = self.running.lock().await;
+            let session = running.get(&session_id).ok_or_else(|| {
+                AppError::NotFound(format!("no running session found: {session_id}"))
+            })?;
+            session.pid.ok_or_else(|| {
+                AppError::Internal("cannot resume session: no PID available".into())
+            })?
+        };
+
+        signal::kill(Pid::from_raw(pid as i32), Signal::SIGCONT)
+            .map_err(|e| AppError::Internal(format!("failed to resume process {pid}: {e}")))?;
+
+        agent_session_service::update_agent_session(
+            &self.pool,
+            task_id,
+            session_id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await?;
 
         Ok(())
     }
