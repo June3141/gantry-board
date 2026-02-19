@@ -1,7 +1,11 @@
 use std::path::PathBuf;
+use std::process::Stdio;
 
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
+use tracing::warn;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
@@ -98,6 +102,124 @@ impl AgentExecutor for NoopExecutor {
             join_handle,
         })
     }
+}
+
+/// Spawn a subprocess, write the prompt to stdin, then stream NDJSON stdout
+/// through the provided `parse_line` function. Handles cancellation, zombie
+/// process reaping, and terminal event detection.
+///
+/// This is the shared implementation behind `ClaudeCodeExecutor` and
+/// `GeminiCliExecutor`.
+pub async fn run_subprocess<F>(
+    mut cmd: Command,
+    prompt: &str,
+    agent_name: &str,
+    parse_line: F,
+) -> AppResult<AgentHandle>
+where
+    F: Fn(&str) -> Option<AgentOutputEvent> + Send + 'static,
+{
+    cmd.stdin(Stdio::piped());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::inherit());
+    cmd.kill_on_drop(true);
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| AppError::Internal(format!("failed to spawn {agent_name} CLI: {e}")))?;
+
+    // Write prompt to stdin and close it so the CLI starts processing.
+    if let Some(mut stdin) = child.stdin.take() {
+        if let Err(e) = stdin.write_all(prompt.as_bytes()).await {
+            let _ = child.kill().await;
+            let _ = child.wait().await; // reap to avoid zombie
+            return Err(AppError::Internal(format!(
+                "failed to write prompt to {agent_name} stdin: {e}"
+            )));
+        }
+        // stdin is dropped here, closing the pipe
+    }
+
+    let stdout = match child.stdout.take() {
+        Some(out) => out,
+        None => {
+            let _ = child.kill().await;
+            let _ = child.wait().await; // reap to avoid zombie
+            return Err(AppError::Internal(format!(
+                "{agent_name} CLI stdout not captured"
+            )));
+        }
+    };
+
+    let cancel = CancellationToken::new();
+    let (tx, rx) = mpsc::channel(256);
+    let token = cancel.clone();
+    let name = agent_name.to_string();
+
+    let join_handle = tokio::spawn(async move {
+        let reader = BufReader::new(stdout);
+        let mut lines = reader.lines();
+
+        loop {
+            tokio::select! {
+                _ = token.cancelled() => {
+                    let _ = child.kill().await;
+                    let _ = child.wait().await; // reap to avoid zombie
+                    let _ = tx.send(AgentOutputEvent::Completed).await;
+                    break;
+                }
+                line = lines.next_line() => {
+                    match line {
+                        Ok(Some(line)) => {
+                            if let Some(event) = parse_line(&line) {
+                                let is_terminal = matches!(
+                                    event,
+                                    AgentOutputEvent::Completed | AgentOutputEvent::Failed { .. }
+                                );
+                                if tx.send(event).await.is_err() {
+                                    break;
+                                }
+                                if is_terminal {
+                                    break;
+                                }
+                            }
+                        }
+                        Ok(None) => {
+                            // stdout closed — check process exit code
+                            let terminal = match child.wait().await {
+                                Ok(status) if status.success() => AgentOutputEvent::Completed,
+                                Ok(status) => AgentOutputEvent::Failed {
+                                    error: format!("{name} exited with {status}"),
+                                },
+                                Err(e) => AgentOutputEvent::Failed {
+                                    error: format!("failed to wait on {name}: {e}"),
+                                },
+                            };
+                            let _ = tx.send(terminal).await;
+                            break;
+                        }
+                        Err(e) => {
+                            warn!("IO error reading {name} stdout: {e}");
+                            let _ = tx.send(AgentOutputEvent::Failed {
+                                error: format!("IO error: {e}"),
+                            }).await;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        // Reap the child on all exit paths to prevent zombie processes.
+        // Double-wait on the Ok(None) path is harmless.
+        let _ = child.wait().await;
+        Ok(())
+    });
+
+    Ok(AgentHandle {
+        cancel,
+        output_rx: rx,
+        join_handle,
+    })
 }
 
 #[cfg(test)]
