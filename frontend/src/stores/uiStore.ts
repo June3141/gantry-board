@@ -20,6 +20,9 @@ interface UiState {
   isProjectMembersOpen: boolean;
   openProjectMembers: () => void;
   closeProjectMembers: () => void;
+  isProjectChatOpen: boolean;
+  openProjectChat: () => void;
+  closeProjectChat: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -41,4 +44,7 @@ export const useUiStore = create<UiState>((set) => ({
   isProjectMembersOpen: false,
   openProjectMembers: () => set({ isProjectMembersOpen: true }),
   closeProjectMembers: () => set({ isProjectMembersOpen: false }),
+  isProjectChatOpen: false,
+  openProjectChat: () => set({ isProjectChatOpen: true }),
+  closeProjectChat: () => set({ isProjectChatOpen: false }),
 }));

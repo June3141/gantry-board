@@ -15,7 +15,9 @@ import type { SseEventOneOfOneseven } from './sseEventOneOfOneseven';
 import type { SseEventOneOfOnethree } from './sseEventOneOfOnethree';
 import type { SseEventOneOfSeven } from './sseEventOneOfSeven';
 import type { SseEventOneOfThree } from './sseEventOneOfThree';
+import type { SseEventOneOfTwofive } from './sseEventOneOfTwofive';
 import type { SseEventOneOfTwoone } from './sseEventOneOfTwoone';
+import type { SseEventOneOfTwoseven } from './sseEventOneOfTwoseven';
 import type { SseEventOneOfTwothree } from './sseEventOneOfTwothree';
 
 /**
@@ -33,4 +35,6 @@ export type SseEvent =
   | SseEventOneOfOneseven
   | SseEventOneOfOnenine
   | SseEventOneOfTwoone
-  | SseEventOneOfTwothree;
+  | SseEventOneOfTwothree
+  | SseEventOneOfTwofive
+  | SseEventOneOfTwoseven;

@@ -11,5 +11,5 @@ export type SseEventOneOfTwooneType =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SseEventOneOfTwooneType = {
-  GitHubSyncCompleted: 'GitHubSyncCompleted',
+  PreviewStatusChanged: 'PreviewStatusChanged',
 } as const;

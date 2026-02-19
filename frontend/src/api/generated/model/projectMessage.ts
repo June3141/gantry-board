@@ -5,10 +5,12 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import type { SseEventOneOfOnenineType } from './sseEventOneOfOnenineType';
 
-export type SseEventOneOfOnenine = {
-  message_id: string;
+export interface ProjectMessage {
+  content: string;
+  created_at: string;
+  id: string;
   project_id: string;
-  type: SseEventOneOfOnenineType;
-};
+  user_id: string;
+  user_name: string;
+}

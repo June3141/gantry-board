@@ -7,6 +7,7 @@ import { KanbanBoard } from '@/components/board';
 import { ErrorBoundary, ToastContainer } from '@/components/common';
 import { LoginPage, ProtectedRoute, RegisterPage } from '@/components/layout';
 import {
+  ProjectChatPanel,
   ProjectCreateDialog,
   ProjectMembersPanel,
   ProjectSettingsModal,
@@ -26,6 +27,7 @@ function KanbanApp() {
   const openProjectModal = useUiStore((s) => s.openProjectModal);
   const openProjectSettings = useUiStore((s) => s.openProjectSettings);
   const openProjectMembers = useUiStore((s) => s.openProjectMembers);
+  const openProjectChat = useUiStore((s) => s.openProjectChat);
 
   // Connect to real-time updates (WebSocket with SSE fallback)
   // biome-ignore lint/correctness/useExhaustiveDependencies: queryClient is stable from provider
@@ -90,6 +92,13 @@ function KanbanApp() {
                 >
                   Members
                 </button>
+                <button
+                  type="button"
+                  onClick={openProjectChat}
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Chat
+                </button>
               </>
             )}
 
@@ -126,6 +135,7 @@ function KanbanApp() {
         />
       )}
       {selectedProjectId && <ProjectMembersPanel projectId={selectedProjectId} />}
+      {selectedProjectId && <ProjectChatPanel projectId={selectedProjectId} />}
     </div>
   );
 }

@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type SseEventOneOfOnesevenType =
-  (typeof SseEventOneOfOnesevenType)[keyof typeof SseEventOneOfOnesevenType];
+export type SseEventOneOfTwofiveType =
+  (typeof SseEventOneOfTwofiveType)[keyof typeof SseEventOneOfTwofiveType];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const SseEventOneOfOnesevenType = {
-  ProjectMessageCreated: 'ProjectMessageCreated',
+export const SseEventOneOfTwofiveType = {
+  GitHubSyncCompleted: 'GitHubSyncCompleted',
 } as const;

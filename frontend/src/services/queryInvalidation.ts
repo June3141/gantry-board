@@ -37,6 +37,13 @@ export function invalidatePreviews(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['/api/previews'], exact: false });
 }
 
+export function invalidateMessages(queryClient: QueryClient, projectId: string) {
+  queryClient.invalidateQueries({
+    queryKey: [`/api/projects/${projectId}/messages`],
+    exact: false,
+  });
+}
+
 export function invalidateGithubLinks(queryClient: QueryClient, projectId: string) {
   queryClient.invalidateQueries({
     queryKey: [`/api/projects/${projectId}/github-link`],
