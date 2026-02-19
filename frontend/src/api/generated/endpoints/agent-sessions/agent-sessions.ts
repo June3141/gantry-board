@@ -614,6 +614,72 @@ export function useGetAgentSessionOutputs<
   return query;
 }
 
+export const pauseAgentSession = (taskId: string, sessionId: string, signal?: AbortSignal) => {
+  return customInstance<AgentSession>({
+    url: `/api/tasks/${taskId}/sessions/${sessionId}/pause`,
+    method: 'POST',
+    signal,
+  });
+};
+
+export const getPauseAgentSessionMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof pauseAgentSession>>,
+    TError,
+    { taskId: string; sessionId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof pauseAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationKey = ['pauseAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof pauseAgentSession>>,
+    { taskId: string; sessionId: string }
+  > = (props) => {
+    const { taskId, sessionId } = props ?? {};
+
+    return pauseAgentSession(taskId, sessionId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PauseAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof pauseAgentSession>>
+>;
+
+export type PauseAgentSessionMutationError = void;
+
+export const usePauseAgentSession = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof pauseAgentSession>>,
+      TError,
+      { taskId: string; sessionId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof pauseAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationOptions = getPauseAgentSessionMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
 export const restartAgentSession = (taskId: string, sessionId: string, signal?: AbortSignal) => {
   return customInstance<StartAgentSessionResponse>({
     url: `/api/tasks/${taskId}/sessions/${sessionId}/restart`,
@@ -677,6 +743,72 @@ export const useRestartAgentSession = <TError = void, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getRestartAgentSessionMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+export const resumeAgentSession = (taskId: string, sessionId: string, signal?: AbortSignal) => {
+  return customInstance<AgentSession>({
+    url: `/api/tasks/${taskId}/sessions/${sessionId}/resume`,
+    method: 'POST',
+    signal,
+  });
+};
+
+export const getResumeAgentSessionMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resumeAgentSession>>,
+    TError,
+    { taskId: string; sessionId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resumeAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationKey = ['resumeAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resumeAgentSession>>,
+    { taskId: string; sessionId: string }
+  > = (props) => {
+    const { taskId, sessionId } = props ?? {};
+
+    return resumeAgentSession(taskId, sessionId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResumeAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resumeAgentSession>>
+>;
+
+export type ResumeAgentSessionMutationError = void;
+
+export const useResumeAgentSession = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resumeAgentSession>>,
+      TError,
+      { taskId: string; sessionId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resumeAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationOptions = getResumeAgentSessionMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

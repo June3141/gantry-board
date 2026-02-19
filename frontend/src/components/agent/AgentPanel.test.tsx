@@ -9,6 +9,8 @@ vi.mock('@/api/generated/endpoints/agent-sessions/agent-sessions', () => ({
   useListAgentSessions: vi.fn(),
   useStartAgentSession: vi.fn(),
   useStopAgentSession: vi.fn(),
+  usePauseAgentSession: vi.fn(),
+  useResumeAgentSession: vi.fn(),
   useGetAgentSessionOutputs: vi.fn(),
 }));
 
@@ -26,6 +28,8 @@ const renderWithProviders = (ui: React.ReactElement) => {
 describe('AgentPanel', () => {
   const mockStartMutateAsync = vi.fn();
   const mockStopMutateAsync = vi.fn();
+  const mockPauseMutateAsync = vi.fn();
+  const mockResumeMutateAsync = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -44,6 +48,16 @@ describe('AgentPanel', () => {
       mutateAsync: mockStopMutateAsync,
       isPending: false,
     } as unknown as ReturnType<typeof agentSessionsApi.useStopAgentSession>);
+
+    vi.mocked(agentSessionsApi.usePauseAgentSession).mockReturnValue({
+      mutateAsync: mockPauseMutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.usePauseAgentSession>);
+
+    vi.mocked(agentSessionsApi.useResumeAgentSession).mockReturnValue({
+      mutateAsync: mockResumeMutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useResumeAgentSession>);
 
     vi.mocked(agentSessionsApi.useGetAgentSessionOutputs).mockReturnValue({
       data: undefined,
@@ -222,6 +236,107 @@ describe('AgentPanel', () => {
     expect(screen.getByTestId('agent-output-container')).toBeInTheDocument();
     expect(screen.getByText('output line 1')).toBeInTheDocument();
     expect(screen.getByText('output line 2')).toBeInTheDocument();
+  });
+
+  it('renders pause button when session is running', () => {
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [
+        {
+          id: 'session-1',
+          task_id: 'task-1',
+          agent_type: 'claude_code',
+          status: 'running',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    renderWithProviders(<AgentPanel taskId="task-1" />);
+    expect(screen.getByRole('button', { name: /pause/i })).toBeInTheDocument();
+  });
+
+  it('renders resume button when session is paused', () => {
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [
+        {
+          id: 'session-1',
+          task_id: 'task-1',
+          agent_type: 'claude_code',
+          status: 'paused',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    renderWithProviders(<AgentPanel taskId="task-1" />);
+    expect(screen.getByRole('button', { name: /resume/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument();
+  });
+
+  it('calls pause mutation when pause is clicked', async () => {
+    mockPauseMutateAsync.mockResolvedValue({
+      id: 'session-1',
+      status: 'paused',
+    });
+
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [
+        {
+          id: 'session-1',
+          task_id: 'task-1',
+          agent_type: 'claude_code',
+          status: 'running',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    const user = userEvent.setup();
+    renderWithProviders(<AgentPanel taskId="task-1" />);
+
+    await user.click(screen.getByRole('button', { name: /pause/i }));
+
+    expect(mockPauseMutateAsync).toHaveBeenCalledWith({
+      taskId: 'task-1',
+      sessionId: 'session-1',
+    });
+  });
+
+  it('calls resume mutation when resume is clicked', async () => {
+    mockResumeMutateAsync.mockResolvedValue({
+      id: 'session-1',
+      status: 'running',
+    });
+
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [
+        {
+          id: 'session-1',
+          task_id: 'task-1',
+          agent_type: 'claude_code',
+          status: 'paused',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    const user = userEvent.setup();
+    renderWithProviders(<AgentPanel taskId="task-1" />);
+
+    await user.click(screen.getByRole('button', { name: /resume/i }));
+
+    expect(mockResumeMutateAsync).toHaveBeenCalledWith({
+      taskId: 'task-1',
+      sessionId: 'session-1',
+    });
   });
 
   it('displays session status badge', () => {
