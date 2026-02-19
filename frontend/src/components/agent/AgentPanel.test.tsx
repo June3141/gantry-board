@@ -216,7 +216,9 @@ describe('AgentPanel', () => {
     renderWithProviders(<AgentPanel taskId="task-1" />);
 
     // Click the past session to view its output (session ID is truncated to 8 chars)
-    await user.click(screen.getByText('session-').closest('button')!);
+    const sessionBtn = screen.getByText('session-').closest('button');
+    expect(sessionBtn).toBeInTheDocument();
+    await user.click(sessionBtn as HTMLElement);
 
     // Output viewer should be visible with loaded history content
     expect(screen.getByTestId('agent-output-container')).toBeInTheDocument();

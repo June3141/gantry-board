@@ -163,7 +163,8 @@ describe('CommentSection', () => {
     renderWithProviders(<CommentSection taskId="task-1" />);
 
     const editBtn = screen.getAllByTestId('comment-item')[0].querySelector('[aria-label="Edit"]');
-    await user.click(editBtn!);
+    expect(editBtn).toBeInTheDocument();
+    await user.click(editBtn as HTMLElement);
 
     expect(screen.getByDisplayValue('First comment')).toBeInTheDocument();
   });
@@ -174,7 +175,8 @@ describe('CommentSection', () => {
     renderWithProviders(<CommentSection taskId="task-1" />);
 
     const editBtn = screen.getAllByTestId('comment-item')[0].querySelector('[aria-label="Edit"]');
-    await user.click(editBtn!);
+    expect(editBtn).toBeInTheDocument();
+    await user.click(editBtn as HTMLElement);
 
     const input = screen.getByDisplayValue('First comment');
     await user.clear(input);
@@ -193,7 +195,8 @@ describe('CommentSection', () => {
     renderWithProviders(<CommentSection taskId="task-1" />);
 
     const editBtn = screen.getAllByTestId('comment-item')[0].querySelector('[aria-label="Edit"]');
-    await user.click(editBtn!);
+    expect(editBtn).toBeInTheDocument();
+    await user.click(editBtn as HTMLElement);
 
     await user.click(screen.getByRole('button', { name: /cancel/i }));
 
@@ -209,7 +212,8 @@ describe('CommentSection', () => {
     const deleteBtn = screen
       .getAllByTestId('comment-item')[0]
       .querySelector('[aria-label="Delete"]');
-    await user.click(deleteBtn!);
+    expect(deleteBtn).toBeInTheDocument();
+    await user.click(deleteBtn as HTMLElement);
 
     // Confirmation appears
     await user.click(screen.getByRole('button', { name: /confirm/i }));
