@@ -108,7 +108,10 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
         if (e.target === e.currentTarget) closeTaskDetail();
       }}
     >
-      <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+      <div
+        data-testid="task-detail-modal"
+        className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
+      >
         {isLoading ? (
           <p className="text-sm text-gray-500">Loading...</p>
         ) : isError || !task ? (
