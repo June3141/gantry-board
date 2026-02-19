@@ -129,10 +129,7 @@ async fn test_list_messages_with_cursor_pagination() {
 
     // First page: limit=3
     let response = server
-        .get(&format!(
-            "/api/projects/{}/messages?limit=3",
-            project_id
-        ))
+        .get(&format!("/api/projects/{}/messages?limit=3", project_id))
         .await;
     response.assert_status_ok();
     let page1: Vec<serde_json::Value> = response.json();
