@@ -629,3 +629,80 @@ fn create_tar_context(dir: &std::path::Path) -> AppResult<Vec<u8>> {
         .map_err(|e| AppError::Internal(format!("tar flush error: {e}")))?;
     Ok(buf)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_helpers::setup_test_db;
+
+    async fn insert_preview(pool: &SqlitePool, worktree_name: &str) -> Uuid {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        sqlx::query(
+            "INSERT INTO docker_previews (id, worktree_name, status, created_at, updated_at) VALUES ($1, $2, 'pending', $3, $4)",
+        )
+        .bind(id.to_string())
+        .bind(worktree_name)
+        .bind(now)
+        .bind(now)
+        .execute(pool)
+        .await
+        .expect("insert preview");
+        id
+    }
+
+    #[tokio::test]
+    async fn test_allocate_port_assigns_first_available() {
+        let pool = setup_test_db().await;
+        let id = insert_preview(&pool, "wt-1").await;
+
+        let mut conn = pool.acquire().await.unwrap();
+        let port = allocate_port_tx(&mut conn, id, 9000, 9010, "http://localhost")
+            .await
+            .expect("port allocation should succeed");
+
+        assert_eq!(port, 9000);
+    }
+
+    #[tokio::test]
+    async fn test_allocate_port_skips_already_allocated() {
+        let pool = setup_test_db().await;
+        let id1 = insert_preview(&pool, "wt-1").await;
+        let id2 = insert_preview(&pool, "wt-2").await;
+
+        let mut conn = pool.acquire().await.unwrap();
+        let port1 = allocate_port_tx(&mut conn, id1, 9000, 9010, "http://localhost")
+            .await
+            .expect("first allocation should succeed");
+        assert_eq!(port1, 9000);
+
+        let port2 = allocate_port_tx(&mut conn, id2, 9000, 9010, "http://localhost")
+            .await
+            .expect("second allocation should succeed");
+        assert_eq!(port2, 9001);
+    }
+
+    #[tokio::test]
+    async fn test_port_unique_constraint_prevents_duplicate() {
+        let pool = setup_test_db().await;
+        let id1 = insert_preview(&pool, "wt-1").await;
+        let id2 = insert_preview(&pool, "wt-2").await;
+
+        // Allocate port 9000 to id1
+        let mut conn = pool.acquire().await.unwrap();
+        allocate_port_tx(&mut conn, id1, 9000, 9010, "http://localhost")
+            .await
+            .expect("first allocation should succeed");
+
+        // Directly try to set id2's port to 9000 — should fail due to UNIQUE index
+        let result = sqlx::query("UPDATE docker_previews SET port = 9000 WHERE id = $1")
+            .bind(id2.to_string())
+            .execute(&pool)
+            .await;
+
+        assert!(
+            result.is_err(),
+            "duplicate port should be rejected by UNIQUE constraint"
+        );
+    }
+}
