@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type {
   AgentSession,
   DockerPreview,
+  ProjectMessage,
   SyncResult,
   Task,
   TaskComment,
@@ -10,6 +11,7 @@ import { logger } from '../lib/logger';
 import { createRealtimeTransport } from '../lib/realtimeTransport';
 import {
   invalidateComments,
+  invalidateMessages,
   invalidatePreviews,
   invalidateSessions,
   invalidateTasks,
@@ -27,6 +29,8 @@ export type SseEvent =
   | { type: 'CommentCreated'; comment: TaskComment }
   | { type: 'CommentUpdated'; comment: TaskComment }
   | { type: 'CommentDeleted'; comment_id: string; task_id: string }
+  | { type: 'ProjectMessageCreated'; message: ProjectMessage }
+  | { type: 'ProjectMessageDeleted'; message_id: string; project_id: string }
   | { type: 'PreviewStatusChanged'; preview: DockerPreview }
   | { type: 'PreviewDeleted'; preview_id: string }
   | { type: 'GitHubSyncCompleted'; result: SyncResult }
@@ -82,6 +86,25 @@ export function connectEventSource(queryClient: QueryClient): () => void {
   eventSource.addEventListener('comment_created', handleCommentEvent);
   eventSource.addEventListener('comment_updated', handleCommentEvent);
   eventSource.addEventListener('comment_deleted', handleCommentEvent);
+
+  const handleMessageEvent = (event: MessageEvent) => {
+    try {
+      const parsed = JSON.parse(event.data) as SseEvent;
+      const projectId =
+        'message' in parsed
+          ? parsed.message.project_id
+          : 'project_id' in parsed
+            ? parsed.project_id
+            : null;
+      if (projectId) {
+        invalidateMessages(queryClient, projectId);
+      }
+    } catch {
+      sseLog.error({ data: event.data }, 'failed to parse SSE event');
+    }
+  };
+  eventSource.addEventListener('project_message_created', handleMessageEvent);
+  eventSource.addEventListener('project_message_deleted', handleMessageEvent);
 
   const handlePreviewEvent = () => {
     invalidatePreviews(queryClient);

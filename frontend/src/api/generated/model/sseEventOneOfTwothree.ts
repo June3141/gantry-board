@@ -8,7 +8,6 @@
 import type { SseEventOneOfTwothreeType } from './sseEventOneOfTwothreeType';
 
 export type SseEventOneOfTwothree = {
-  error: string;
-  project_id: string;
+  preview_id: string;
   type: SseEventOneOfTwothreeType;
 };

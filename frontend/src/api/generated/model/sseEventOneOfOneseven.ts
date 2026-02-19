@@ -5,10 +5,10 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import type { DockerPreview } from './dockerPreview';
+import type { ProjectMessage } from './projectMessage';
 import type { SseEventOneOfOnesevenType } from './sseEventOneOfOnesevenType';
 
 export type SseEventOneOfOneseven = {
-  preview: DockerPreview;
+  message: ProjectMessage;
   type: SseEventOneOfOnesevenType;
 };

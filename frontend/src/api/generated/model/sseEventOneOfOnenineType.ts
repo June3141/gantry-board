@@ -11,5 +11,5 @@ export type SseEventOneOfOnenineType =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SseEventOneOfOnenineType = {
-  PreviewDeleted: 'PreviewDeleted',
+  ProjectMessageDeleted: 'ProjectMessageDeleted',
 } as const;
