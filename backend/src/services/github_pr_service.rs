@@ -126,6 +126,28 @@ pub async fn list_prs_for_task(
     rows.into_iter().map(row_to_pr).collect()
 }
 
+/// Find task IDs linked to a specific PR number within a github_link.
+pub async fn find_task_ids_by_pr(
+    pool: &SqlitePool,
+    github_link_id: Uuid,
+    pr_number: i64,
+) -> AppResult<Vec<Uuid>> {
+    let rows: Vec<(String,)> = sqlx::query_as(
+        "SELECT task_id FROM github_pull_requests WHERE github_link_id = $1 AND pr_number = $2",
+    )
+    .bind(github_link_id.to_string())
+    .bind(pr_number)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|(id,)| {
+            id.parse::<Uuid>()
+                .map_err(|e| AppError::Internal(e.to_string()))
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

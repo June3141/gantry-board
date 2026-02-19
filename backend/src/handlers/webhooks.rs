@@ -8,7 +8,7 @@ use sha2::Sha256;
 
 use crate::error::{AppError, AppResult};
 use crate::github::sync_engine::SyncEngine;
-use crate::services::github_link_service;
+use crate::services::{agent_session_service, github_link_service, worktree_service};
 use crate::AppState;
 
 type HmacSha256 = Hmac<Sha256>;
@@ -85,8 +85,13 @@ pub async fn github_webhook(
             tracing::info!("received GitHub webhook ping");
             Ok(StatusCode::OK)
         }
-        "issues" | "pull_request" => {
+        "issues" => {
             handle_sync_event(&state, &body).await?;
+            Ok(StatusCode::OK)
+        }
+        "pull_request" => {
+            handle_sync_event(&state, &body).await?;
+            handle_pr_merge_cleanup(&state, &body).await;
             Ok(StatusCode::OK)
         }
         _ => {
@@ -146,6 +151,118 @@ async fn handle_sync_event(state: &AppState, body: &[u8]) -> AppResult<()> {
     }
 
     Ok(())
+}
+
+/// Clean up worktrees when a PR is merged.
+///
+/// On `action=closed` + `merged=true`, finds the task linked to this PR
+/// and deletes any remaining worktrees created by agent sessions.
+async fn handle_pr_merge_cleanup(state: &AppState, body: &[u8]) {
+    let payload: serde_json::Value = match serde_json::from_slice(body) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+
+    let action = payload["action"].as_str().unwrap_or_default();
+    let merged = payload["pull_request"]["merged"].as_bool().unwrap_or(false);
+
+    if action != "closed" || !merged {
+        return;
+    }
+
+    let pr_number = match payload["pull_request"]["number"].as_i64() {
+        Some(n) => n,
+        None => return,
+    };
+
+    let repo_owner = payload["repository"]["owner"]["login"]
+        .as_str()
+        .unwrap_or_default();
+    let repo_name = payload["repository"]["name"].as_str().unwrap_or_default();
+
+    if repo_owner.is_empty() || repo_name.is_empty() {
+        return;
+    }
+
+    // Find the github_link for this repo
+    let link = match github_link_service::find_by_repo(&state.pool, repo_owner, repo_name).await {
+        Ok(Some(link)) => link,
+        _ => return,
+    };
+
+    // Find tasks linked to this PR
+    let task_ids = match crate::services::github_pr_service::find_task_ids_by_pr(
+        &state.pool,
+        link.id,
+        pr_number,
+    )
+    .await
+    {
+        Ok(ids) => ids,
+        Err(e) => {
+            tracing::warn!(error = %e, "failed to find tasks for merged PR");
+            return;
+        }
+    };
+
+    let repo_path = state.config.repo_path();
+    for task_id in task_ids {
+        let sessions =
+            match agent_session_service::list_sessions_with_worktrees(&state.pool, task_id).await {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, %task_id, "failed to list sessions with worktrees");
+                    continue;
+                }
+            };
+
+        for session in sessions {
+            let Some(ref wt_name) = session.worktree_name else {
+                continue;
+            };
+            let name = wt_name.clone();
+            let path = repo_path.clone();
+            match tokio::task::spawn_blocking(move || {
+                worktree_service::delete_worktree(&path, &name)
+            })
+            .await
+            {
+                Ok(Ok(())) => {
+                    tracing::info!(
+                        worktree = %wt_name,
+                        %task_id,
+                        pr_number,
+                        "cleaned up worktree after PR merge"
+                    );
+                    // Clear worktree_name so future events don't re-attempt deletion
+                    if let Err(e) =
+                        agent_session_service::clear_worktree_name(&state.pool, session.id).await
+                    {
+                        tracing::warn!(error = %e, session_id = %session.id, "failed to clear worktree_name");
+                    }
+                }
+                Ok(Err(e)) => {
+                    let msg = e.to_string();
+                    if msg.contains("not found") || msg.contains("does not exist") {
+                        tracing::debug!(
+                            error = %e,
+                            worktree = %wt_name,
+                            "worktree already removed or not found"
+                        );
+                    } else {
+                        tracing::warn!(
+                            error = %e,
+                            worktree = %wt_name,
+                            "worktree cleanup failed"
+                        );
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "worktree cleanup task panicked");
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
