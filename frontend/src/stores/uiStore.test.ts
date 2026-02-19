@@ -1,22 +1,9 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { TaskStatus } from '../api/generated/model';
 import { useUiStore } from './uiStore';
 
 describe('uiStore', () => {
-  afterEach(() => {
-    // Reset store to initial state between tests
-    useUiStore.setState({
-      isTaskModalOpen: false,
-      defaultStatus: null,
-      isProjectModalOpen: false,
-      selectedTaskId: null,
-      isTaskDetailOpen: false,
-      isProjectSettingsOpen: false,
-      isProjectMembersOpen: false,
-    });
-  });
-
   describe('task modal', () => {
     it('has correct initial state', () => {
       const state = useUiStore.getState();

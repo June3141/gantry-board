@@ -1,16 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { TaskPriority } from '../api/generated/model';
 import { useBoardStore } from './boardStore';
 
 describe('boardStore filters', () => {
-  beforeEach(() => {
-    useBoardStore.setState({
-      searchText: '',
-      assigneeFilter: [],
-      priorityFilter: [],
-    });
-  });
-
   it('has empty initial filter state', () => {
     const state = useBoardStore.getState();
     expect(state.searchText).toBe('');

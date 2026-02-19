@@ -1,14 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { useAuthStore } from './authStore';
 
 describe('authStore', () => {
-  afterEach(() => {
-    useAuthStore.getState().logout();
-    sessionStorage.clear();
-    localStorage.clear();
-  });
-
   it('uses sessionStorage instead of localStorage', () => {
     useAuthStore.getState().setUser({
       id: 'test-id',

@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as agentSessionsApi from '@/api/generated/endpoints/agent-sessions/agent-sessions';
-import { useAgentStore } from '@/stores/agentStore';
 import { AgentPanel } from './AgentPanel';
 
 vi.mock('@/api/generated/endpoints/agent-sessions/agent-sessions', () => ({
@@ -30,7 +29,6 @@ describe('AgentPanel', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    useAgentStore.getState().reset();
 
     vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
       data: [],
