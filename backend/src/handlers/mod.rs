@@ -4,6 +4,7 @@ pub mod github_links;
 pub mod health;
 pub mod previews;
 pub mod project_members;
+pub mod project_messages;
 pub mod projects;
 pub mod pull_requests;
 pub mod task_comments;

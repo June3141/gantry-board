@@ -126,6 +126,19 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/projects/{project_id}/members/{user_id}",
             delete(handlers::project_members::remove_member),
         )
+        // Project message endpoints
+        .route(
+            "/projects/{project_id}/messages",
+            get(handlers::project_messages::list_messages),
+        )
+        .route(
+            "/projects/{project_id}/messages",
+            post(handlers::project_messages::create_message),
+        )
+        .route(
+            "/projects/{project_id}/messages/{message_id}",
+            delete(handlers::project_messages::delete_message),
+        )
         // Task comment endpoints
         .route(
             "/tasks/{task_id}/comments",

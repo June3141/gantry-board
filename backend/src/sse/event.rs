@@ -5,6 +5,7 @@ use uuid::Uuid;
 use crate::models::agent_session::AgentSession;
 use crate::models::docker_preview::DockerPreview;
 use crate::models::github::SyncResult;
+use crate::models::project_message::ProjectMessage;
 use crate::models::task::Task;
 use crate::models::task_comment::TaskComment;
 
@@ -20,6 +21,8 @@ pub enum SseEvent {
     CommentCreated { comment: TaskComment },
     CommentUpdated { comment: TaskComment },
     CommentDeleted { comment_id: Uuid, task_id: Uuid },
+    ProjectMessageCreated { message: ProjectMessage },
+    ProjectMessageDeleted { message_id: Uuid, project_id: Uuid },
     PreviewStatusChanged { preview: DockerPreview },
     PreviewDeleted { preview_id: Uuid },
     GitHubSyncCompleted { result: SyncResult },
@@ -62,6 +65,17 @@ impl SseEvent {
         }
     }
 
+    pub fn project_message_created(message: ProjectMessage) -> Self {
+        Self::ProjectMessageCreated { message }
+    }
+
+    pub fn project_message_deleted(message_id: Uuid, project_id: Uuid) -> Self {
+        Self::ProjectMessageDeleted {
+            message_id,
+            project_id,
+        }
+    }
+
     pub fn preview_status_changed(preview: DockerPreview) -> Self {
         Self::PreviewStatusChanged { preview }
     }
@@ -88,6 +102,8 @@ impl SseEvent {
             Self::CommentCreated { .. } => "comment_created",
             Self::CommentUpdated { .. } => "comment_updated",
             Self::CommentDeleted { .. } => "comment_deleted",
+            Self::ProjectMessageCreated { .. } => "project_message_created",
+            Self::ProjectMessageDeleted { .. } => "project_message_deleted",
             Self::PreviewStatusChanged { .. } => "preview_status_changed",
             Self::PreviewDeleted { .. } => "preview_deleted",
             Self::GitHubSyncCompleted { .. } => "github_sync_completed",
