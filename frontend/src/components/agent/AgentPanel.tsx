@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useState } from 'react';
 import {
   getListAgentSessionsQueryKey,
   useGetAgentSessionOutputs,
@@ -56,7 +56,9 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
   // Derive active session from both store and server data
   const activeSession =
     sessions?.find((s) => s.id === activeSessionId) ??
-    sessions?.find((s) => s.status === 'running' || s.status === 'pending' || s.status === 'paused');
+    sessions?.find(
+      (s) => s.status === 'running' || s.status === 'pending' || s.status === 'paused',
+    );
 
   // Past (terminal) sessions
   const pastSessions = sessions?.filter((s) => TERMINAL_STATUSES.includes(s.status)) ?? [];
