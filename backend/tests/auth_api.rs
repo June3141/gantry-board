@@ -162,7 +162,7 @@ async fn test_login_with_wrong_password() {
 }
 
 // Why: Must return the same status code as wrong-password to prevent user enumeration
-// via timing or response differences (constant-time comparison in Argon2 handles timing).
+// via response differences (no distinct error for unknown email vs wrong password).
 #[tokio::test]
 async fn test_login_with_nonexistent_email() {
     let server = create_test_server().await;
