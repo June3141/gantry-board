@@ -290,6 +290,8 @@ fn validate_status_transition(from: &AgentSessionStatus, to: &AgentSessionStatus
             | (Running, Paused)
             | (Paused, Running)
             | (Paused, Cancelled)
+            | (Paused, Completed)
+            | (Paused, Failed)
     );
     if !allowed {
         return Err(AppError::Validation(format!(

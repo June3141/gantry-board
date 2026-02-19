@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
+  getListAgentSessionsQueryKey,
   useGetAgentSessionOutputs,
   useListAgentSessions,
   usePauseAgentSession,
@@ -32,6 +34,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: sessions } = useListAgentSessions(taskId);
   const startSession = useStartAgentSession();
@@ -129,6 +132,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
         taskId,
         sessionId: activeSession.id,
       });
+      queryClient.invalidateQueries({ queryKey: getListAgentSessionsQueryKey(taskId) });
     } catch {
       setError('Failed to pause agent session. Please try again.');
     }
@@ -142,6 +146,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
         taskId,
         sessionId: activeSession.id,
       });
+      queryClient.invalidateQueries({ queryKey: getListAgentSessionsQueryKey(taskId) });
     } catch {
       setError('Failed to resume agent session. Please try again.');
     }

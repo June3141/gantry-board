@@ -21,7 +21,7 @@ impl AgentOrchestrator {
         {
             let running = self.running.lock().await;
             let session = running.get(&session_id).ok_or_else(|| {
-                AppError::NotFound(format!("no running session found: {session_id}"))
+                AppError::NotFound(format!("no active session found: {session_id}"))
             })?;
             // Send SIGCONT before killing, in case the process is stopped
             if let Some(pid) = session.pid {
@@ -52,20 +52,21 @@ impl AgentOrchestrator {
     }
 
     /// Pause a running agent session by sending SIGSTOP to the child process.
+    ///
+    /// Updates DB status first, then sends SIGSTOP. If SIGSTOP fails, the DB
+    /// update is rolled back by resetting the status to Running.
     pub async fn pause_session(&self, task_id: Uuid, session_id: Uuid) -> AppResult<()> {
         let pid = {
             let running = self.running.lock().await;
             let session = running.get(&session_id).ok_or_else(|| {
-                AppError::NotFound(format!("no running session found: {session_id}"))
+                AppError::NotFound(format!("no active session found: {session_id}"))
             })?;
             session.pid.ok_or_else(|| {
                 AppError::Internal("cannot pause session: no PID available".into())
             })?
         };
 
-        signal::kill(Pid::from_raw(pid as i32), Signal::SIGSTOP)
-            .map_err(|e| AppError::Internal(format!("failed to pause process {pid}: {e}")))?;
-
+        // Update DB first, then send signal. If SIGSTOP fails, roll back DB.
         agent_session_service::update_agent_session(
             &self.pool,
             task_id,
@@ -76,6 +77,23 @@ impl AgentOrchestrator {
         )
         .await?;
 
+        if let Err(e) = signal::kill(Pid::from_raw(pid as i32), Signal::SIGSTOP) {
+            // Roll back DB status to Running since SIGSTOP failed
+            tracing::warn!(pid, %session_id, error = %e, "SIGSTOP failed, rolling back DB status");
+            let _ = agent_session_service::update_agent_session(
+                &self.pool,
+                task_id,
+                session_id,
+                &UpdateAgentSessionRequest {
+                    status: AgentSessionStatus::Running,
+                },
+            )
+            .await;
+            return Err(AppError::Internal(format!(
+                "failed to pause process {pid}: {e}"
+            )));
+        }
+
         Ok(())
     }
 
@@ -84,7 +102,7 @@ impl AgentOrchestrator {
         let pid = {
             let running = self.running.lock().await;
             let session = running.get(&session_id).ok_or_else(|| {
-                AppError::NotFound(format!("no running session found: {session_id}"))
+                AppError::NotFound(format!("no active session found: {session_id}"))
             })?;
             session.pid.ok_or_else(|| {
                 AppError::Internal("cannot resume session: no PID available".into())

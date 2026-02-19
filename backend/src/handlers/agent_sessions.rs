@@ -242,8 +242,10 @@ pub async fn restart_agent_session(
     ),
     responses(
         (status = 200, description = "Agent session paused", body = AgentSession),
+        (status = 400, description = "Invalid status transition (not running)"),
         (status = 403, description = "Forbidden"),
-        (status = 404, description = "Session not found or not running")
+        (status = 404, description = "Session not found or not running"),
+        (status = 500, description = "Failed to send SIGSTOP to process")
     ),
     tag = "agent-sessions"
 )]
@@ -274,8 +276,10 @@ pub async fn pause_agent_session(
     ),
     responses(
         (status = 200, description = "Agent session resumed", body = AgentSession),
+        (status = 400, description = "Invalid status transition (not paused)"),
         (status = 403, description = "Forbidden"),
-        (status = 404, description = "Session not found or not paused")
+        (status = 404, description = "Session not found or not paused"),
+        (status = 500, description = "Failed to send SIGCONT to process")
     ),
     tag = "agent-sessions"
 )]
