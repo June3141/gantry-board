@@ -234,13 +234,28 @@ async fn handle_pr_merge_cleanup(state: &AppState, body: &[u8]) {
                         pr_number,
                         "cleaned up worktree after PR merge"
                     );
+                    // Clear worktree_name so future events don't re-attempt deletion
+                    if let Err(e) =
+                        agent_session_service::clear_worktree_name(&state.pool, session.id).await
+                    {
+                        tracing::warn!(error = %e, session_id = %session.id, "failed to clear worktree_name");
+                    }
                 }
                 Ok(Err(e)) => {
-                    tracing::debug!(
-                        error = %e,
-                        worktree = %wt_name,
-                        "worktree already removed or not found"
-                    );
+                    let msg = e.to_string();
+                    if msg.contains("not found") || msg.contains("does not exist") {
+                        tracing::debug!(
+                            error = %e,
+                            worktree = %wt_name,
+                            "worktree already removed or not found"
+                        );
+                    } else {
+                        tracing::warn!(
+                            error = %e,
+                            worktree = %wt_name,
+                            "worktree cleanup failed"
+                        );
+                    }
                 }
                 Err(e) => {
                     tracing::warn!(error = %e, "worktree cleanup task panicked");

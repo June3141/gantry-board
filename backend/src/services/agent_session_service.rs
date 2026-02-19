@@ -222,6 +222,7 @@ pub async fn save_worktree_name(
 }
 
 /// List sessions for a task that have a worktree and are in a terminal state.
+/// Only returns sessions that are completed, failed, or cancelled — never running/pending ones.
 pub async fn list_sessions_with_worktrees(
     pool: &SqlitePool,
     task_id: Uuid,
@@ -230,7 +231,9 @@ pub async fn list_sessions_with_worktrees(
         r#"
         SELECT id, task_id, agent_type, status, prompt, worktree_name, started_at, finished_at, created_at, updated_at
         FROM agent_sessions
-        WHERE task_id = $1 AND worktree_name IS NOT NULL
+        WHERE task_id = $1
+          AND worktree_name IS NOT NULL
+          AND status IN ('completed', 'failed', 'cancelled')
         "#,
     )
     .bind(task_id.to_string())
@@ -241,6 +244,17 @@ pub async fn list_sessions_with_worktrees(
         .map(|r| r.try_into())
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+}
+
+/// Clear the worktree_name for a session after cleanup.
+pub async fn clear_worktree_name(pool: &SqlitePool, session_id: Uuid) -> AppResult<()> {
+    sqlx::query(
+        "UPDATE agent_sessions SET worktree_name = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+    )
+    .bind(session_id.to_string())
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
 /// Save prompt for a session using a connection (for transactions).
