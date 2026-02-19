@@ -1,8 +1,9 @@
 mod common;
 
 use axum::http::StatusCode;
-use axum_test::TestServer;
-use common::{create_test_server_with_pool, SqlitePool};
+use common::{
+    create_project_no_auth, create_task_no_auth, create_test_server_with_pool, SqlitePool,
+};
 use serde_json::json;
 
 /// Seed a user with nil UUID so auth-disabled mode (user_id = Uuid::nil()) can
@@ -21,38 +22,12 @@ async fn seed_nil_user(pool: &SqlitePool) {
     .unwrap();
 }
 
-async fn create_test_project(server: &TestServer) -> String {
-    let response = server
-        .post("/api/projects")
-        .json(&json!({
-            "name": "Test Project",
-            "description": "A test project"
-        }))
-        .await;
-    response.assert_status(StatusCode::CREATED);
-    let body: serde_json::Value = response.json();
-    body["id"].as_str().unwrap().to_string()
-}
-
-async fn create_test_task(server: &TestServer, project_id: &str) -> String {
-    let response = server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Test Task"
-        }))
-        .await;
-    response.assert_status(StatusCode::CREATED);
-    let body: serde_json::Value = response.json();
-    body["id"].as_str().unwrap().to_string()
-}
-
 #[tokio::test]
 async fn test_create_comment_returns_created() {
     let (server, pool) = create_test_server_with_pool().await;
     seed_nil_user(&pool).await;
-    let project_id = create_test_project(&server).await;
-    let task_id = create_test_task(&server, &project_id).await;
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "Test Task").await;
 
     let response = server
         .post(&format!("/api/tasks/{}/comments", task_id))
@@ -72,8 +47,8 @@ async fn test_create_comment_returns_created() {
 async fn test_list_comments_returns_all() {
     let (server, pool) = create_test_server_with_pool().await;
     seed_nil_user(&pool).await;
-    let project_id = create_test_project(&server).await;
-    let task_id = create_test_task(&server, &project_id).await;
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "Test Task").await;
 
     server
         .post(&format!("/api/tasks/{}/comments", task_id))
@@ -102,8 +77,8 @@ async fn test_list_comments_returns_all() {
 async fn test_update_comment_by_author() {
     let (server, pool) = create_test_server_with_pool().await;
     seed_nil_user(&pool).await;
-    let project_id = create_test_project(&server).await;
-    let task_id = create_test_task(&server, &project_id).await;
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "Test Task").await;
 
     let create_resp = server
         .post(&format!("/api/tasks/{}/comments", task_id))
@@ -127,8 +102,8 @@ async fn test_update_comment_by_author() {
 async fn test_delete_comment_by_author() {
     let (server, pool) = create_test_server_with_pool().await;
     seed_nil_user(&pool).await;
-    let project_id = create_test_project(&server).await;
-    let task_id = create_test_task(&server, &project_id).await;
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "Test Task").await;
 
     let create_resp = server
         .post(&format!("/api/tasks/{}/comments", task_id))
@@ -162,8 +137,8 @@ async fn test_create_comment_on_nonexistent_task_returns_not_found() {
 async fn test_create_comment_empty_content_returns_validation_error() {
     let (server, pool) = create_test_server_with_pool().await;
     seed_nil_user(&pool).await;
-    let project_id = create_test_project(&server).await;
-    let task_id = create_test_task(&server, &project_id).await;
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "Test Task").await;
 
     let response = server
         .post(&format!("/api/tasks/{}/comments", task_id))

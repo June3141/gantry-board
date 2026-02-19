@@ -1,28 +1,14 @@
 mod common;
 
 use axum::http::StatusCode;
-use axum_test::TestServer;
-use common::create_test_server;
+use common::{create_project_no_auth, create_task_no_auth, create_test_server};
 use serde_json::json;
 use uuid::Uuid;
-
-async fn create_test_project(server: &TestServer) -> String {
-    let response = server
-        .post("/api/projects")
-        .json(&json!({
-            "name": "Test Project"
-        }))
-        .await;
-
-    response.assert_status(StatusCode::CREATED);
-    let body: serde_json::Value = response.json();
-    body["id"].as_str().unwrap().to_string()
-}
 
 #[tokio::test]
 async fn test_list_tasks_returns_empty_initially() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
+    let project_id = create_project_no_auth(&server, "Test Project").await;
 
     let response = server
         .get(&format!("/api/tasks?project_id={}", project_id))
@@ -52,7 +38,7 @@ async fn test_list_tasks_returns_not_found_for_nonexistent_project() {
 #[tokio::test]
 async fn test_create_task_returns_created() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
+    let project_id = create_project_no_auth(&server, "Test Project").await;
 
     let response = server
         .post("/api/tasks")
@@ -75,7 +61,7 @@ async fn test_create_task_returns_created() {
 #[tokio::test]
 async fn test_create_task_validates_title() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
+    let project_id = create_project_no_auth(&server, "Test Project").await;
 
     let response = server
         .post("/api/tasks")
@@ -107,17 +93,8 @@ async fn test_create_task_returns_not_found_for_nonexistent_project() {
 #[tokio::test]
 async fn test_get_task_returns_existing() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
-
-    let create_response = server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Get Me"
-        }))
-        .await;
-    let created: serde_json::Value = create_response.json();
-    let task_id = created["id"].as_str().unwrap();
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "Get Me").await;
 
     let response = server.get(&format!("/api/tasks/{}", task_id)).await;
 
@@ -139,17 +116,8 @@ async fn test_get_task_returns_not_found() {
 #[tokio::test]
 async fn test_update_task_changes_title() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
-
-    let create_response = server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Original"
-        }))
-        .await;
-    let created: serde_json::Value = create_response.json();
-    let task_id = created["id"].as_str().unwrap();
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "Original").await;
 
     let response = server
         .patch(&format!("/api/tasks/{}", task_id))
@@ -166,17 +134,8 @@ async fn test_update_task_changes_title() {
 #[tokio::test]
 async fn test_update_task_changes_status() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
-
-    let create_response = server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Task"
-        }))
-        .await;
-    let created: serde_json::Value = create_response.json();
-    let task_id = created["id"].as_str().unwrap();
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "Task").await;
 
     let response = server
         .patch(&format!("/api/tasks/{}", task_id))
@@ -193,17 +152,8 @@ async fn test_update_task_changes_status() {
 #[tokio::test]
 async fn test_delete_task_removes_from_db() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
-
-    let create_response = server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "To Delete"
-        }))
-        .await;
-    let created: serde_json::Value = create_response.json();
-    let task_id = created["id"].as_str().unwrap();
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "To Delete").await;
 
     let delete_response = server.delete(&format!("/api/tasks/{}", task_id)).await;
     delete_response.assert_status(StatusCode::NO_CONTENT);
@@ -215,22 +165,9 @@ async fn test_delete_task_removes_from_db() {
 #[tokio::test]
 async fn test_list_tasks_returns_created_tasks() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
-
-    server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Task 1"
-        }))
-        .await;
-    server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Task 2"
-        }))
-        .await;
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    create_task_no_auth(&server, &project_id, "Task 1").await;
+    create_task_no_auth(&server, &project_id, "Task 2").await;
 
     let response = server
         .get(&format!("/api/tasks?project_id={}", project_id))
@@ -246,16 +183,9 @@ async fn test_list_tasks_returns_created_tasks() {
 #[tokio::test]
 async fn test_list_tasks_respects_limit_and_offset() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
-
+    let project_id = create_project_no_auth(&server, "Test Project").await;
     for i in 0..5 {
-        server
-            .post("/api/tasks")
-            .json(&json!({
-                "project_id": project_id,
-                "title": format!("Task {}", i)
-            }))
-            .await;
+        create_task_no_auth(&server, &project_id, &format!("Task {}", i)).await;
     }
 
     let response = server
@@ -277,17 +207,8 @@ async fn test_list_tasks_respects_limit_and_offset() {
 #[tokio::test]
 async fn test_update_task_validates_empty_title() {
     let server = create_test_server().await;
-    let project_id = create_test_project(&server).await;
-
-    let create_response = server
-        .post("/api/tasks")
-        .json(&json!({
-            "project_id": project_id,
-            "title": "Valid Title"
-        }))
-        .await;
-    let created: serde_json::Value = create_response.json();
-    let task_id = created["id"].as_str().unwrap();
+    let project_id = create_project_no_auth(&server, "Test Project").await;
+    let task_id = create_task_no_auth(&server, &project_id, "Valid Title").await;
 
     let response = server
         .patch(&format!("/api/tasks/{}", task_id))
