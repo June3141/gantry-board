@@ -50,7 +50,7 @@ impl TryFrom<TaskRow> for Task {
 pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResult<Task> {
     let mut tx = pool.begin().await?;
 
-    validate_assigned_to_tx(&mut *tx, req.assigned_to).await?;
+    validate_assigned_to_tx(&mut *tx, req.assigned_to, req.project_id).await?;
     validate_parent_project_tx(&mut *tx, req.parent_id, req.project_id).await?;
 
     let id = Uuid::new_v4();
@@ -178,7 +178,7 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
 
     let existing = get_task_tx(&mut *tx, id).await?;
 
-    validate_assigned_to_tx(&mut *tx, req.assigned_to).await?;
+    validate_assigned_to_tx(&mut *tx, req.assigned_to, existing.project_id).await?;
     validate_parent_project_tx(&mut *tx, req.parent_id, existing.project_id).await?;
 
     let now = Utc::now();
@@ -248,6 +248,7 @@ async fn get_task_tx(conn: &mut SqliteConnection, id: Uuid) -> AppResult<Task> {
 async fn validate_assigned_to_tx(
     conn: &mut SqliteConnection,
     assigned_to: Option<Uuid>,
+    project_id: Uuid,
 ) -> AppResult<()> {
     if let Some(user_id) = assigned_to {
         let exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM users WHERE id = $1")
@@ -258,6 +259,19 @@ async fn validate_assigned_to_tx(
             return Err(AppError::Validation(format!(
                 "assigned user {} does not exist",
                 user_id
+            )));
+        }
+
+        let is_member: Option<(i32,)> =
+            sqlx::query_as("SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2")
+                .bind(project_id.to_string())
+                .bind(user_id.to_string())
+                .fetch_optional(&mut *conn)
+                .await?;
+        if is_member.is_none() {
+            return Err(AppError::Validation(format!(
+                "assigned user {} is not a member of project {}",
+                user_id, project_id
             )));
         }
     }
