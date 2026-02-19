@@ -49,6 +49,8 @@ async fn test_list_tasks_returns_not_found_for_nonexistent_project() {
     response.assert_status(StatusCode::NOT_FOUND);
 }
 
+// Why: Default status=backlog and priority=medium ensure new tasks appear in a
+// predictable location on the board without requiring the caller to set every field.
 #[tokio::test]
 async fn test_create_task_returns_created() {
     let server = create_test_server().await;
@@ -72,6 +74,8 @@ async fn test_create_task_returns_created() {
     assert_eq!(task["priority"], "medium");
 }
 
+// Why: Empty titles produce meaningless kanban cards — validation at the API layer
+// ensures every task has an identifiable label for the board UI.
 #[tokio::test]
 async fn test_create_task_validates_title() {
     let server = create_test_server().await;
@@ -299,6 +303,8 @@ async fn test_update_task_validates_empty_title() {
     response.assert_status(StatusCode::BAD_REQUEST);
 }
 
+// Why: Listing tasks without a project_id would return cross-project data, violating
+// the multi-tenant isolation boundary — the API must require explicit scoping.
 #[tokio::test]
 async fn test_list_tasks_requires_project_id() {
     let server = create_test_server().await;

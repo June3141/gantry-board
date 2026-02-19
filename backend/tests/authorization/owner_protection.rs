@@ -10,6 +10,8 @@ use crate::common::{
 // Phase 6: Owner protection rules
 // =============================================================
 
+// Why: Removing the last owner would leave the project in an unmanageable state —
+// no one could add members, change settings, or delete the project.
 #[tokio::test]
 async fn test_cannot_remove_last_owner() {
     let server = create_test_server().await;
@@ -46,6 +48,8 @@ async fn test_can_remove_owner_if_another_owner_exists() {
     response.assert_status(StatusCode::NO_CONTENT);
 }
 
+// Why: Downgrading the last owner to admin/member has the same effect as removal —
+// the project loses its ability to perform owner-only operations.
 #[tokio::test]
 async fn test_cannot_downgrade_last_owner_role() {
     let server = create_test_server().await;
@@ -88,6 +92,8 @@ async fn test_can_downgrade_owner_if_another_owner_exists() {
 // Phase 7: Session outputs endpoint authorization
 // =============================================================
 
+// Why: Agent session outputs may contain secrets (env vars, API keys) from the
+// execution environment — non-members must never access them.
 #[tokio::test]
 async fn test_session_outputs_forbidden_for_non_member() {
     let server = create_test_server().await;

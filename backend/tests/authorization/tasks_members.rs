@@ -10,6 +10,8 @@ use crate::common::{
 // Phase 4: Task endpoint authorization
 // =============================================================
 
+// Why: All task CRUD endpoints must enforce project membership — without this,
+// any authenticated user could read/modify/delete tasks in projects they don't belong to.
 #[tokio::test]
 async fn test_task_endpoints_forbidden_for_non_member() {
     let server = create_test_server().await;
@@ -79,6 +81,8 @@ async fn test_task_endpoints_allowed_for_member() {
 // Phase 5: Member management authorization
 // =============================================================
 
+// Why: Member list reveals who works on a project — non-members must not access
+// this information to maintain organizational privacy.
 #[tokio::test]
 async fn test_list_members_forbidden_for_non_member() {
     let server = create_test_server().await;
@@ -110,6 +114,8 @@ async fn test_list_members_allowed_for_member() {
     response.assert_status_ok();
 }
 
+// Why: Only admins/owners should add members — allowing regular members to invite
+// would bypass the intended approval hierarchy and could lead to unauthorized access.
 #[tokio::test]
 async fn test_add_member_forbidden_for_member_role() {
     let server = create_test_server().await;

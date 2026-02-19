@@ -86,6 +86,8 @@ async fn test_host_validation_allows_configured_host() {
     response.assert_status_ok();
 }
 
+// Why: Host header validation prevents DNS rebinding attacks where a malicious page
+// tricks the browser into sending requests to the local server via a crafted hostname.
 #[tokio::test]
 async fn test_host_validation_rejects_unknown_host() {
     let server = create_server_with_allowed_hosts(vec!["allowed.example.com".to_string()]).await;
