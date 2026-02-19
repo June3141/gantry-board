@@ -157,8 +157,9 @@ pub async fn update_container_id_tx(
     Ok(())
 }
 
-/// Atomically allocate the next available port within the configured range.
-/// Uses BEGIN IMMEDIATE to prevent concurrent allocations of the same port.
+/// Allocate the next available port within the configured range.
+/// Callers should start a BEGIN IMMEDIATE transaction before calling this
+/// function to prevent concurrent allocations of the same port.
 pub async fn allocate_port_tx(
     conn: &mut SqliteConnection,
     preview_id: Uuid,
@@ -182,7 +183,7 @@ pub async fn allocate_port_tx(
     // Immediately claim the port in the same transaction
     let preview_url = format!("{base_url}:{port}");
     let now = Utc::now();
-    sqlx::query(
+    let result = sqlx::query(
         "UPDATE docker_previews SET port = $1, preview_url = $2, updated_at = $3 WHERE id = $4",
     )
     .bind(port)
@@ -191,6 +192,12 @@ pub async fn allocate_port_tx(
     .bind(preview_id.to_string())
     .execute(&mut *conn)
     .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!(
+            "preview {preview_id} not found"
+        )));
+    }
 
     Ok(port)
 }
