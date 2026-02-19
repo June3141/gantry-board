@@ -32,3 +32,15 @@ tasks:
   audit:
     desc: Run npm audit for frontend dependencies
     cmd: npm audit --audit-level=moderate
+
+  e2e:
+    desc: Run Playwright E2E tests
+    cmd: npx playwright test
+
+  e2e:ui:
+    desc: Run Playwright E2E tests with UI
+    cmd: npx playwright test --ui
+
+  e2e:report:
+    desc: Show Playwright HTML report
+    cmd: npx playwright show-report
