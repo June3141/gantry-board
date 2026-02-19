@@ -9,7 +9,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { server } from '@/test/mocks/server';
 import { TaskDetailModal } from './TaskDetailModal';
 
-const API = 'http://localhost:3000';
+const API = '*';
 
 function renderModal() {
   const queryClient = new QueryClient({
@@ -98,8 +98,10 @@ describe('TaskDetailModal (MSW)', () => {
       await user.clear(input);
       await user.tab();
 
-      // Give the async handler a chance to fire (it shouldn't)
-      await new Promise((r) => setTimeout(r, 100));
+      // Verify no PATCH was sent — waitFor will timeout if patchCalled never becomes true
+      await expect(
+        waitFor(() => expect(patchCalled).toBe(true), { timeout: 200 }),
+      ).rejects.toThrow();
       expect(patchCalled).toBe(false);
     });
 

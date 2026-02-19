@@ -48,21 +48,23 @@ export function buildComment(overrides: Partial<TaskComment> = {}): TaskComment 
     task_id: 'task-1',
     user_id: 'user-1',
     user_name: 'Test User',
-    body: 'Test comment',
+    content: 'Test comment',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
 
+let outputIdCounter = 0;
+
 export function buildSessionOutput(
   overrides: Partial<AgentSessionOutput> = {},
 ): AgentSessionOutput {
-  const id = overrides.id ?? nextId();
+  outputIdCounter++;
   return {
-    id,
+    id: overrides.id ?? outputIdCounter,
     session_id: 'session-1',
-    output_type: 'assistant',
+    sequence: overrides.sequence ?? outputIdCounter,
     content: 'Test output',
     created_at: '2026-01-01T00:00:00Z',
     ...overrides,
