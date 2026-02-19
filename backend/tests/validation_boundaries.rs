@@ -68,9 +68,9 @@ async fn test_task_title_whitespace_only_rejected() {
         .json(&json!({ "project_id": project_id, "title": "   " }))
         .await;
 
-    // Whitespace-only strings pass length validation (len >= 1)
-    // but may be trimmed by the service layer; either CREATED or BAD_REQUEST is acceptable.
-    // This test documents the current behavior.
+    // Whitespace-only strings pass garde length validation (len >= 1) and the service
+    // layer stores them without trimming — so this currently succeeds as CREATED.
+    // This test documents that behavior; a future trim-before-validate change would make it BAD_REQUEST.
     let status = response.status_code();
     assert!(
         status == StatusCode::CREATED || status == StatusCode::BAD_REQUEST,
@@ -229,6 +229,9 @@ async fn test_project_name_whitespace_only_rejected() {
         .json(&json!({ "name": "   " }))
         .await;
 
+    // Whitespace-only strings pass garde length validation (len >= 1) and the service
+    // layer stores them without trimming — so this currently succeeds as CREATED.
+    // This test documents that behavior; a future trim-before-validate change would make it BAD_REQUEST.
     let status = response.status_code();
     assert!(
         status == StatusCode::CREATED || status == StatusCode::BAD_REQUEST,
