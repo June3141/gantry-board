@@ -1,22 +1,20 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { useLogout, useMe } from './api/generated/endpoints/auth/auth';
-import { useListProjects } from './api/generated/endpoints/projects/projects';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { KanbanBoard } from './components/KanbanBoard';
-import { LoginPage } from './components/LoginPage';
-import { ProjectCreateDialog } from './components/ProjectCreateDialog';
-import { ProjectMembersPanel } from './components/ProjectMembersPanel';
-import { ProjectSettingsModal } from './components/ProjectSettingsModal';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { RegisterPage } from './components/RegisterPage';
-import { TaskCreateDialog } from './components/TaskCreateDialog';
-import { TaskDetailModal } from './components/TaskDetailModal';
-import { ToastContainer } from './components/ToastContainer';
-import { connectEventSource } from './hooks/useEventSource';
-import { useAuthStore } from './stores/authStore';
-import { useUiStore } from './stores/uiStore';
+import { useLogout, useMe } from '@/api/generated/endpoints/auth/auth';
+import { useListProjects } from '@/api/generated/endpoints/projects/projects';
+import { KanbanBoard } from '@/components/board';
+import { ErrorBoundary, ToastContainer } from '@/components/common';
+import { LoginPage, ProtectedRoute, RegisterPage } from '@/components/layout';
+import {
+  ProjectCreateDialog,
+  ProjectMembersPanel,
+  ProjectSettingsModal,
+} from '@/components/project';
+import { TaskCreateDialog, TaskDetailModal } from '@/components/task';
+import { connectEventSource } from '@/hooks/useEventSource';
+import { useAuthStore } from '@/stores/authStore';
+import { useUiStore } from '@/stores/uiStore';
 
 function KanbanApp() {
   const queryClient = useQueryClient();
