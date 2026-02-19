@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::docker_preview::{CreatePreviewRequest, DockerPreview};
-use crate::services::{preview_service, worktree_service};
+use crate::services::{preview_repository, worktree_service};
 use crate::sse::event::SseEvent;
 use crate::AppState;
 
@@ -35,7 +35,7 @@ pub async fn create_preview(
         .await
         .map_err(|e| AppError::Internal(e.to_string()))??;
 
-    let preview = preview_service::create_preview(&state.pool, &worktree_name).await?;
+    let preview = preview_repository::create_preview(&state.pool, &worktree_name).await?;
 
     state
         .sse_hub
@@ -56,7 +56,7 @@ pub async fn list_previews(
     State(state): State<AppState>,
     _auth: AuthUser,
 ) -> AppResult<Json<Vec<DockerPreview>>> {
-    let previews = preview_service::list_previews(&state.pool).await?;
+    let previews = preview_repository::list_previews(&state.pool).await?;
     Ok(Json(previews))
 }
 
@@ -75,7 +75,7 @@ pub async fn get_preview(
     _auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<DockerPreview>> {
-    let preview = preview_service::get_preview(&state.pool, id).await?;
+    let preview = preview_repository::get_preview(&state.pool, id).await?;
     Ok(Json(preview))
 }
 
@@ -99,7 +99,7 @@ pub async fn delete_preview(
         let _ = pm.cleanup(id).await;
     }
 
-    preview_service::delete_preview(&state.pool, id).await?;
+    preview_repository::delete_preview(&state.pool, id).await?;
 
     state.sse_hub.broadcast(SseEvent::preview_deleted(id));
 
@@ -122,7 +122,7 @@ pub async fn start_preview(
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
     // Verify preview exists
-    preview_service::get_preview(&state.pool, id).await?;
+    preview_repository::get_preview(&state.pool, id).await?;
 
     let pm = state
         .preview_manager
@@ -159,7 +159,7 @@ pub async fn stop_preview(
     } else {
         // No Docker available: just update status in DB
         let mut conn = state.pool.acquire().await?;
-        let preview = preview_service::update_status_tx(
+        let preview = preview_repository::update_status_tx(
             &mut conn,
             id,
             crate::models::docker_preview::PreviewStatus::Stopped,
@@ -189,7 +189,7 @@ pub async fn restart_preview(
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
     // Verify preview exists
-    preview_service::get_preview(&state.pool, id).await?;
+    preview_repository::get_preview(&state.pool, id).await?;
 
     let pm = state
         .preview_manager
