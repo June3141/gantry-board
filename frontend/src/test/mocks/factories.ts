@@ -55,7 +55,9 @@ export function buildComment(overrides: Partial<TaskComment> = {}): TaskComment 
   };
 }
 
-export function buildSessionOutput(overrides: Partial<AgentSessionOutput> = {}): AgentSessionOutput {
+export function buildSessionOutput(
+  overrides: Partial<AgentSessionOutput> = {},
+): AgentSessionOutput {
   const id = overrides.id ?? nextId();
   return {
     id,

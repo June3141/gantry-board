@@ -60,4 +60,14 @@ export const handlers = [
   http.get(`${API}/api/tasks/:taskId/comments`, () => {
     return HttpResponse.json([]);
   }),
+
+  // Pull requests
+  http.get(`${API}/api/tasks/:taskId/pull-requests`, () => {
+    return HttpResponse.json([]);
+  }),
+
+  // Agent session outputs
+  http.get(`${API}/api/tasks/:taskId/sessions/:sessionId/outputs`, () => {
+    return HttpResponse.json([]);
+  }),
 ];
