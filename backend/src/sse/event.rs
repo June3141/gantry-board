@@ -235,6 +235,7 @@ mod tests {
             agent_type: AgentType::ClaudeCode,
             status: AgentSessionStatus::Running,
             prompt: None,
+            worktree_name: None,
             started_at: Some(Utc::now()),
             finished_at: None,
             created_at: Utc::now(),

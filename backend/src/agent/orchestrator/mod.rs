@@ -152,6 +152,13 @@ impl AgentOrchestrator {
             }
         };
 
+        // Step 5b: Save worktree name to DB for cleanup tracking
+        if let Err(e) =
+            agent_session_service::save_worktree_name(&self.pool, session.id, &worktree_name).await
+        {
+            tracing::warn!(%e, "failed to save worktree name, continuing anyway");
+        }
+
         // Step 6: Start executor
         let config = AgentConfig {
             agent_type: req.agent_type,

@@ -13,6 +13,7 @@ export * from './agentSessionOutput';
 export * from './agentSessionPrompt';
 export * from './agentSessionStartedAt';
 export * from './agentSessionStatus';
+export * from './agentSessionWorktreeName';
 export * from './agentType';
 export * from './authResponse';
 export * from './createAgentSessionRequest';

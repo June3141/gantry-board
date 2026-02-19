@@ -16,6 +16,7 @@ struct AgentSessionRow {
     agent_type: AgentType,
     status: AgentSessionStatus,
     prompt: Option<String>,
+    worktree_name: Option<String>,
     started_at: Option<DateTime<Utc>>,
     finished_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
@@ -32,6 +33,7 @@ impl TryFrom<AgentSessionRow> for AgentSession {
             agent_type: row.agent_type,
             status: row.status,
             prompt: row.prompt,
+            worktree_name: row.worktree_name,
             started_at: row.started_at,
             finished_at: row.finished_at,
             created_at: row.created_at,
@@ -69,6 +71,7 @@ pub async fn create_agent_session(
         agent_type: req.agent_type.clone(),
         status: AgentSessionStatus::Pending,
         prompt: None,
+        worktree_name: None,
         started_at: None,
         finished_at: None,
         created_at: now,
@@ -83,7 +86,7 @@ pub async fn get_agent_session(
 ) -> AppResult<AgentSession> {
     let row = sqlx::query_as::<_, AgentSessionRow>(
         r#"
-        SELECT id, task_id, agent_type, status, prompt, started_at, finished_at, created_at, updated_at
+        SELECT id, task_id, agent_type, status, prompt, worktree_name, started_at, finished_at, created_at, updated_at
         FROM agent_sessions
         WHERE id = $1 AND task_id = $2
         "#,
@@ -102,7 +105,7 @@ pub async fn get_agent_session(
 pub async fn list_agent_sessions(pool: &SqlitePool, task_id: Uuid) -> AppResult<Vec<AgentSession>> {
     let rows = sqlx::query_as::<_, AgentSessionRow>(
         r#"
-        SELECT id, task_id, agent_type, status, prompt, started_at, finished_at, created_at, updated_at
+        SELECT id, task_id, agent_type, status, prompt, worktree_name, started_at, finished_at, created_at, updated_at
         FROM agent_sessions
         WHERE task_id = $1
         ORDER BY created_at ASC
@@ -141,7 +144,7 @@ pub async fn check_no_active_session_tx(
 ) -> AppResult<()> {
     let row = sqlx::query_as::<_, AgentSessionRow>(
         r#"
-        SELECT id, task_id, agent_type, status, prompt, started_at, finished_at, created_at, updated_at
+        SELECT id, task_id, agent_type, status, prompt, worktree_name, started_at, finished_at, created_at, updated_at
         FROM agent_sessions
         WHERE task_id = $1 AND status IN ('pending', 'running')
         LIMIT 1
@@ -189,11 +192,55 @@ pub async fn create_agent_session_tx(
         agent_type: req.agent_type.clone(),
         status: AgentSessionStatus::Pending,
         prompt: None,
+        worktree_name: None,
         started_at: None,
         finished_at: None,
         created_at: now,
         updated_at: now,
     })
+}
+
+/// Save worktree name for a session.
+pub async fn save_worktree_name(
+    pool: &SqlitePool,
+    session_id: Uuid,
+    worktree_name: &str,
+) -> AppResult<()> {
+    let result = sqlx::query(
+        "UPDATE agent_sessions SET worktree_name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+    )
+    .bind(worktree_name)
+    .bind(session_id.to_string())
+    .execute(pool)
+    .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!(
+            "Agent session {session_id} not found"
+        )));
+    }
+    Ok(())
+}
+
+/// List sessions for a task that have a worktree and are in a terminal state.
+pub async fn list_sessions_with_worktrees(
+    pool: &SqlitePool,
+    task_id: Uuid,
+) -> AppResult<Vec<AgentSession>> {
+    let rows = sqlx::query_as::<_, AgentSessionRow>(
+        r#"
+        SELECT id, task_id, agent_type, status, prompt, worktree_name, started_at, finished_at, created_at, updated_at
+        FROM agent_sessions
+        WHERE task_id = $1 AND worktree_name IS NOT NULL
+        "#,
+    )
+    .bind(task_id.to_string())
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
 /// Save prompt for a session using a connection (for transactions).
@@ -288,6 +335,7 @@ pub async fn update_agent_session(
         agent_type: existing.agent_type,
         status: req.status.clone(),
         prompt: existing.prompt,
+        worktree_name: existing.worktree_name,
         started_at,
         finished_at,
         created_at: existing.created_at,

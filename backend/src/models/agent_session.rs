@@ -38,6 +38,7 @@ pub struct AgentSession {
     pub agent_type: AgentType,
     pub status: AgentSessionStatus,
     pub prompt: Option<String>,
+    pub worktree_name: Option<String>,
     pub started_at: Option<DateTime<Utc>>,
     pub finished_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,

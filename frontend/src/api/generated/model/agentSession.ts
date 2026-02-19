@@ -10,6 +10,7 @@ import type { AgentSessionFinishedAt } from './agentSessionFinishedAt';
 import type { AgentSessionPrompt } from './agentSessionPrompt';
 import type { AgentSessionStartedAt } from './agentSessionStartedAt';
 import type { AgentSessionStatus } from './agentSessionStatus';
+import type { AgentSessionWorktreeName } from './agentSessionWorktreeName';
 import type { AgentType } from './agentType';
 
 export interface AgentSession {
@@ -22,4 +23,5 @@ export interface AgentSession {
   status: AgentSessionStatus;
   task_id: string;
   updated_at: string;
+  worktree_name?: AgentSessionWorktreeName;
 }
