@@ -23,9 +23,12 @@ async fn test_create_project_auto_adds_creator_as_owner() {
     response.assert_status_ok();
 
     let members: Vec<serde_json::Value> = response.json();
-    assert_eq!(members.len(), 1);
+    assert_eq!(members.len(), 1, "creator must be the only initial member");
     assert_eq!(members[0]["user_id"], user_id);
-    assert_eq!(members[0]["role"], "owner");
+    assert_eq!(
+        members[0]["role"], "owner",
+        "creator must be auto-assigned the owner role"
+    );
 }
 
 #[tokio::test]
@@ -66,7 +69,11 @@ async fn test_list_projects_only_returns_member_projects() {
     response.assert_status_ok();
     let body: serde_json::Value = response.json();
     let projects = body["data"].as_array().unwrap();
-    assert_eq!(projects.len(), 2);
+    assert_eq!(
+        projects.len(),
+        2,
+        "User A must see only their own 2 projects"
+    );
 
     let response = server
         .get("/api/projects")
@@ -75,7 +82,11 @@ async fn test_list_projects_only_returns_member_projects() {
     response.assert_status_ok();
     let body: serde_json::Value = response.json();
     let projects = body["data"].as_array().unwrap();
-    assert_eq!(projects.len(), 1);
+    assert_eq!(
+        projects.len(),
+        1,
+        "User B must see only their own 1 project"
+    );
 }
 
 #[tokio::test]

@@ -28,8 +28,14 @@ async fn test_register_creates_user_and_returns_session_cookie() {
     let cookies = response.headers().get("set-cookie");
     assert!(cookies.is_some(), "Should set session cookie");
     let cookie_str = cookies.unwrap().to_str().unwrap();
-    assert!(cookie_str.contains("gantry_session="));
-    assert!(cookie_str.contains("HttpOnly"));
+    assert!(
+        cookie_str.contains("gantry_session="),
+        "session cookie must use gantry_session name"
+    );
+    assert!(
+        cookie_str.contains("HttpOnly"),
+        "session cookie must be HttpOnly to prevent XSS theft"
+    );
 }
 
 #[tokio::test]
@@ -252,7 +258,10 @@ async fn test_logout_clears_session() {
     let clear_cookie = logout_response.headers().get("set-cookie");
     assert!(clear_cookie.is_some());
     let clear_cookie_str = clear_cookie.unwrap().to_str().unwrap();
-    assert!(clear_cookie_str.contains("Max-Age=0"));
+    assert!(
+        clear_cookie_str.contains("Max-Age=0"),
+        "logout must expire the cookie to prevent reuse"
+    );
 
     // Try to access /me with the old cookie - should fail
     let me_response = server
