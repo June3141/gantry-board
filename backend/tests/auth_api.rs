@@ -4,6 +4,7 @@ use axum::http::{header, StatusCode};
 use common::create_auth_test_server as create_test_server;
 use serde_json::json;
 
+// Why: Session cookies must have HttpOnly to prevent XSS-based session theft.
 #[tokio::test]
 async fn test_register_creates_user_and_returns_session_cookie() {
     let server = create_test_server().await;
@@ -54,6 +55,8 @@ async fn test_register_validates_email() {
     response.assert_status(StatusCode::BAD_REQUEST);
 }
 
+// Why: Short passwords are trivially brute-forced; enforcing minimum length
+// raises the cost of offline attacks on leaked hashes.
 #[tokio::test]
 async fn test_register_validates_password_length() {
     let server = create_test_server().await;
@@ -70,6 +73,8 @@ async fn test_register_validates_password_length() {
     response.assert_status(StatusCode::BAD_REQUEST);
 }
 
+// Why: Returning a specific "email already exists" error enables user enumeration
+// attacks — attackers can probe the registration endpoint to discover valid accounts.
 #[tokio::test]
 async fn test_register_duplicate_email_returns_generic_error() {
     let server = create_test_server().await;
@@ -134,6 +139,8 @@ async fn test_login_with_valid_credentials() {
     assert!(cookies.is_some(), "Should set session cookie");
 }
 
+// Why: Invalid credentials must return UNAUTHORIZED (not a specific "wrong password"
+// message) to prevent credential-stuffing bots from distinguishing valid accounts.
 #[tokio::test]
 async fn test_login_with_wrong_password() {
     let server = create_test_server().await;
@@ -160,6 +167,8 @@ async fn test_login_with_wrong_password() {
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
+// Why: Must return the same status code as wrong-password to prevent user enumeration
+// via response differences (no distinct error for unknown email vs wrong password).
 #[tokio::test]
 async fn test_login_with_nonexistent_email() {
     let server = create_test_server().await;
@@ -175,6 +184,8 @@ async fn test_login_with_nonexistent_email() {
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
+// Why: Unauthenticated requests to user-specific endpoints must be rejected to enforce
+// the authentication boundary and prevent information leakage.
 #[tokio::test]
 async fn test_me_without_auth() {
     let server = create_test_server().await;
@@ -222,6 +233,8 @@ async fn test_me_with_auth() {
     assert_eq!(body["name"], "Test User");
 }
 
+// Why: Logout must invalidate the server-side session AND set Max-Age=0 on the cookie.
+// Without both, a stolen cookie could remain valid after the user logs out.
 #[tokio::test]
 async fn test_logout_clears_session() {
     let server = create_test_server().await;
@@ -281,6 +294,8 @@ async fn test_logout_without_auth() {
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
+// Why: When a user logs in again, old sessions must be invalidated to limit the
+// window of exposure if a session token was compromised (session fixation prevention).
 #[tokio::test]
 async fn test_login_invalidates_previous_sessions() {
     let server = create_test_server().await;
@@ -324,6 +339,8 @@ async fn test_login_invalidates_previous_sessions() {
     me_response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
+// Why: Rate limiting on login prevents brute-force and credential-stuffing attacks
+// by throttling the number of attempts per time window.
 #[tokio::test]
 async fn test_login_rate_limit_returns_429_after_burst() {
     let server = create_test_server().await;
@@ -343,6 +360,8 @@ async fn test_login_rate_limit_returns_429_after_burst() {
     response.assert_status(StatusCode::TOO_MANY_REQUESTS);
 }
 
+// Why: Rate limiting on registration prevents automated mass account creation
+// and abuse of the signup endpoint as an email oracle.
 #[tokio::test]
 async fn test_register_rate_limit_returns_429_after_burst() {
     let server = create_test_server().await;

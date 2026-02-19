@@ -111,6 +111,8 @@ async fn test_unauthorized_error_response_structure() {
     assert_error_response(&body, "UNAUTHORIZED");
 }
 
+// Why: Internal details (library names, stack traces) in error responses help attackers
+// fingerprint the tech stack and find known vulnerabilities — OWASP recommends generic messages.
 #[tokio::test]
 async fn test_error_response_does_not_leak_internal_details() {
     let server = create_test_server().await;

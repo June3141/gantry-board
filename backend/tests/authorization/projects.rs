@@ -9,6 +9,8 @@ use crate::common::{
 // Phase 2: create_project auto-adds creator as Owner
 // =============================================================
 
+// Why: The creator must be auto-enrolled as owner so every project has at least one
+// user who can manage members and settings from the moment of creation.
 #[tokio::test]
 async fn test_create_project_auto_adds_creator_as_owner() {
     let server = create_test_server().await;
@@ -52,6 +54,8 @@ async fn test_create_project_creator_can_access_project() {
 // Phase 3: Project endpoint authorization
 // =============================================================
 
+// Why: Users must only see projects they belong to — leaking project existence or
+// metadata to non-members violates the multi-tenant isolation model.
 #[tokio::test]
 async fn test_list_projects_only_returns_member_projects() {
     let server = create_test_server().await;
@@ -89,6 +93,8 @@ async fn test_list_projects_only_returns_member_projects() {
     );
 }
 
+// Why: Non-members must receive 403 (not 404) to maintain a clear authorization
+// boundary — 404 could be ambiguous between "doesn't exist" and "not allowed".
 #[tokio::test]
 async fn test_get_project_forbidden_for_non_member() {
     let server = create_test_server().await;
@@ -120,6 +126,8 @@ async fn test_get_project_allowed_for_member() {
     response.assert_status_ok();
 }
 
+// Why: Regular members must not be able to modify project settings (name, etc.) —
+// only admins and owners should have write access to project-level configuration.
 #[tokio::test]
 async fn test_update_project_forbidden_for_member_role() {
     let server = create_test_server().await;
@@ -156,6 +164,8 @@ async fn test_update_project_allowed_for_admin() {
     assert_eq!(body["name"], "Updated by Admin");
 }
 
+// Why: Project deletion is destructive and irreversible — restricting it to owner
+// prevents admins from accidentally or maliciously destroying the project.
 #[tokio::test]
 async fn test_delete_project_forbidden_for_admin() {
     let server = create_test_server().await;
