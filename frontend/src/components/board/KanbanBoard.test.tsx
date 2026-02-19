@@ -46,7 +46,6 @@ const renderWithProviders = (ui: React.ReactElement) => {
 describe('KanbanBoard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useBoardStore.getState().clearFilters();
     vi.mocked(membersApi.useListMembers).mockReturnValue({
       data: [],
       isLoading: false,

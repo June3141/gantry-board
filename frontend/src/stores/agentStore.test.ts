@@ -1,11 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { useAgentStore } from './agentStore';
 
 describe('agentStore', () => {
-  afterEach(() => {
-    useAgentStore.getState().reset();
-  });
-
   it('has correct initial state', () => {
     const state = useAgentStore.getState();
     expect(state.activeSessionId).toBeNull();

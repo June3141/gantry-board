@@ -1,15 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { useToastStore } from '@/stores/toastStore';
 import { ToastContainer } from './ToastContainer';
 
 describe('ToastContainer', () => {
-  afterEach(() => {
-    useToastStore.setState({ toasts: [] });
-  });
-
   it('renders nothing when no toasts', () => {
     const { container } = render(<ToastContainer />);
     expect(container.querySelector('[data-testid="toast-container"]')?.children).toHaveLength(0);

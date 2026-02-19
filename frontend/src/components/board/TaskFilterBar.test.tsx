@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { ProjectMember } from '@/api/generated/model';
 import { MemberRole, TaskPriority } from '@/api/generated/model';
 import { useBoardStore } from '@/stores/boardStore';
@@ -26,10 +26,6 @@ const mockMembers: ProjectMember[] = [
 ];
 
 describe('TaskFilterBar', () => {
-  beforeEach(() => {
-    useBoardStore.getState().clearFilters();
-  });
-
   it('renders search input', () => {
     render(<TaskFilterBar members={mockMembers} />);
     expect(screen.getByPlaceholderText(/search/i)).toBeInTheDocument();
