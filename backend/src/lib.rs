@@ -148,6 +148,27 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/projects/{project_id}/messages/{message_id}",
             delete(handlers::project_messages::delete_message),
         )
+        // Project invitation endpoints
+        .route(
+            "/projects/{project_id}/invitations",
+            get(handlers::invitations::list_invitations),
+        )
+        .route(
+            "/projects/{project_id}/invitations",
+            post(handlers::invitations::create_invitation),
+        )
+        .route(
+            "/projects/{project_id}/invitations/{invitation_id}",
+            delete(handlers::invitations::delete_invitation),
+        )
+        .route(
+            "/invitations/{token}",
+            get(handlers::invitations::get_invitation_by_token),
+        )
+        .route(
+            "/invitations/{token}/accept",
+            post(handlers::invitations::accept_invitation),
+        )
         // Task comment endpoints
         .route(
             "/tasks/{task_id}/comments",

@@ -4,6 +4,7 @@ pub mod docker_preview;
 pub mod github;
 pub mod pagination;
 pub mod project;
+pub mod project_invitation;
 pub mod project_message;
 pub mod task;
 pub mod task_comment;

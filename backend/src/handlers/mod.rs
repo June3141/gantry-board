@@ -2,6 +2,7 @@ pub mod agent_sessions;
 pub mod auth;
 pub mod github_links;
 pub mod health;
+pub mod invitations;
 pub mod previews;
 pub mod project_members;
 pub mod project_messages;
