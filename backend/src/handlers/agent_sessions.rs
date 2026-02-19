@@ -233,6 +233,74 @@ pub async fn restart_agent_session(
     ))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/tasks/{task_id}/sessions/{session_id}/pause",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID"),
+        ("session_id" = Uuid, Path, description = "Agent session ID")
+    ),
+    responses(
+        (status = 200, description = "Agent session paused", body = AgentSession),
+        (status = 400, description = "Invalid status transition (not running)"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Session not found or not running"),
+        (status = 500, description = "Failed to send SIGSTOP to process")
+    ),
+    tag = "agent-sessions"
+)]
+pub async fn pause_agent_session(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((task_id, session_id)): Path<(Uuid, Uuid)>,
+) -> AppResult<Json<AgentSession>> {
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
+    agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
+
+    state
+        .orchestrator
+        .pause_session(task_id, session_id)
+        .await?;
+
+    let session =
+        agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
+    Ok(Json(session))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/tasks/{task_id}/sessions/{session_id}/resume",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID"),
+        ("session_id" = Uuid, Path, description = "Agent session ID")
+    ),
+    responses(
+        (status = 200, description = "Agent session resumed", body = AgentSession),
+        (status = 400, description = "Invalid status transition (not paused)"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Session not found or not paused"),
+        (status = 500, description = "Failed to send SIGCONT to process")
+    ),
+    tag = "agent-sessions"
+)]
+pub async fn resume_agent_session(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((task_id, session_id)): Path<(Uuid, Uuid)>,
+) -> AppResult<Json<AgentSession>> {
+    authorization_service::authorize_task(&state.pool, auth.user_id, task_id).await?;
+    agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
+
+    state
+        .orchestrator
+        .resume_session(task_id, session_id)
+        .await?;
+
+    let session =
+        agent_session_service::get_agent_session(&state.pool, task_id, session_id).await?;
+    Ok(Json(session))
+}
+
 #[derive(Debug, Deserialize)]
 pub struct GetOutputsQuery {
     pub after: Option<i64>,

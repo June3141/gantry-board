@@ -37,6 +37,8 @@ pub struct AgentHandle {
     pub cancel: CancellationToken,
     pub output_rx: mpsc::Receiver<AgentOutputEvent>,
     pub join_handle: tokio::task::JoinHandle<AppResult<()>>,
+    /// Process ID of the spawned child, used for pause/resume signals.
+    pub pid: Option<u32>,
 }
 
 /// Validate agent configuration before execution.
@@ -100,6 +102,7 @@ impl AgentExecutor for NoopExecutor {
             cancel,
             output_rx: rx,
             join_handle,
+            pid: None,
         })
     }
 }
@@ -150,6 +153,8 @@ where
             )));
         }
     };
+
+    let pid = child.id();
 
     let cancel = CancellationToken::new();
     let (tx, rx) = mpsc::channel(256);
@@ -219,6 +224,7 @@ where
         cancel,
         output_rx: rx,
         join_handle,
+        pid,
     })
 }
 

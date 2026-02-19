@@ -26,6 +26,7 @@ impl std::fmt::Display for AgentType {
 pub enum AgentSessionStatus {
     Pending,
     Running,
+    Paused,
     Completed,
     Failed,
     Cancelled,

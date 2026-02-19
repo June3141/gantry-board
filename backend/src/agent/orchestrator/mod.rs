@@ -22,6 +22,8 @@ use crate::sse::hub::SseHub;
 struct RunningSession {
     cancel: tokio_util::sync::CancellationToken,
     _monitor_handle: tokio::task::JoinHandle<()>,
+    /// Process ID of the agent child process, used for SIGSTOP/SIGCONT.
+    pid: Option<u32>,
 }
 
 /// Parameters for starting a new agent session.
@@ -222,6 +224,7 @@ impl AgentOrchestrator {
                 session.id,
                 RunningSession {
                     cancel: handle.cancel,
+                    pid: handle.pid,
                     _monitor_handle: monitor_handle,
                 },
             );
@@ -279,6 +282,7 @@ mod tests {
                 cancel,
                 output_rx: rx,
                 join_handle,
+                pid: None,
             })
         }
     }
@@ -592,6 +596,7 @@ mod tests {
                     cancel,
                     output_rx: rx,
                     join_handle,
+                    pid: None,
                 })
             }
         }
@@ -667,6 +672,7 @@ mod tests {
                     cancel,
                     output_rx: rx,
                     join_handle,
+                    pid: None,
                 })
             }
         }

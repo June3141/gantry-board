@@ -7,19 +7,65 @@ use std::sync::Arc;
 
 use axum::http::header;
 use axum_test::TestServer;
-use gantry_board::agent::executor::{AgentExecutor, NoopExecutor};
+use gantry_board::agent::executor::{
+    AgentConfig, AgentExecutor, AgentHandle, AgentOutputEvent, NoopExecutor,
+};
 use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
+use gantry_board::error::AppResult;
 use gantry_board::models::agent_session::AgentType;
 use gantry_board::services::agent_session_output_service::OutputBuffer;
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
 use sqlx::sqlite::SqlitePoolOptions;
 pub use sqlx::SqlitePool;
+use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 
-async fn create_test_server_impl(
+/// Executor that spawns a real `sleep` process for testing pause/resume with signals.
+pub struct SleepExecutor;
+
+#[async_trait::async_trait]
+impl AgentExecutor for SleepExecutor {
+    async fn start(&self, _config: AgentConfig) -> AppResult<AgentHandle> {
+        use std::process::Stdio;
+        use tokio::process::Command;
+
+        let mut child = Command::new("sleep")
+            .arg("3600")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .kill_on_drop(true)
+            .spawn()
+            .expect("failed to spawn sleep process");
+
+        let pid = child.id();
+        let cancel = CancellationToken::new();
+        let (tx, rx) = mpsc::channel(16);
+        let token = cancel.clone();
+
+        let join_handle = tokio::spawn(async move {
+            token.cancelled().await;
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            let _ = tx.send(AgentOutputEvent::Completed).await;
+            Ok(())
+        });
+
+        Ok(AgentHandle {
+            cancel,
+            output_rx: rx,
+            join_handle,
+            pid,
+        })
+    }
+}
+
+async fn create_test_server_with_executor(
     auth_disabled: bool,
     repo_path: PathBuf,
+    executor: Arc<dyn AgentExecutor>,
 ) -> (TestServer, SqlitePool) {
     let pool = SqlitePoolOptions::new()
         .connect("sqlite::memory:")
@@ -41,7 +87,7 @@ async fn create_test_server_impl(
 
     let sse_hub = Arc::new(SseHub::default());
     let mut executors: HashMap<AgentType, Arc<dyn AgentExecutor>> = HashMap::new();
-    executors.insert(AgentType::ClaudeCode, Arc::new(NoopExecutor));
+    executors.insert(AgentType::ClaudeCode, executor);
     let output_buffer = Arc::new(OutputBuffer::new(pool.clone()));
     let orchestrator = Arc::new(AgentOrchestrator::new(
         executors,
@@ -65,9 +111,15 @@ async fn create_test_server_impl(
         .expect("Failed to build app")
         .into_make_service_with_connect_info::<SocketAddr>();
     let mut server = TestServer::new(app).expect("Failed to create test server");
-    // CSRF middleware requires X-Requested-With on state-changing requests
     server.add_header("x-requested-with", "XMLHttpRequest");
     (server, pool)
+}
+
+async fn create_test_server_impl(
+    auth_disabled: bool,
+    repo_path: PathBuf,
+) -> (TestServer, SqlitePool) {
+    create_test_server_with_executor(auth_disabled, repo_path, Arc::new(NoopExecutor)).await
 }
 
 /// Create a test server with auth disabled (for CRUD tests).
@@ -118,6 +170,14 @@ pub async fn create_test_server_with_repo_and_pool() -> (tempfile::TempDir, Test
     let (tmp, repo_path) = init_test_repo();
     let (server, pool) = create_test_server_impl(true, repo_path).await;
     (tmp, server, pool)
+}
+
+/// Create a test server with SleepExecutor for pause/resume tests.
+pub async fn create_test_server_with_sleep_executor() -> (tempfile::TempDir, TestServer) {
+    let (tmp, repo_path) = init_test_repo();
+    let (server, _pool) =
+        create_test_server_with_executor(true, repo_path, Arc::new(SleepExecutor)).await;
+    (tmp, server)
 }
 
 // ========== Common Test Helpers (no-auth) ==========

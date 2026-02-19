@@ -12,6 +12,7 @@ export type AgentSessionStatus = (typeof AgentSessionStatus)[keyof typeof AgentS
 export const AgentSessionStatus = {
   pending: 'pending',
   running: 'running',
+  paused: 'paused',
   completed: 'completed',
   failed: 'failed',
   cancelled: 'cancelled',

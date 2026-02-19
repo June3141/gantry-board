@@ -1,7 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  getListAgentSessionsQueryKey,
   useGetAgentSessionOutputs,
   useListAgentSessions,
+  usePauseAgentSession,
+  useResumeAgentSession,
   useStartAgentSession,
   useStopAgentSession,
 } from '@/api/generated/endpoints/agent-sessions/agent-sessions';
@@ -17,6 +21,7 @@ interface AgentPanelProps {
 const STATUS_COLORS: Record<AgentSessionStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   running: 'bg-blue-100 text-blue-800',
+  paused: 'bg-orange-100 text-orange-800',
   completed: 'bg-green-100 text-green-800',
   failed: 'bg-red-100 text-red-800',
   cancelled: 'bg-gray-100 text-gray-800',
@@ -29,10 +34,13 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: sessions } = useListAgentSessions(taskId);
   const startSession = useStartAgentSession();
   const stopSession = useStopAgentSession();
+  const pauseSession = usePauseAgentSession();
+  const resumeSession = useResumeAgentSession();
 
   const {
     activeSessionId,
@@ -48,7 +56,9 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
   // Derive active session from both store and server data
   const activeSession =
     sessions?.find((s) => s.id === activeSessionId) ??
-    sessions?.find((s) => s.status === 'running' || s.status === 'pending');
+    sessions?.find(
+      (s) => s.status === 'running' || s.status === 'pending' || s.status === 'paused',
+    );
 
   // Past (terminal) sessions
   const pastSessions = sessions?.filter((s) => TERMINAL_STATUSES.includes(s.status)) ?? [];
@@ -116,6 +126,34 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
     }
   };
 
+  const handlePause = async () => {
+    if (!activeSession) return;
+    setError(null);
+    try {
+      await pauseSession.mutateAsync({
+        taskId,
+        sessionId: activeSession.id,
+      });
+      queryClient.invalidateQueries({ queryKey: getListAgentSessionsQueryKey(taskId) });
+    } catch {
+      setError('Failed to pause agent session. Please try again.');
+    }
+  };
+
+  const handleResume = async () => {
+    if (!activeSession) return;
+    setError(null);
+    try {
+      await resumeSession.mutateAsync({
+        taskId,
+        sessionId: activeSession.id,
+      });
+      queryClient.invalidateQueries({ queryKey: getListAgentSessionsQueryKey(taskId) });
+    } catch {
+      setError('Failed to resume agent session. Please try again.');
+    }
+  };
+
   const handleViewSession = (session: AgentSession) => {
     setViewingSessionId(session.id);
     setActiveSession(null);
@@ -148,14 +186,36 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
               </span>
             </div>
             {!TERMINAL_STATUSES.includes(activeSession.status) && (
-              <button
-                type="button"
-                onClick={handleStop}
-                disabled={stopSession.isPending}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                Stop
-              </button>
+              <div className="flex items-center gap-2">
+                {activeSession.status === 'running' && (
+                  <button
+                    type="button"
+                    onClick={handlePause}
+                    disabled={pauseSession.isPending}
+                    className="rounded-md bg-yellow-600 px-3 py-1.5 text-sm text-white hover:bg-yellow-700 disabled:opacity-50"
+                  >
+                    Pause
+                  </button>
+                )}
+                {activeSession.status === 'paused' && (
+                  <button
+                    type="button"
+                    onClick={handleResume}
+                    disabled={resumeSession.isPending}
+                    className="rounded-md bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    Resume
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleStop}
+                  disabled={stopSession.isPending}
+                  className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  Stop
+                </button>
+              </div>
             )}
           </div>
           <AgentOutputViewer lines={outputLines} isLoading={false} />

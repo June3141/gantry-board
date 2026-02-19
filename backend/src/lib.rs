@@ -188,6 +188,14 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             post(handlers::agent_sessions::stop_agent_session),
         )
         .route(
+            "/tasks/{task_id}/sessions/{session_id}/pause",
+            post(handlers::agent_sessions::pause_agent_session),
+        )
+        .route(
+            "/tasks/{task_id}/sessions/{session_id}/resume",
+            post(handlers::agent_sessions::resume_agent_session),
+        )
+        .route(
             "/tasks/{task_id}/sessions/{session_id}/outputs",
             get(handlers::agent_sessions::get_agent_session_outputs),
         )

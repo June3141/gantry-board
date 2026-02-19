@@ -36,6 +36,8 @@ use crate::sse;
         handlers::agent_sessions::update_agent_session,
         handlers::agent_sessions::start_agent_session,
         handlers::agent_sessions::stop_agent_session,
+        handlers::agent_sessions::pause_agent_session,
+        handlers::agent_sessions::resume_agent_session,
         handlers::agent_sessions::get_agent_session_outputs,
         handlers::agent_sessions::restart_agent_session,
         handlers::users::search_users,
