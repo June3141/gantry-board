@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use sqlx::prelude::FromRow;
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
@@ -70,6 +70,41 @@ pub async fn add_member(
     tx.commit().await?;
 
     get_member(pool, project_id, req.user_id).await
+}
+
+/// Transaction-aware variant of `add_member` for use within an existing transaction.
+pub async fn add_member_tx(
+    conn: &mut SqliteConnection,
+    project_id: Uuid,
+    req: &AddMemberRequest,
+) -> AppResult<()> {
+    let user_exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM users WHERE id = $1")
+        .bind(req.user_id.to_string())
+        .fetch_optional(&mut *conn)
+        .await?;
+    if user_exists.is_none() {
+        return Err(AppError::NotFound(format!(
+            "user {} not found",
+            req.user_id
+        )));
+    }
+
+    let now = Utc::now();
+
+    sqlx::query(
+        r#"
+        INSERT INTO project_members (project_id, user_id, role, created_at)
+        VALUES ($1, $2, $3, $4)
+        "#,
+    )
+    .bind(project_id.to_string())
+    .bind(req.user_id.to_string())
+    .bind(&req.role)
+    .bind(now)
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn get_member(

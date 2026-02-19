@@ -157,9 +157,14 @@ pub async fn list_invitations(
     rows.into_iter().map(ProjectInvitation::try_from).collect()
 }
 
-pub async fn delete_invitation(pool: &SqlitePool, invitation_id: Uuid) -> AppResult<()> {
-    let result = sqlx::query("DELETE FROM project_invitations WHERE id = $1")
+pub async fn delete_invitation(
+    pool: &SqlitePool,
+    project_id: Uuid,
+    invitation_id: Uuid,
+) -> AppResult<()> {
+    let result = sqlx::query("DELETE FROM project_invitations WHERE id = $1 AND project_id = $2")
         .bind(invitation_id.to_string())
+        .bind(project_id.to_string())
         .execute(pool)
         .await?;
     if result.rows_affected() == 0 {
@@ -239,13 +244,24 @@ pub async fn accept_invitation(
         return Err(AppError::Validation("invitation has expired".to_string()));
     }
 
-    // Mark invitation as accepted
-    sqlx::query("UPDATE project_invitations SET accepted_at = $1, accepted_by = $2 WHERE id = $3")
-        .bind(Utc::now())
-        .bind(user_id.to_string())
-        .bind(invitation.id.to_string())
-        .execute(pool)
-        .await?;
+    let mut tx = pool.begin().await?;
+
+    // Mark invitation as accepted (conditional on accepted_at still being NULL
+    // to prevent double-accept race condition)
+    let result = sqlx::query(
+        "UPDATE project_invitations SET accepted_at = $1, accepted_by = $2 WHERE id = $3 AND accepted_at IS NULL",
+    )
+    .bind(Utc::now())
+    .bind(user_id.to_string())
+    .bind(invitation.id.to_string())
+    .execute(&mut *tx)
+    .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::Conflict(
+            "invitation has already been accepted".to_string(),
+        ));
+    }
 
     // Add user as project member
     use crate::models::project::AddMemberRequest;
@@ -257,12 +273,12 @@ pub async fn accept_invitation(
     )
     .bind(invitation.project_id.to_string())
     .bind(user_id.to_string())
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await?;
 
     if existing == 0 {
-        member_service::add_member(
-            pool,
+        member_service::add_member_tx(
+            &mut tx,
             invitation.project_id,
             &AddMemberRequest {
                 user_id,
@@ -271,6 +287,8 @@ pub async fn accept_invitation(
         )
         .await?;
     }
+
+    tx.commit().await?;
 
     get_invitation(pool, invitation.id).await
 }

@@ -28,8 +28,8 @@ export function InvitationAcceptPage() {
 
   const handleAccept = async () => {
     try {
-      await acceptMutation.mutateAsync({ token });
-      navigate('/');
+      const result = await acceptMutation.mutateAsync({ token });
+      navigate(`/projects/${result.project_id}`);
     } catch {
       // Error is shown via mutation state
     }

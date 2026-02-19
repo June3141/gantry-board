@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLogin } from '@/api/generated/endpoints/auth/auth';
 import { useAuthStore } from '@/stores/authStore';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
   const setUser = useAuthStore((state) => state.setUser);
   const login = useLogin();
 
@@ -21,7 +23,7 @@ export function LoginPage() {
         data: { email, password },
       });
       setUser(response.user);
-      navigate('/');
+      navigate(redirectTo ?? '/');
     } catch {
       setError('Invalid email or password. Please try again.');
     }

@@ -97,7 +97,7 @@ pub async fn delete_invitation(
     Path((project_id, invitation_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<StatusCode> {
     authorization_service::require_project_admin(&state.pool, auth.user_id, project_id).await?;
-    invitation_service::delete_invitation(&state.pool, invitation_id).await?;
+    invitation_service::delete_invitation(&state.pool, project_id, invitation_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

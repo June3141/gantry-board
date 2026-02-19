@@ -266,7 +266,6 @@ function InvitationSection({ projectId }: { projectId: string }) {
   const deleteInvitation = useDeleteInvitation();
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const invalidateInvitations = () => {
     queryClient.invalidateQueries({
@@ -281,9 +280,12 @@ function InvitationSection({ projectId }: { projectId: string }) {
         data: {},
       });
       invalidateInvitations();
-      // Copy invite URL to clipboard
-      await navigator.clipboard.writeText(result.invite_url);
-      addToast('success', 'Invitation link copied to clipboard!');
+      try {
+        await navigator.clipboard.writeText(result.invite_url);
+        addToast('success', 'Invitation link copied to clipboard!');
+      } catch {
+        addToast('success', `Invitation created: ${result.invite_url}`);
+      }
     } catch {
       addToast('error', 'Failed to create invitation.');
     }
@@ -298,12 +300,9 @@ function InvitationSection({ projectId }: { projectId: string }) {
     }
   };
 
-  const handleCopy = async (invitationId: string) => {
-    // Re-create would be needed to get the token, so we show the invitation ID
-    // The original token was shown once at creation time
-    setCopiedId(invitationId);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+  // Token is only available at creation time — it's copied to clipboard
+  // automatically when the invitation is created. Re-retrieval is not
+  // possible since only the SHA-256 hash is stored in the database.
 
   const pendingInvitations = invitations?.filter((i) => !i.accepted_at) ?? [];
 
@@ -342,13 +341,6 @@ function InvitationSection({ projectId }: { projectId: string }) {
                       : `Expires ${new Date(inv.expires_at).toLocaleDateString()}`}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(inv.id)}
-                  className="text-xs text-gray-400 hover:text-gray-600"
-                >
-                  {copiedId === inv.id ? 'Copied!' : 'Copy'}
-                </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(inv.id)}
