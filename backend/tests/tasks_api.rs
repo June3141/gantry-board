@@ -33,7 +33,7 @@ async fn test_list_tasks_returns_empty_initially() {
     let tasks = body["data"].as_array().unwrap();
     assert!(tasks.is_empty());
     assert_eq!(body["total"], 0);
-    assert_eq!(body["limit"], 50);
+    assert_eq!(body["limit"], 50, "default page size must be 50");
     assert_eq!(body["offset"], 0);
 }
 
@@ -68,8 +68,14 @@ async fn test_create_task_returns_created() {
     assert_eq!(task["title"], "Test Task");
     assert_eq!(task["description"], "A test task");
     assert_eq!(task["project_id"], project_id);
-    assert_eq!(task["status"], "backlog");
-    assert_eq!(task["priority"], "medium");
+    assert_eq!(
+        task["status"], "backlog",
+        "new tasks must default to backlog status"
+    );
+    assert_eq!(
+        task["priority"], "medium",
+        "new tasks must default to medium priority"
+    );
 }
 
 #[tokio::test]
