@@ -18,12 +18,13 @@ export const test = base.extend<Fixtures>({
     await use(user);
   },
 
-  authenticatedPage: async ({ page, testUser }, use) => {
+  authenticatedPage: async ({ page, testUser, baseURL }, use) => {
+    const domain = new URL(baseURL ?? 'http://localhost:5173').hostname;
     await page.context().addCookies([
       {
         name: testUser.cookie.split('=')[0],
         value: testUser.cookie.split('=')[1],
-        domain: 'localhost',
+        domain,
         path: '/',
       },
     ]);

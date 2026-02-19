@@ -25,6 +25,10 @@ export async function createTestUser(
     headers: { 'x-requested-with': 'XMLHttpRequest' },
   });
 
+  if (!response.ok()) {
+    throw new Error(`createTestUser failed: ${response.status()} ${await response.text()}`);
+  }
+
   const setCookie = response.headers()['set-cookie'] ?? '';
   const cookie = setCookie.split(';')[0];
   const body = await response.json();
