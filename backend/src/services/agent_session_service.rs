@@ -146,7 +146,7 @@ pub async fn check_no_active_session_tx(
         r#"
         SELECT id, task_id, agent_type, status, prompt, worktree_name, started_at, finished_at, created_at, updated_at
         FROM agent_sessions
-        WHERE task_id = $1 AND status IN ('pending', 'running')
+        WHERE task_id = $1 AND status IN ('pending', 'running', 'paused')
         LIMIT 1
         "#,
     )
@@ -287,6 +287,9 @@ fn validate_status_transition(from: &AgentSessionStatus, to: &AgentSessionStatus
             | (Running, Completed)
             | (Running, Failed)
             | (Running, Cancelled)
+            | (Running, Paused)
+            | (Paused, Running)
+            | (Paused, Cancelled)
     );
     if !allowed {
         return Err(AppError::Validation(format!(
@@ -929,5 +932,282 @@ mod tests {
         .await;
 
         assert!(matches!(result, Err(AppError::Validation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_transition_running_to_paused_is_valid() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let created = create_agent_session(
+            &pool,
+            task_id,
+            &CreateAgentSessionRequest {
+                agent_type: AgentType::ClaudeCode,
+            },
+        )
+        .await
+        .expect("Failed to create");
+
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Transition to running");
+
+        let paused = update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Paused,
+            },
+        )
+        .await
+        .expect("Transition to paused should succeed");
+
+        assert_eq!(paused.status, AgentSessionStatus::Paused);
+        assert!(paused.started_at.is_some());
+        assert!(paused.finished_at.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_transition_paused_to_running_is_valid() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let created = create_agent_session(
+            &pool,
+            task_id,
+            &CreateAgentSessionRequest {
+                agent_type: AgentType::ClaudeCode,
+            },
+        )
+        .await
+        .expect("Failed to create");
+
+        // Pending → Running → Paused → Running (resume)
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Transition to running");
+
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Paused,
+            },
+        )
+        .await
+        .expect("Transition to paused");
+
+        let resumed = update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Transition from paused to running should succeed");
+
+        assert_eq!(resumed.status, AgentSessionStatus::Running);
+        assert!(resumed.finished_at.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_transition_paused_to_cancelled_is_valid() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let created = create_agent_session(
+            &pool,
+            task_id,
+            &CreateAgentSessionRequest {
+                agent_type: AgentType::ClaudeCode,
+            },
+        )
+        .await
+        .expect("Failed to create");
+
+        // Pending → Running → Paused → Cancelled
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Transition to running");
+
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Paused,
+            },
+        )
+        .await
+        .expect("Transition to paused");
+
+        let cancelled = update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Cancelled,
+            },
+        )
+        .await
+        .expect("Transition from paused to cancelled should succeed");
+
+        assert_eq!(cancelled.status, AgentSessionStatus::Cancelled);
+        assert!(cancelled.finished_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_invalid_transition_pending_to_paused() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let created = create_agent_session(
+            &pool,
+            task_id,
+            &CreateAgentSessionRequest {
+                agent_type: AgentType::ClaudeCode,
+            },
+        )
+        .await
+        .expect("Failed to create");
+
+        // Pending → Paused should fail
+        let result = update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Paused,
+            },
+        )
+        .await;
+
+        assert!(
+            matches!(result, Err(AppError::Validation(_))),
+            "Pending → Paused should be rejected"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_invalid_transition_completed_to_paused() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let created = create_agent_session(
+            &pool,
+            task_id,
+            &CreateAgentSessionRequest {
+                agent_type: AgentType::ClaudeCode,
+            },
+        )
+        .await
+        .expect("Failed to create");
+
+        // Pending → Running → Completed
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Transition to running");
+        update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Completed,
+            },
+        )
+        .await
+        .expect("Transition to completed");
+
+        // Completed → Paused should fail
+        let result = update_agent_session(
+            &pool,
+            task_id,
+            created.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Paused,
+            },
+        )
+        .await;
+
+        assert!(
+            matches!(result, Err(AppError::Validation(_))),
+            "Completed → Paused should be rejected"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_paused_session_blocks_new_session_creation() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let req = CreateAgentSessionRequest {
+            agent_type: AgentType::ClaudeCode,
+        };
+
+        let session = create_agent_session(&pool, task_id, &req)
+            .await
+            .expect("First session should succeed");
+
+        // Pending → Running → Paused
+        update_agent_session(
+            &pool,
+            task_id,
+            session.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("Transition to running");
+        update_agent_session(
+            &pool,
+            task_id,
+            session.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Paused,
+            },
+        )
+        .await
+        .expect("Transition to paused");
+
+        // New session while paused should fail
+        let result = create_agent_session(&pool, task_id, &req).await;
+        assert!(
+            result.is_err(),
+            "New session should be blocked while another is paused"
+        );
     }
 }
