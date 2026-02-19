@@ -15,15 +15,12 @@ test.describe('Authentication Flow', () => {
     await expect(page.getByText('Gantry Board')).toBeVisible();
   });
 
-  test('logs in with valid credentials', async ({ page }) => {
+  test('logs in with valid credentials', async ({ page, apiHelper }) => {
     const email = `e2e-login-${Date.now()}@test.local`;
     const password = 'Tr0ub4dor&3-e2e-test';
 
-    // Register first via API
-    await page.request.post('/api/auth/register', {
-      data: { email, name: 'Login Test', password },
-      headers: { 'x-requested-with': 'XMLHttpRequest' },
-    });
+    // Register first via API (use apiHelper to target backend directly)
+    await apiHelper.registerUser(email, 'Login Test', password);
 
     await page.goto('/login');
     await page.getByLabel('Email').fill(email);
