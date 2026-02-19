@@ -1,6 +1,6 @@
 mod common;
 
-use common::create_test_server;
+use common::{create_project_no_auth, create_test_server};
 use serde_json::json;
 
 #[tokio::test]
@@ -55,15 +55,7 @@ async fn test_create_project_validates_name() {
 #[tokio::test]
 async fn test_get_project_returns_existing() {
     let server = create_test_server().await;
-
-    let create_response = server
-        .post("/api/projects")
-        .json(&json!({
-            "name": "Test Project"
-        }))
-        .await;
-    let created: serde_json::Value = create_response.json();
-    let id = created["id"].as_str().unwrap();
+    let id = create_project_no_auth(&server, "Test Project").await;
 
     let response = server.get(&format!("/api/projects/{}", id)).await;
 
@@ -86,15 +78,7 @@ async fn test_get_project_returns_not_found() {
 #[tokio::test]
 async fn test_update_project_changes_name() {
     let server = create_test_server().await;
-
-    let create_response = server
-        .post("/api/projects")
-        .json(&json!({
-            "name": "Original Name"
-        }))
-        .await;
-    let created: serde_json::Value = create_response.json();
-    let id = created["id"].as_str().unwrap();
+    let id = create_project_no_auth(&server, "Original Name").await;
 
     let response = server
         .patch(&format!("/api/projects/{}", id))
@@ -111,15 +95,7 @@ async fn test_update_project_changes_name() {
 #[tokio::test]
 async fn test_delete_project_removes_from_db() {
     let server = create_test_server().await;
-
-    let create_response = server
-        .post("/api/projects")
-        .json(&json!({
-            "name": "To Be Deleted"
-        }))
-        .await;
-    let created: serde_json::Value = create_response.json();
-    let id = created["id"].as_str().unwrap();
+    let id = create_project_no_auth(&server, "To Be Deleted").await;
 
     let delete_response = server.delete(&format!("/api/projects/{}", id)).await;
     delete_response.assert_status(axum::http::StatusCode::NO_CONTENT);
@@ -131,15 +107,8 @@ async fn test_delete_project_removes_from_db() {
 #[tokio::test]
 async fn test_list_projects_returns_created_projects() {
     let server = create_test_server().await;
-
-    server
-        .post("/api/projects")
-        .json(&json!({ "name": "Project 1" }))
-        .await;
-    server
-        .post("/api/projects")
-        .json(&json!({ "name": "Project 2" }))
-        .await;
+    create_project_no_auth(&server, "Project 1").await;
+    create_project_no_auth(&server, "Project 2").await;
 
     let response = server.get("/api/projects").await;
 
@@ -153,12 +122,8 @@ async fn test_list_projects_returns_created_projects() {
 #[tokio::test]
 async fn test_list_projects_respects_limit_and_offset() {
     let server = create_test_server().await;
-
     for i in 0..5 {
-        server
-            .post("/api/projects")
-            .json(&json!({ "name": format!("Project {}", i) }))
-            .await;
+        create_project_no_auth(&server, &format!("Project {}", i)).await;
     }
 
     let response = server.get("/api/projects?limit=2&offset=1").await;

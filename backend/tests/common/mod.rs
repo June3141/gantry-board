@@ -120,32 +120,41 @@ pub async fn create_test_server_with_repo_and_pool() -> (tempfile::TempDir, Test
     (tmp, server, pool)
 }
 
-// ========== Common Test Helpers ==========
+// ========== Common Test Helpers (no-auth) ==========
 
-/// Create a project and a task in it, returning (project_id, task_id).
-/// Used by agent_sessions tests that don't require auth.
-pub async fn create_project_and_task(server: &TestServer) -> (String, String) {
+/// Create a project (no auth) and return its ID.
+pub async fn create_project_no_auth(server: &TestServer, name: &str) -> String {
     let response = server
         .post("/api/projects")
-        .json(&serde_json::json!({ "name": "Test Project" }))
+        .json(&serde_json::json!({ "name": name }))
         .await;
-    let project_id = response.json::<serde_json::Value>()["id"]
+    response.assert_status(axum::http::StatusCode::CREATED);
+    response.json::<serde_json::Value>()["id"]
         .as_str()
         .unwrap()
-        .to_string();
+        .to_string()
+}
 
+/// Create a task in a project (no auth) and return its ID.
+pub async fn create_task_no_auth(server: &TestServer, project_id: &str, title: &str) -> String {
     let response = server
         .post("/api/tasks")
         .json(&serde_json::json!({
             "project_id": project_id,
-            "title": "Test Task"
+            "title": title
         }))
         .await;
-    let task_id = response.json::<serde_json::Value>()["id"]
+    response.assert_status(axum::http::StatusCode::CREATED);
+    response.json::<serde_json::Value>()["id"]
         .as_str()
         .unwrap()
-        .to_string();
+        .to_string()
+}
 
+/// Create a project and a task in it, returning (project_id, task_id).
+pub async fn create_project_and_task(server: &TestServer) -> (String, String) {
+    let project_id = create_project_no_auth(server, "Test Project").await;
+    let task_id = create_task_no_auth(server, &project_id, "Test Task").await;
     (project_id, task_id)
 }
 
