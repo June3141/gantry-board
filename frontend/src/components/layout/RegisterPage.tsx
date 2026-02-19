@@ -38,9 +38,16 @@ export function RegisterPage() {
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
         <h1 className="mb-6 text-center text-2xl font-bold text-gray-900">Create your account</h1>
 
-        {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        {error && (
+          <div
+            data-testid="register-error"
+            className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700"
+          >
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} data-testid="register-form" className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
               Name

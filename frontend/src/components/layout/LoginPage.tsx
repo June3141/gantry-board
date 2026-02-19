@@ -34,9 +34,16 @@ export function LoginPage() {
           Sign in to Gantry Board
         </h1>
 
-        {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        {error && (
+          <div
+            data-testid="login-error"
+            className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700"
+          >
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} data-testid="login-form" className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email

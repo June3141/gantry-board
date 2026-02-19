@@ -20,15 +20,46 @@ export class ApiHelper {
     return (await assertOk(response, 'registerUser')).json();
   }
 
-  async createProject(cookie: string, name: string) {
+  async createProject(cookie: string, name: string, description?: string) {
     const response = await this.request.post(`${API_BASE}/api/projects`, {
-      data: { name },
+      data: { name, description },
       headers: {
         cookie,
         'x-requested-with': 'XMLHttpRequest',
       },
     });
     return (await assertOk(response, 'createProject')).json();
+  }
+
+  async createTask(
+    cookie: string,
+    projectId: string,
+    title: string,
+    options?: { description?: string; status?: string; priority?: string },
+  ) {
+    const response = await this.request.post(`${API_BASE}/api/tasks`, {
+      data: {
+        project_id: projectId,
+        title,
+        ...options,
+      },
+      headers: {
+        cookie,
+        'x-requested-with': 'XMLHttpRequest',
+      },
+    });
+    return (await assertOk(response, 'createTask')).json();
+  }
+
+  async createComment(cookie: string, taskId: string, content: string) {
+    const response = await this.request.post(`${API_BASE}/api/tasks/${taskId}/comments`, {
+      data: { content },
+      headers: {
+        cookie,
+        'x-requested-with': 'XMLHttpRequest',
+      },
+    });
+    return (await assertOk(response, 'createComment')).json();
   }
 
   async healthCheck() {

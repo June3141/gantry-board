@@ -49,7 +49,10 @@ function ProjectCreateForm() {
         if (e.target === e.currentTarget) closeProjectModal();
       }}
     >
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div
+        data-testid="project-create-dialog"
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+      >
         <h2 id="project-create-title" className="mb-4 text-lg font-semibold">
           Create Project
         </h2>
