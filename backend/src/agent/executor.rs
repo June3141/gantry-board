@@ -130,16 +130,26 @@ where
 
     // Write prompt to stdin and close it so the CLI starts processing.
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(prompt.as_bytes()).await.map_err(|e| {
-            AppError::Internal(format!("failed to write prompt to {agent_name} stdin: {e}"))
-        })?;
+        if let Err(e) = stdin.write_all(prompt.as_bytes()).await {
+            let _ = child.kill().await;
+            let _ = child.wait().await; // reap to avoid zombie
+            return Err(AppError::Internal(format!(
+                "failed to write prompt to {agent_name} stdin: {e}"
+            )));
+        }
         // stdin is dropped here, closing the pipe
     }
 
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| AppError::Internal(format!("{agent_name} CLI stdout not captured")))?;
+    let stdout = match child.stdout.take() {
+        Some(out) => out,
+        None => {
+            let _ = child.kill().await;
+            let _ = child.wait().await; // reap to avoid zombie
+            return Err(AppError::Internal(format!(
+                "{agent_name} CLI stdout not captured"
+            )));
+        }
+    };
 
     let cancel = CancellationToken::new();
     let (tx, rx) = mpsc::channel(256);
