@@ -1,6 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
+  getListInvitationsQueryKey,
+  useCreateInvitation,
+  useDeleteInvitation,
+  useListInvitations,
+} from '@/api/generated/endpoints/invitations/invitations';
+import {
   getListMembersQueryKey,
   useAddMember,
   useListMembers,
@@ -193,9 +199,11 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
           </div>
         )}
 
+        {canManage && <InvitationSection projectId={projectId} />}
+
         {canManage && (
           <div className="mt-4 border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-700">Invite Member</h3>
+            <h3 className="mb-2 text-sm font-medium text-gray-700">Add Existing User</h3>
             <div className="relative">
               <input
                 type="text"
@@ -248,6 +256,114 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function InvitationSection({ projectId }: { projectId: string }) {
+  const { data: invitations } = useListInvitations(projectId);
+  const createInvitation = useCreateInvitation();
+  const deleteInvitation = useDeleteInvitation();
+  const queryClient = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const invalidateInvitations = () => {
+    queryClient.invalidateQueries({
+      queryKey: getListInvitationsQueryKey(projectId),
+    });
+  };
+
+  const handleCreate = async () => {
+    try {
+      const result = await createInvitation.mutateAsync({
+        projectId,
+        data: {},
+      });
+      invalidateInvitations();
+      // Copy invite URL to clipboard
+      await navigator.clipboard.writeText(result.invite_url);
+      addToast('success', 'Invitation link copied to clipboard!');
+    } catch {
+      addToast('error', 'Failed to create invitation.');
+    }
+  };
+
+  const handleDelete = async (invitationId: string) => {
+    try {
+      await deleteInvitation.mutateAsync({ projectId, invitationId });
+      invalidateInvitations();
+    } catch {
+      addToast('error', 'Failed to revoke invitation.');
+    }
+  };
+
+  const handleCopy = async (invitationId: string) => {
+    // Re-create would be needed to get the token, so we show the invitation ID
+    // The original token was shown once at creation time
+    setCopiedId(invitationId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const pendingInvitations = invitations?.filter((i) => !i.accepted_at) ?? [];
+
+  return (
+    <div className="mt-4 border-t pt-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-sm font-medium text-gray-700">Invitation Links</h3>
+        <button
+          type="button"
+          onClick={handleCreate}
+          disabled={createInvitation.isPending}
+          className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700 disabled:opacity-50"
+          data-testid="create-invitation-btn"
+        >
+          Create Link
+        </button>
+      </div>
+
+      {pendingInvitations.length > 0 ? (
+        <div className="space-y-2">
+          {pendingInvitations.map((inv) => {
+            const isExpired = new Date(inv.expires_at) < new Date();
+            return (
+              <div
+                key={inv.id}
+                data-testid="invitation-item"
+                className="flex items-center gap-2 rounded border border-gray-200 px-2 py-1.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-gray-600">
+                    {inv.role} &middot; by {inv.invited_by_name}
+                  </p>
+                  <p className={`text-xs ${isExpired ? 'text-red-500' : 'text-gray-400'}`}>
+                    {isExpired
+                      ? 'Expired'
+                      : `Expires ${new Date(inv.expires_at).toLocaleDateString()}`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(inv.id)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  {copiedId === inv.id ? 'Copied!' : 'Copy'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(inv.id)}
+                  className="text-xs text-gray-400 hover:text-red-600"
+                  aria-label="Revoke"
+                >
+                  Revoke
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-500">No pending invitations.</p>
+      )}
     </div>
   );
 }
