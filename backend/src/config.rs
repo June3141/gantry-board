@@ -107,7 +107,7 @@ fn default_bind_addr() -> String {
 }
 
 fn default_database_url() -> String {
-    "sqlite:gantry_board.db?mode=rwc".to_string()
+    "sqlite:./data/gantry_board.db?mode=rwc".to_string()
 }
 
 fn default_session_duration_hours() -> u64 {
