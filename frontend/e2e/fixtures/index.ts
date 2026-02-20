@@ -15,9 +15,12 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   testUser: [
     async (_deps, use) => {
       const apiContext = await playwrightRequest.newContext();
-      const user = await createTestUser(apiContext);
-      await use(user);
-      await apiContext.dispose();
+      try {
+        const user = await createTestUser(apiContext);
+        await use(user);
+      } finally {
+        await apiContext.dispose();
+      }
     },
     { scope: 'worker' },
   ],
