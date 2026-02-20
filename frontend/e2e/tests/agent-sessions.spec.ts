@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { expect, test } from '../fixtures';
 
 test.describe('Agent Session UI', () => {
   test('shows agent controls in the task detail modal', async ({

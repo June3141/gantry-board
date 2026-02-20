@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { expect, test } from '../fixtures';
 
 test.describe('Task CRUD', () => {
   test('creates a task via the kanban column button', async ({
@@ -74,9 +74,7 @@ test.describe('Task CRUD', () => {
 
     // Task should now appear in the "In Progress" column
     await expect(
-      page
-        .locator('.flex-shrink-0', { hasText: 'In Progress' })
-        .getByText('Status Change Task'),
+      page.locator('.flex-shrink-0', { hasText: 'In Progress' }).getByText('Status Change Task'),
     ).toBeVisible();
   });
 
@@ -105,15 +103,8 @@ test.describe('Task CRUD', () => {
 });
 
 test.describe('Task Comments', () => {
-  test('adds a comment to a task', async ({
-    authenticatedPage: page,
-    apiHelper,
-    testUser,
-  }) => {
-    const project = await apiHelper.createProject(
-      testUser.cookie,
-      `Comment Project ${Date.now()}`,
-    );
+  test('adds a comment to a task', async ({ authenticatedPage: page, apiHelper, testUser }) => {
+    const project = await apiHelper.createProject(testUser.cookie, `Comment Project ${Date.now()}`);
     await apiHelper.createTask(testUser.cookie, project.id, 'Commentable Task');
 
     await page.goto('/');
@@ -132,11 +123,7 @@ test.describe('Task Comments', () => {
     await expect(dialog.getByText('E2E test comment')).toBeVisible();
   });
 
-  test('displays existing comments', async ({
-    authenticatedPage: page,
-    apiHelper,
-    testUser,
-  }) => {
+  test('displays existing comments', async ({ authenticatedPage: page, apiHelper, testUser }) => {
     const project = await apiHelper.createProject(
       testUser.cookie,
       `Pre-Comment Project ${Date.now()}`,

@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { expect, test } from '../fixtures';
 
 test.describe('Authentication Flow', () => {
   test('registers a new user and redirects to board', async ({ page }) => {

@@ -13,7 +13,8 @@ type WorkerFixtures = {
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   testUser: [
-    async (_deps, use) => {
+    // biome-ignore lint/correctness/noEmptyPattern: Playwright requires object destructuring for worker fixtures
+    async ({}, use) => {
       const apiContext = await playwrightRequest.newContext();
       try {
         const user = await createTestUser(apiContext);
