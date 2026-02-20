@@ -8,7 +8,7 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel('Name').fill('E2E Test User');
     await page.getByLabel('Email').fill(email);
     await page.getByLabel('Password').fill('Tr0ub4dor&3-e2e-test');
-    await page.getByRole('button', { name: /register/i }).click();
+    await page.getByRole('button', { name: /create account/i }).click();
 
     // Should redirect to board
     await expect(page).toHaveURL('/');
@@ -25,7 +25,7 @@ test.describe('Authentication Flow', () => {
     await page.goto('/login');
     await page.getByLabel('Email').fill(email);
     await page.getByLabel('Password').fill(password);
-    await page.getByRole('button', { name: /log in/i }).click();
+    await page.getByRole('button', { name: /sign in/i }).click();
 
     await expect(page).toHaveURL('/');
     await expect(page.getByText('Gantry Board')).toBeVisible();
@@ -35,7 +35,7 @@ test.describe('Authentication Flow', () => {
     await page.goto('/login');
     await page.getByLabel('Email').fill('nonexistent@test.local');
     await page.getByLabel('Password').fill('wrongpassword');
-    await page.getByRole('button', { name: /log in/i }).click();
+    await page.getByRole('button', { name: /sign in/i }).click();
 
     await expect(page.getByText(/invalid|incorrect|unauthorized/i)).toBeVisible();
   });

@@ -6,6 +6,7 @@ export interface TestUser {
   id: string;
   email: string;
   name: string;
+  password: string;
   cookie: string;
 }
 
@@ -38,6 +39,7 @@ export async function createTestUser(
     id: body.user.id,
     email,
     name,
+    password,
     cookie,
   };
 }
