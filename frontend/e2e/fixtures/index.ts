@@ -31,7 +31,8 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   },
 
   authenticatedPage: async ({ page, testUser, baseURL }, use) => {
-    const domain = new URL(baseURL ?? 'http://localhost:5173').hostname;
+    const base = baseURL ?? 'http://localhost:5173';
+    const domain = new URL(base).hostname;
     await page.context().addCookies([
       {
         name: testUser.cookie.split('=')[0],
@@ -40,6 +41,21 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         path: '/',
       },
     ]);
+    // Populate sessionStorage with Zustand auth state so ProtectedRoute
+    // doesn't redirect to /login before the app can mount.
+    await page.goto(base);
+    await page.evaluate(
+      (user) => {
+        sessionStorage.setItem(
+          'auth-storage',
+          JSON.stringify({
+            state: { user, isAuthenticated: true },
+            version: 0,
+          }),
+        );
+      },
+      { id: testUser.id, email: testUser.email, name: testUser.name },
+    );
     await use(page);
   },
 });
