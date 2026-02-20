@@ -2,7 +2,7 @@ mod common;
 
 use axum::http::header;
 use axum::http::StatusCode;
-use common::{create_auth_test_server, register_user};
+use common::{create_auth_test_server, create_auth_test_server_with_pool, register_user};
 
 // ========== Create Invitation ==========
 
@@ -317,4 +317,95 @@ async fn test_accept_invitation_twice_returns_conflict() {
         .await;
 
     resp.assert_status(StatusCode::CONFLICT);
+}
+
+// ========== Expired Invitation ==========
+
+#[tokio::test]
+async fn test_accept_expired_invitation_returns_bad_request() {
+    let (server, pool) = create_auth_test_server_with_pool().await;
+    let (_owner_id, owner_cookie) = register_user(&server, "owner@test.com", "Owner").await;
+    let (_invitee_id, invitee_cookie) = register_user(&server, "invitee@test.com", "Invitee").await;
+
+    let resp = server
+        .post("/api/projects")
+        .add_header(header::COOKIE, &owner_cookie)
+        .json(&serde_json::json!({ "name": "Test Project" }))
+        .await;
+    let project_id = resp.json::<serde_json::Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let resp = server
+        .post(&format!("/api/projects/{}/invitations", project_id))
+        .add_header(header::COOKIE, &owner_cookie)
+        .json(&serde_json::json!({}))
+        .await;
+    let body: serde_json::Value = resp.json();
+    let token = body["token"].as_str().unwrap().to_string();
+    let invitation_id = body["invitation"]["id"].as_str().unwrap().to_string();
+
+    // Expire the invitation by setting expires_at to the past
+    sqlx::query(
+        "UPDATE project_invitations SET expires_at = datetime('now', '-1 hour') WHERE id = $1",
+    )
+    .bind(&invitation_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    // Verify get_invitation_by_token reports expired
+    let resp = server.get(&format!("/api/invitations/{}", token)).await;
+    resp.assert_status_ok();
+    let info: serde_json::Value = resp.json();
+    assert_eq!(info["expired"], true);
+
+    // Try to accept — should fail
+    let resp = server
+        .post(&format!("/api/invitations/{}/accept", token))
+        .add_header(header::COOKIE, &invitee_cookie)
+        .await;
+
+    resp.assert_status(StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_get_expired_invitation_by_token_shows_expired() {
+    let (server, pool) = create_auth_test_server_with_pool().await;
+    let (_user_id, cookie) = register_user(&server, "owner@test.com", "Owner").await;
+
+    let resp = server
+        .post("/api/projects")
+        .add_header(header::COOKIE, &cookie)
+        .json(&serde_json::json!({ "name": "Test Project" }))
+        .await;
+    let project_id = resp.json::<serde_json::Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let resp = server
+        .post(&format!("/api/projects/{}/invitations", project_id))
+        .add_header(header::COOKIE, &cookie)
+        .json(&serde_json::json!({}))
+        .await;
+    let body: serde_json::Value = resp.json();
+    let token = body["token"].as_str().unwrap().to_string();
+    let invitation_id = body["invitation"]["id"].as_str().unwrap().to_string();
+
+    // Expire the invitation
+    sqlx::query(
+        "UPDATE project_invitations SET expires_at = datetime('now', '-1 hour') WHERE id = $1",
+    )
+    .bind(&invitation_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let resp = server.get(&format!("/api/invitations/{}", token)).await;
+    resp.assert_status_ok();
+    let info: serde_json::Value = resp.json();
+    assert_eq!(info["expired"], true);
+    assert_eq!(info["accepted"], false);
 }

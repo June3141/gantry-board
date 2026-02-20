@@ -132,6 +132,11 @@ pub async fn create_auth_test_server() -> TestServer {
     create_test_server_impl(false, PathBuf::from(".")).await.0
 }
 
+/// Create a test server with auth enabled and DB pool access.
+pub async fn create_auth_test_server_with_pool() -> (TestServer, SqlitePool) {
+    create_test_server_impl(false, PathBuf::from(".")).await
+}
+
 fn init_test_repo() -> (tempfile::TempDir, PathBuf) {
     let tmp = tempfile::TempDir::new().expect("Failed to create temp dir");
     let repo_path = tmp.path().join("repo");

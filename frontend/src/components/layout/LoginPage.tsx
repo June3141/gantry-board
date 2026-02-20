@@ -87,7 +87,10 @@ export function LoginPage() {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Don't have an account?{' '}
-          <Link to="/register" className="text-blue-600 hover:text-blue-500">
+          <Link
+            to={redirectTo ? `/register?redirect=${encodeURIComponent(redirectTo)}` : '/register'}
+            className="text-blue-600 hover:text-blue-500"
+          >
             Sign up
           </Link>
         </p>
