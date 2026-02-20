@@ -1,21 +1,29 @@
-import { test as base, type Page } from '@playwright/test';
+import { test as base, type Page, request as playwrightRequest } from '@playwright/test';
 import { ApiHelper } from '../helpers/api';
-import { type TestUser, createTestUser } from '../helpers/auth';
+import { createTestUser, type TestUser } from '../helpers/auth';
 
-type Fixtures = {
+type TestFixtures = {
   apiHelper: ApiHelper;
-  testUser: TestUser;
   authenticatedPage: Page;
 };
 
-export const test = base.extend<Fixtures>({
+type WorkerFixtures = {
+  testUser: TestUser;
+};
+
+export const test = base.extend<TestFixtures, WorkerFixtures>({
+  testUser: [
+    async (_deps, use) => {
+      const apiContext = await playwrightRequest.newContext();
+      const user = await createTestUser(apiContext);
+      await use(user);
+      await apiContext.dispose();
+    },
+    { scope: 'worker' },
+  ],
+
   apiHelper: async ({ request }, use) => {
     await use(new ApiHelper(request));
-  },
-
-  testUser: async ({ request }, use) => {
-    const user = await createTestUser(request);
-    await use(user);
   },
 
   authenticatedPage: async ({ page, testUser, baseURL }, use) => {
