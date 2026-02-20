@@ -2,8 +2,6 @@ import { test as base, type Page, request as playwrightRequest } from '@playwrig
 import { ApiHelper } from '../helpers/api';
 import { createTestUser, type TestUser } from '../helpers/auth';
 
-const API_BASE = process.env.E2E_API_URL ?? 'http://localhost:3000';
-
 type TestFixtures = {
   apiHelper: ApiHelper;
   authenticatedPage: Page;
@@ -32,19 +30,22 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(new ApiHelper(request));
   },
 
-  authenticatedPage: async ({ page, testUser }, use) => {
-    // Login via page.request so the session cookie is stored in the browser context.
-    // This is more reliable than manually parsing Set-Cookie and calling addCookies.
-    const loginResponse = await page.request.post(`${API_BASE}/api/auth/login`, {
-      data: { email: testUser.email, password: testUser.password },
-      headers: { 'x-requested-with': 'XMLHttpRequest' },
-    });
-    if (!loginResponse.ok()) {
-      throw new Error(
-        `authenticatedPage login failed: ${loginResponse.status()} ${await loginResponse.text()}`,
-      );
-    }
-
+  authenticatedPage: async ({ page, testUser, baseURL }, use) => {
+    const base = baseURL ?? 'http://localhost:5173';
+    const domain = new URL(base).hostname;
+    // Set the register session cookie on the browser context.
+    // We intentionally do NOT call login (which rotates sessions) because
+    // parallel tests within the same worker share the testUser and login
+    // would invalidate other tests' sessions.
+    await page.context().addCookies([
+      {
+        name: testUser.cookie.split('=')[0],
+        value: testUser.cookie.split('=')[1],
+        domain,
+        path: '/',
+        sameSite: 'Lax',
+      },
+    ]);
     // Inject Zustand auth state into sessionStorage before any page script runs.
     // This prevents ProtectedRoute from redirecting to /login on the first navigation.
     const authState = JSON.stringify({

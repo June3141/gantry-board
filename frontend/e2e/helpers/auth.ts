@@ -31,8 +31,15 @@ export async function createTestUser(
     throw new Error(`createTestUser failed: ${response.status()} ${await response.text()}`);
   }
 
-  const setCookie = response.headers()['set-cookie'] ?? '';
-  const cookie = setCookie.split(';')[0];
+  // Use headersArray() for reliable Set-Cookie retrieval
+  const headers = response.headersArray();
+  const setCookieHeader = headers.find((h) => h.name.toLowerCase() === 'set-cookie');
+  const cookie = setCookieHeader?.value.split(';')[0] ?? '';
+  if (!cookie || !cookie.includes('=')) {
+    throw new Error(
+      `createTestUser: no valid Set-Cookie header in register response (got: ${JSON.stringify(setCookieHeader)})`,
+    );
+  }
   const body = await response.json();
 
   return {
