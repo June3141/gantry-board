@@ -41,21 +41,18 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         path: '/',
       },
     ]);
-    // Populate sessionStorage with Zustand auth state so ProtectedRoute
-    // doesn't redirect to /login before the app can mount.
-    await page.goto(base);
-    await page.evaluate(
-      (user) => {
-        sessionStorage.setItem(
-          'auth-storage',
-          JSON.stringify({
-            state: { user, isAuthenticated: true },
-            version: 0,
-          }),
-        );
+    // Inject Zustand auth state into sessionStorage before any page script runs.
+    // This prevents ProtectedRoute from redirecting to /login on the first navigation.
+    const authState = JSON.stringify({
+      state: {
+        user: { id: testUser.id, email: testUser.email, name: testUser.name },
+        isAuthenticated: true,
       },
-      { id: testUser.id, email: testUser.email, name: testUser.name },
-    );
+      version: 0,
+    });
+    await page.addInitScript((state) => {
+      sessionStorage.setItem('auth-storage', state);
+    }, authState);
     await use(page);
   },
 });
