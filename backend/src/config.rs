@@ -382,4 +382,37 @@ mod tests {
         let config = Config::default();
         assert!(config.allowed_hosts.is_empty());
     }
+
+    #[test]
+    fn test_register_rate_limit_defaults() {
+        let config = Config::default();
+        assert_eq!(config.register_rate_limit_per_second, 1200);
+        assert_eq!(config.register_rate_limit_burst, 3);
+    }
+
+    #[test]
+    fn test_login_rate_limit_defaults() {
+        let config = Config::default();
+        assert_eq!(config.login_rate_limit_per_second, 180);
+        assert_eq!(config.login_rate_limit_burst, 5);
+    }
+
+    #[test]
+    fn test_validate_rejects_zero_rate_limit_per_second() {
+        let config = Config {
+            register_rate_limit_per_second: 0,
+            cors_origin: Some("http://localhost:5173".to_string()),
+            ..Default::default()
+        };
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("rate limit"));
+
+        let config = Config {
+            login_rate_limit_burst: 0,
+            cors_origin: Some("http://localhost:5173".to_string()),
+            ..Default::default()
+        };
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("rate limit"));
+    }
 }
