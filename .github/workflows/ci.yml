@@ -217,6 +217,10 @@ jobs:
         env:
           GANTRY_COOKIE_SECURE: "false"
           GANTRY_CORS_ORIGIN: "http://localhost:5173"
+          GANTRY_REGISTER_RATE_LIMIT_PER_SECOND: "1"
+          GANTRY_REGISTER_RATE_LIMIT_BURST: "100"
+          GANTRY_LOGIN_RATE_LIMIT_PER_SECOND: "1"
+          GANTRY_LOGIN_RATE_LIMIT_BURST: "100"
 
       # Start frontend dev server
       - name: Start frontend dev server
