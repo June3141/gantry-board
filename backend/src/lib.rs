@@ -75,8 +75,11 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         state.config.register_rate_limit_per_second,
         state.config.register_rate_limit_burst
     )?;
-    // General API rate limit: ~1 req/s sustained, 60-request burst capacity per IP.
-    let general_governor = governor!(1, 60)?;
+    // General API rate limit — configurable (default: ~1 req/s sustained, 60-burst per IP).
+    let general_governor = governor!(
+        state.config.general_rate_limit_per_second,
+        state.config.general_rate_limit_burst
+    )?;
     // Rate limit: agent start — 1 per 10 seconds, burst 3 per IP.
     let agent_start_governor = governor!(10, 3)?;
     // Rate limit: agent restart — same as start.
