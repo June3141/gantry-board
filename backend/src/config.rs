@@ -100,6 +100,22 @@ pub struct Config {
     /// GitHub Webhook secret for signature verification (env: GANTRY_GITHUB_WEBHOOK_SECRET)
     #[serde(default)]
     pub github_webhook_secret: Option<String>,
+
+    /// Register rate limit: replenishment interval in seconds (default: 1200)
+    #[serde(default = "default_register_rate_limit_per_second")]
+    pub register_rate_limit_per_second: u64,
+
+    /// Register rate limit: burst size (default: 3)
+    #[serde(default = "default_register_rate_limit_burst")]
+    pub register_rate_limit_burst: u32,
+
+    /// Login rate limit: replenishment interval in seconds (default: 180)
+    #[serde(default = "default_login_rate_limit_per_second")]
+    pub login_rate_limit_per_second: u64,
+
+    /// Login rate limit: burst size (default: 5)
+    #[serde(default = "default_login_rate_limit_burst")]
+    pub login_rate_limit_burst: u32,
 }
 
 fn default_bind_addr() -> String {
@@ -162,6 +178,22 @@ fn default_github_sync_interval_secs() -> u64 {
     300 // 5 minutes
 }
 
+fn default_register_rate_limit_per_second() -> u64 {
+    1200
+}
+
+fn default_register_rate_limit_burst() -> u32 {
+    3
+}
+
+fn default_login_rate_limit_per_second() -> u64 {
+    180
+}
+
+fn default_login_rate_limit_burst() -> u32 {
+    5
+}
+
 impl Config {
     pub fn load() -> Result<Self, Box<figment::Error>> {
         dotenvy::dotenv().ok();
@@ -200,6 +232,18 @@ impl Config {
                  This is a security risk in production deployments. \
                  Set GANTRY_CORS_ORIGIN to your frontend URL."
             );
+        }
+
+        // Reject zero rate limit values
+        if self.register_rate_limit_per_second == 0 || self.register_rate_limit_burst == 0 {
+            return Err(ConfigError::RateLimiter(
+                "register rate limit per_second and burst must be > 0".to_string(),
+            ));
+        }
+        if self.login_rate_limit_per_second == 0 || self.login_rate_limit_burst == 0 {
+            return Err(ConfigError::RateLimiter(
+                "login rate limit per_second and burst must be > 0".to_string(),
+            ));
         }
 
         // Reject wildcard CORS origin
@@ -259,6 +303,10 @@ impl Default for Config {
             github_sync_interval_secs: default_github_sync_interval_secs(),
             allowed_hosts: Vec::new(),
             github_webhook_secret: None,
+            register_rate_limit_per_second: default_register_rate_limit_per_second(),
+            register_rate_limit_burst: default_register_rate_limit_burst(),
+            login_rate_limit_per_second: default_login_rate_limit_per_second(),
+            login_rate_limit_burst: default_login_rate_limit_burst(),
         }
     }
 }
