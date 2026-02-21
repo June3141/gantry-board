@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { User } from '../api/generated/model';
+import { me } from '../api/generated/endpoints/auth/auth';
 
 interface AuthState {
   user: User | null;
@@ -31,9 +32,30 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
       onRehydrateStorage: () => {
-        return (_state, error) => {
+        return (state, error) => {
           if (error) {
             useAuthStore.setState({ isAuthenticated: false, user: null, isLoading: true });
+            return;
+          }
+
+          // When restored isAuthenticated is true, revalidate with server
+          if (state?.isAuthenticated) {
+            me()
+              .then((user) => {
+                useAuthStore.setState({
+                  user,
+                  isAuthenticated: true,
+                  isLoading: false,
+                });
+              })
+              .catch(() => {
+                // Session expired or invalid — clear auth state
+                useAuthStore.setState({
+                  user: null,
+                  isAuthenticated: false,
+                  isLoading: false,
+                });
+              });
           }
         };
       },

@@ -304,6 +304,10 @@ pub async fn resume_agent_session(
 #[derive(Debug, Deserialize)]
 pub struct GetOutputsQuery {
     pub after: Option<i64>,
+    /// Maximum number of outputs to return (default: 100, max: 1000)
+    pub limit: Option<i64>,
+    /// Number of outputs to skip (default: 0)
+    pub offset: Option<i64>,
 }
 
 #[utoipa::path(
@@ -312,7 +316,9 @@ pub struct GetOutputsQuery {
     params(
         ("task_id" = Uuid, Path, description = "Task ID"),
         ("session_id" = Uuid, Path, description = "Agent session ID"),
-        ("after" = Option<i64>, Query, description = "Return outputs after this sequence number")
+        ("after" = Option<i64>, Query, description = "Return outputs after this sequence number"),
+        ("limit" = Option<i64>, Query, description = "Maximum number of outputs to return (default: 100, max: 1000)"),
+        ("offset" = Option<i64>, Query, description = "Number of outputs to skip (default: 0)")
     ),
     responses(
         (status = 200, description = "Session outputs", body = Vec<AgentSessionOutput>),
@@ -335,7 +341,17 @@ pub async fn get_agent_session_outputs(
             agent_session_output_service::get_outputs_after(&state.pool, session_id, after_seq)
                 .await?
         }
-        None => agent_session_output_service::get_outputs(&state.pool, session_id).await?,
+        None => {
+            let limit = query.limit.unwrap_or(100).clamp(1, 1000);
+            let offset = query.offset.unwrap_or(0).max(0);
+            agent_session_output_service::get_outputs_paginated(
+                &state.pool,
+                session_id,
+                limit,
+                offset,
+            )
+            .await?
+        }
     };
 
     Ok(Json(outputs))
