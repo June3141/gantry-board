@@ -93,7 +93,7 @@ test.describe('Task CRUD', () => {
     await page.getByTestId('task-card').getByText('Task To Delete').click();
 
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('button', { name: 'Delete' }).click();
+    await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
     await dialog.getByRole('button', { name: 'Confirm' }).click();
 
     // Modal should close and task should be gone

@@ -45,8 +45,18 @@ test.describe('Authentication Flow', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('logs out successfully', async ({ authenticatedPage: page }) => {
-    await page.goto('/');
+  test('logs out successfully', async ({ page, apiHelper }) => {
+    // Use a disposable user to avoid invalidating the shared testUser session
+    const email = `e2e-logout-${Date.now()}@test.local`;
+    const password = 'Tr0ub4dor&3-e2e-test';
+    await apiHelper.registerUser(email, 'Logout Test', password);
+
+    await page.goto('/login');
+    await page.getByLabel('Email').fill(email);
+    await page.getByLabel('Password').fill(password);
+    await page.getByRole('button', { name: /sign in/i }).click();
+
+    await expect(page).toHaveURL('/');
     await page.getByRole('button', { name: /logout/i }).click();
 
     await expect(page).toHaveURL(/\/login/);

@@ -33,10 +33,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   authenticatedPage: async ({ page, testUser, baseURL }, use) => {
     const base = baseURL ?? 'http://localhost:5173';
     const domain = new URL(base).hostname;
-    // Set the register session cookie on the browser context.
-    // We intentionally do NOT call login (which rotates sessions) because
-    // parallel tests within the same worker share the testUser and login
-    // would invalidate other tests' sessions.
     await page.context().addCookies([
       {
         name: testUser.cookie.split('=')[0],
@@ -46,18 +42,21 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         sameSite: 'Lax',
       },
     ]);
-    // Inject Zustand auth state into sessionStorage before any page script runs.
-    // This prevents ProtectedRoute from redirecting to /login on the first navigation.
-    const authState = JSON.stringify({
-      state: {
-        user: { id: testUser.id, email: testUser.email, name: testUser.name },
-        isAuthenticated: true,
+    // Navigate to /login (same origin, doesn't trigger ProtectedRoute redirect)
+    // to establish sessionStorage on the correct origin.
+    await page.goto(`${base}/login`);
+    await page.evaluate(
+      (user) => {
+        sessionStorage.setItem(
+          'auth-storage',
+          JSON.stringify({
+            state: { user, isAuthenticated: true },
+            version: 0,
+          }),
+        );
       },
-      version: 0,
-    });
-    await page.addInitScript((state) => {
-      sessionStorage.setItem('auth-storage', state);
-    }, authState);
+      { id: testUser.id, email: testUser.email, name: testUser.name },
+    );
     await use(page);
   },
 });

@@ -65,11 +65,11 @@ test.describe('Agent Session UI', () => {
     const dialog = page.getByRole('dialog');
 
     // Start button should be disabled when prompt is empty
-    await expect(dialog.getByRole('button', { name: 'Start' })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: 'Start', exact: true })).toBeDisabled();
 
     // Fill in a prompt — start button should become enabled
     await dialog.getByPlaceholder('Enter prompt for the agent...').fill('Test prompt');
-    await expect(dialog.getByRole('button', { name: 'Start' })).toBeEnabled();
+    await expect(dialog.getByRole('button', { name: 'Start', exact: true })).toBeEnabled();
   });
 
   test('shows "No activity yet" when task has no sessions or comments', async ({
