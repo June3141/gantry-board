@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useRegister } from '@/api/generated/endpoints/auth/auth';
 import { useAuthStore } from '@/stores/authStore';
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
   const setUser = useAuthStore((state) => state.setUser);
   const register = useRegister();
 
@@ -27,7 +29,7 @@ export function RegisterPage() {
         data: { name, email, password },
       });
       setUser(response.user);
-      navigate('/');
+      navigate(redirectTo ?? '/');
     } catch {
       setError('Registration failed. The email may already be in use.');
     }
@@ -105,7 +107,10 @@ export function RegisterPage() {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Already have an account?{' '}
-          <Link to="/login" className="text-blue-600 hover:text-blue-500">
+          <Link
+            to={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login'}
+            className="text-blue-600 hover:text-blue-500"
+          >
             Sign in
           </Link>
         </p>

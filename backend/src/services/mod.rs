@@ -4,6 +4,7 @@ pub mod authorization_service;
 pub mod github_link_service;
 pub mod github_pr_service;
 pub mod github_sync_service;
+pub mod invitation_service;
 pub mod member_service;
 pub mod preview_repository;
 pub mod preview_service;
