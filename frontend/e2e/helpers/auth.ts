@@ -17,7 +17,7 @@ export async function createTestUser(
   overrides?: { email?: string; name?: string },
 ): Promise<TestUser> {
   userCounter++;
-  const uniqueId = `${userCounter}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const uniqueId = `${process.pid}-${userCounter}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const email = overrides?.email ?? `e2e-user-${uniqueId}@test.local`;
   const name = overrides?.name ?? `E2E User ${userCounter}`;
   const password = 'Tr0ub4dor&3-e2e-test';
