@@ -116,6 +116,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     let cleanup_pool = pool.clone();
+    let cleanup_orchestrator = Arc::clone(&orchestrator);
     let output_retention_days = config.output_retention_days;
 
     let preview_manager = match PreviewManager::new(
@@ -172,6 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         preview_manager,
         github_client,
         output_buffer: Arc::clone(&output_buffer),
+        connection_counter: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         started_at: std::time::Instant::now(),
     };
     let app = gantry_board::app(state)?;
@@ -225,6 +227,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             // Update DB pool connection metrics
             gantry_board::observability::record_db_pool_metrics(&cleanup_pool);
+
+            // Periodic task_locks cleanup to prevent unbounded growth
+            cleanup_orchestrator.cleanup_task_locks().await;
         }
     });
 

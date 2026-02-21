@@ -54,6 +54,7 @@ async fn create_server_with_allowed_hosts(hosts: Vec<String>) -> TestServer {
         preview_manager: None,
         github_client: None,
         output_buffer,
+        connection_counter: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         started_at: std::time::Instant::now(),
     };
 
