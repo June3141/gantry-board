@@ -71,6 +71,33 @@ pub async fn get_outputs(
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
+pub async fn get_outputs_paginated(
+    pool: &SqlitePool,
+    session_id: Uuid,
+    limit: i64,
+    offset: i64,
+) -> AppResult<Vec<AgentSessionOutput>> {
+    let rows = sqlx::query_as::<_, AgentSessionOutputRow>(
+        r#"
+        SELECT id, session_id, sequence, content, created_at
+        FROM agent_session_outputs
+        WHERE session_id = $1
+        ORDER BY sequence ASC
+        LIMIT $2 OFFSET $3
+        "#,
+    )
+    .bind(session_id.to_string())
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|r| r.try_into())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+}
+
 pub async fn get_outputs_after(
     pool: &SqlitePool,
     session_id: Uuid,
@@ -480,6 +507,83 @@ mod tests {
             matches!(result, Err(AppError::Validation(_))),
             "sequence >= limit should be rejected, got: {result:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn test_get_outputs_paginated_returns_limited_results() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        // Insert 10 outputs
+        for i in 0..10 {
+            append_output(&pool, session_id, i, &format!("chunk-{i}"))
+                .await
+                .expect("Failed to append");
+        }
+
+        // Get first 5 outputs
+        let outputs = get_outputs_paginated(&pool, session_id, 5, 0)
+            .await
+            .expect("Failed to get paginated");
+        assert_eq!(outputs.len(), 5);
+        assert_eq!(outputs[0].sequence, 0);
+        assert_eq!(outputs[4].sequence, 4);
+    }
+
+    #[tokio::test]
+    async fn test_get_outputs_paginated_with_offset() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        // Insert 10 outputs
+        for i in 0..10 {
+            append_output(&pool, session_id, i, &format!("chunk-{i}"))
+                .await
+                .expect("Failed to append");
+        }
+
+        // Get outputs 5..10
+        let outputs = get_outputs_paginated(&pool, session_id, 5, 5)
+            .await
+            .expect("Failed to get paginated");
+        assert_eq!(outputs.len(), 5);
+        assert_eq!(outputs[0].sequence, 5);
+        assert_eq!(outputs[4].sequence, 9);
+    }
+
+    #[tokio::test]
+    async fn test_get_outputs_paginated_offset_beyond_total() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        for i in 0..3 {
+            append_output(&pool, session_id, i, &format!("chunk-{i}"))
+                .await
+                .expect("Failed to append");
+        }
+
+        let outputs = get_outputs_paginated(&pool, session_id, 100, 100)
+            .await
+            .expect("Failed to get paginated");
+        assert!(outputs.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_outputs_paginated_default_limit() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        for i in 0..5 {
+            append_output(&pool, session_id, i, &format!("chunk-{i}"))
+                .await
+                .expect("Failed to append");
+        }
+
+        // Default limit (100) should return all 5
+        let outputs = get_outputs_paginated(&pool, session_id, 100, 0)
+            .await
+            .expect("Failed to get paginated");
+        assert_eq!(outputs.len(), 5);
     }
 
     #[tokio::test]
