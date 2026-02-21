@@ -79,8 +79,46 @@ The Docker host is configurable via:
 - **Environment variable:** `GANTRY_DOCKER_HOST`
 - **Default:** `unix:///var/run/docker.sock`
 
+## Resource Limits
+
+Production containers are configured with resource limits in `docker-compose.prod.yml` to prevent runaway resource consumption.
+
+### Default Limits
+
+| Service   | CPU   | Memory (limit) | Memory (reserved) | PID limit |
+|-----------|-------|--------------|--------------------|-----------|
+| backend   | 4.0   | 4 GB         | 1 GB               | 256       |
+| frontend  | 1.0   | 512 MB       | -                  | -         |
+
+### Logging
+
+All services use the `json-file` logging driver with rotation:
+
+- **max-size:** 10 MB per log file
+- **max-file:** 3 files (30 MB total per service)
+
+### Adjusting Limits
+
+Override limits via environment-specific compose overrides or by editing `docker-compose.prod.yml` directly:
+
+```yaml
+services:
+  backend:
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 8G
+          pids: 512
+        reservations:
+          memory: 2G
+```
+
+For high-load deployments with many concurrent agents, increase the backend CPU, memory, and PID limits proportionally. The frontend/nginx service typically needs minimal resources.
+
 ## References
 
 - [Docker daemon attack surface](https://docs.docker.com/engine/security/#docker-daemon-attack-surface)
 - [Rootless Docker](https://docs.docker.com/engine/security/rootless/)
 - [Docker-in-Docker](https://hub.docker.com/_/docker)
+- [Docker Compose deploy resources](https://docs.docker.com/compose/compose-file/deploy/#resources)
