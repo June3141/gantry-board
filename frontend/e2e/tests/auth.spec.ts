@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { expect, test } from '../fixtures';
 
 test.describe('Authentication Flow', () => {
   test('registers a new user and redirects to board', async ({ page }) => {
@@ -8,7 +8,7 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel('Name').fill('E2E Test User');
     await page.getByLabel('Email').fill(email);
     await page.getByLabel('Password').fill('Tr0ub4dor&3-e2e-test');
-    await page.getByRole('button', { name: /register/i }).click();
+    await page.getByRole('button', { name: /create account/i }).click();
 
     // Should redirect to board
     await expect(page).toHaveURL('/');
@@ -25,7 +25,7 @@ test.describe('Authentication Flow', () => {
     await page.goto('/login');
     await page.getByLabel('Email').fill(email);
     await page.getByLabel('Password').fill(password);
-    await page.getByRole('button', { name: /log in/i }).click();
+    await page.getByRole('button', { name: /sign in/i }).click();
 
     await expect(page).toHaveURL('/');
     await expect(page.getByText('Gantry Board')).toBeVisible();
@@ -35,7 +35,7 @@ test.describe('Authentication Flow', () => {
     await page.goto('/login');
     await page.getByLabel('Email').fill('nonexistent@test.local');
     await page.getByLabel('Password').fill('wrongpassword');
-    await page.getByRole('button', { name: /log in/i }).click();
+    await page.getByRole('button', { name: /sign in/i }).click();
 
     await expect(page.getByText(/invalid|incorrect|unauthorized/i)).toBeVisible();
   });
@@ -45,8 +45,18 @@ test.describe('Authentication Flow', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('logs out successfully', async ({ authenticatedPage: page }) => {
-    await page.goto('/');
+  test('logs out successfully', async ({ page, apiHelper }) => {
+    // Use a disposable user to avoid invalidating the shared testUser session
+    const email = `e2e-logout-${Date.now()}@test.local`;
+    const password = 'Tr0ub4dor&3-e2e-test';
+    await apiHelper.registerUser(email, 'Logout Test', password);
+
+    await page.goto('/login');
+    await page.getByLabel('Email').fill(email);
+    await page.getByLabel('Password').fill(password);
+    await page.getByRole('button', { name: /sign in/i }).click();
+
+    await expect(page).toHaveURL('/');
     await page.getByRole('button', { name: /logout/i }).click();
 
     await expect(page).toHaveURL(/\/login/);

@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { expect, test } from '../fixtures';
 
 test.describe('Project CRUD', () => {
   test('creates a new project via UI', async ({ authenticatedPage: page }) => {

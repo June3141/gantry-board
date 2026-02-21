@@ -1,8 +1,10 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import { useDeleteTask, useGetTask, useUpdateTask } from '@/api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '@/api/generated/model';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { invalidateTasks } from '@/services/queryInvalidation';
 import { useUiStore } from '@/stores/uiStore';
 import { PullRequestList } from '../github/PullRequestList';
 import { WorktreePanel } from '../preview/WorktreePanel';
@@ -18,6 +20,7 @@ export function TaskDetailModal() {
 }
 
 function TaskDetailContent({ taskId }: { taskId: string }) {
+  const queryClient = useQueryClient();
   const closeTaskDetail = useUiStore((s) => s.closeTaskDetail);
   const { data: task, isLoading, isError } = useGetTask(taskId);
   const updateTask = useUpdateTask();
@@ -67,6 +70,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
   const handleDelete = async () => {
     try {
       await deleteTask.mutateAsync({ id: taskId });
+      invalidateTasks(queryClient);
       closeTaskDetail();
     } catch {
       setError('Failed to delete task. Please try again.');
@@ -93,6 +97,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
         id: taskId,
         data: { [field]: value },
       });
+      invalidateTasks(queryClient);
     } catch {
       setError(`Failed to update ${field}. Please try again.`);
     }

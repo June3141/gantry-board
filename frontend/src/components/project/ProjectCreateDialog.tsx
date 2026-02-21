@@ -1,6 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useCreateProject } from '@/api/generated/endpoints/projects/projects';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { invalidateProjects } from '@/services/queryInvalidation';
 import { useUiStore } from '@/stores/uiStore';
 
 export function ProjectCreateDialog() {
@@ -12,6 +14,7 @@ export function ProjectCreateDialog() {
 }
 
 function ProjectCreateForm() {
+  const queryClient = useQueryClient();
   const closeProjectModal = useUiStore((s) => s.closeProjectModal);
   const createProject = useCreateProject();
 
@@ -33,6 +36,7 @@ function ProjectCreateForm() {
           description: description.trim() || undefined,
         },
       });
+      invalidateProjects(queryClient);
       closeProjectModal();
     } catch {
       setError('Failed to create project. Please try again.');

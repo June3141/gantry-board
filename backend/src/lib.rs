@@ -64,13 +64,22 @@ macro_rules! governor {
 }
 
 pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
-    // Rate limit: login — 5 attempts per 15 min per IP.
+    // Rate limit: login — configurable (default: 5 attempts per 15 min per IP).
     // per_second(N) sets the replenishment *interval* to N seconds (NOT N req/sec).
-    let login_governor = governor!(180, 5)?;
-    // Rate limit: register — 3 attempts per hour per IP.
-    let register_governor = governor!(1200, 3)?;
-    // General API rate limit: ~1 req/s sustained, 60-request burst capacity per IP.
-    let general_governor = governor!(1, 60)?;
+    let login_governor = governor!(
+        state.config.login_rate_limit_per_second,
+        state.config.login_rate_limit_burst
+    )?;
+    // Rate limit: register — configurable (default: 3 attempts per hour per IP).
+    let register_governor = governor!(
+        state.config.register_rate_limit_per_second,
+        state.config.register_rate_limit_burst
+    )?;
+    // General API rate limit — configurable (default: ~1 req/s sustained, 60-burst per IP).
+    let general_governor = governor!(
+        state.config.general_rate_limit_per_second,
+        state.config.general_rate_limit_burst
+    )?;
     // Rate limit: agent start — 1 per 10 seconds, burst 3 per IP.
     let agent_start_governor = governor!(10, 3)?;
     // Rate limit: agent restart — same as start.

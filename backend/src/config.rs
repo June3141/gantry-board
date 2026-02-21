@@ -100,6 +100,30 @@ pub struct Config {
     /// GitHub Webhook secret for signature verification (env: GANTRY_GITHUB_WEBHOOK_SECRET)
     #[serde(default)]
     pub github_webhook_secret: Option<String>,
+
+    /// Register rate limit: replenishment interval in seconds (default: 1200)
+    #[serde(default = "default_register_rate_limit_per_second")]
+    pub register_rate_limit_per_second: u64,
+
+    /// Register rate limit: burst size (default: 3)
+    #[serde(default = "default_register_rate_limit_burst")]
+    pub register_rate_limit_burst: u32,
+
+    /// Login rate limit: replenishment interval in seconds (default: 180)
+    #[serde(default = "default_login_rate_limit_per_second")]
+    pub login_rate_limit_per_second: u64,
+
+    /// Login rate limit: burst size (default: 5)
+    #[serde(default = "default_login_rate_limit_burst")]
+    pub login_rate_limit_burst: u32,
+
+    /// General API rate limit: replenishment interval in seconds (default: 1)
+    #[serde(default = "default_general_rate_limit_per_second")]
+    pub general_rate_limit_per_second: u64,
+
+    /// General API rate limit: burst size (default: 60)
+    #[serde(default = "default_general_rate_limit_burst")]
+    pub general_rate_limit_burst: u32,
 }
 
 fn default_bind_addr() -> String {
@@ -162,6 +186,30 @@ fn default_github_sync_interval_secs() -> u64 {
     300 // 5 minutes
 }
 
+fn default_register_rate_limit_per_second() -> u64 {
+    1200
+}
+
+fn default_register_rate_limit_burst() -> u32 {
+    3
+}
+
+fn default_login_rate_limit_per_second() -> u64 {
+    180
+}
+
+fn default_login_rate_limit_burst() -> u32 {
+    5
+}
+
+fn default_general_rate_limit_per_second() -> u64 {
+    1
+}
+
+fn default_general_rate_limit_burst() -> u32 {
+    60
+}
+
 impl Config {
     pub fn load() -> Result<Self, Box<figment::Error>> {
         dotenvy::dotenv().ok();
@@ -200,6 +248,23 @@ impl Config {
                  This is a security risk in production deployments. \
                  Set GANTRY_CORS_ORIGIN to your frontend URL."
             );
+        }
+
+        // Reject zero rate limit values
+        if self.register_rate_limit_per_second == 0 || self.register_rate_limit_burst == 0 {
+            return Err(ConfigError::RateLimiter(
+                "register rate limit per_second and burst must be > 0".to_string(),
+            ));
+        }
+        if self.login_rate_limit_per_second == 0 || self.login_rate_limit_burst == 0 {
+            return Err(ConfigError::RateLimiter(
+                "login rate limit per_second and burst must be > 0".to_string(),
+            ));
+        }
+        if self.general_rate_limit_per_second == 0 || self.general_rate_limit_burst == 0 {
+            return Err(ConfigError::RateLimiter(
+                "general rate limit per_second and burst must be > 0".to_string(),
+            ));
         }
 
         // Reject wildcard CORS origin
@@ -259,6 +324,12 @@ impl Default for Config {
             github_sync_interval_secs: default_github_sync_interval_secs(),
             allowed_hosts: Vec::new(),
             github_webhook_secret: None,
+            register_rate_limit_per_second: default_register_rate_limit_per_second(),
+            register_rate_limit_burst: default_register_rate_limit_burst(),
+            login_rate_limit_per_second: default_login_rate_limit_per_second(),
+            login_rate_limit_burst: default_login_rate_limit_burst(),
+            general_rate_limit_per_second: default_general_rate_limit_per_second(),
+            general_rate_limit_burst: default_general_rate_limit_burst(),
         }
     }
 }
@@ -381,5 +452,56 @@ mod tests {
     fn test_allowed_hosts_defaults_to_empty() {
         let config = Config::default();
         assert!(config.allowed_hosts.is_empty());
+    }
+
+    #[test]
+    fn test_register_rate_limit_defaults() {
+        let config = Config::default();
+        assert_eq!(config.register_rate_limit_per_second, 1200);
+        assert_eq!(config.register_rate_limit_burst, 3);
+    }
+
+    #[test]
+    fn test_login_rate_limit_defaults() {
+        let config = Config::default();
+        assert_eq!(config.login_rate_limit_per_second, 180);
+        assert_eq!(config.login_rate_limit_burst, 5);
+    }
+
+    #[test]
+    fn test_general_rate_limit_defaults() {
+        let config = Config::default();
+        assert_eq!(config.general_rate_limit_per_second, 1);
+        assert_eq!(config.general_rate_limit_burst, 60);
+    }
+
+    #[test]
+    fn test_validate_rejects_zero_general_rate_limit() {
+        let config = Config {
+            general_rate_limit_burst: 0,
+            cors_origin: Some("http://localhost:5173".to_string()),
+            ..Default::default()
+        };
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("rate limit"));
+    }
+
+    #[test]
+    fn test_validate_rejects_zero_rate_limit_per_second() {
+        let config = Config {
+            register_rate_limit_per_second: 0,
+            cors_origin: Some("http://localhost:5173".to_string()),
+            ..Default::default()
+        };
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("rate limit"));
+
+        let config = Config {
+            login_rate_limit_burst: 0,
+            cors_origin: Some("http://localhost:5173".to_string()),
+            ..Default::default()
+        };
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("rate limit"));
     }
 }

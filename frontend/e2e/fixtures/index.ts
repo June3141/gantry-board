@@ -1,33 +1,62 @@
-import { test as base, type Page } from '@playwright/test';
+import { test as base, type Page, request as playwrightRequest } from '@playwright/test';
 import { ApiHelper } from '../helpers/api';
-import { type TestUser, createTestUser } from '../helpers/auth';
+import { createTestUser, type TestUser } from '../helpers/auth';
 
-type Fixtures = {
+type TestFixtures = {
   apiHelper: ApiHelper;
-  testUser: TestUser;
   authenticatedPage: Page;
 };
 
-export const test = base.extend<Fixtures>({
+type WorkerFixtures = {
+  testUser: TestUser;
+};
+
+export const test = base.extend<TestFixtures, WorkerFixtures>({
+  testUser: [
+    // biome-ignore lint/correctness/noEmptyPattern: Playwright requires object destructuring for worker fixtures
+    async ({}, use) => {
+      const apiContext = await playwrightRequest.newContext();
+      try {
+        const user = await createTestUser(apiContext);
+        await use(user);
+      } finally {
+        await apiContext.dispose();
+      }
+    },
+    { scope: 'worker' },
+  ],
+
   apiHelper: async ({ request }, use) => {
     await use(new ApiHelper(request));
   },
 
-  testUser: async ({ request }, use) => {
-    const user = await createTestUser(request);
-    await use(user);
-  },
-
   authenticatedPage: async ({ page, testUser, baseURL }, use) => {
-    const domain = new URL(baseURL ?? 'http://localhost:5173').hostname;
+    const base = baseURL ?? 'http://localhost:5173';
+    const domain = new URL(base).hostname;
     await page.context().addCookies([
       {
         name: testUser.cookie.split('=')[0],
         value: testUser.cookie.split('=')[1],
         domain,
         path: '/',
+        sameSite: 'Lax',
       },
     ]);
+    // Navigate to /login (same origin, doesn't trigger ProtectedRoute redirect)
+    // to establish sessionStorage on the correct origin.
+    await page.goto(`${base}/login`);
+    await page.evaluate(
+      (user) => {
+        sessionStorage.setItem(
+          'auth-storage',
+          JSON.stringify({
+            state: { user, isAuthenticated: true },
+            version: 0,
+          }),
+        );
+      },
+      { id: testUser.id, email: testUser.email, name: testUser.name },
+    );
     await use(page);
   },
 });

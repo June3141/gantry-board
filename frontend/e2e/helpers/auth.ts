@@ -6,6 +6,7 @@ export interface TestUser {
   id: string;
   email: string;
   name: string;
+  password: string;
   cookie: string;
 }
 
@@ -16,7 +17,8 @@ export async function createTestUser(
   overrides?: { email?: string; name?: string },
 ): Promise<TestUser> {
   userCounter++;
-  const email = overrides?.email ?? `e2e-user-${userCounter}-${Date.now()}@test.local`;
+  const uniqueId = `${process.pid}-${userCounter}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const email = overrides?.email ?? `e2e-user-${uniqueId}@test.local`;
   const name = overrides?.name ?? `E2E User ${userCounter}`;
   const password = 'Tr0ub4dor&3-e2e-test';
 
@@ -29,14 +31,22 @@ export async function createTestUser(
     throw new Error(`createTestUser failed: ${response.status()} ${await response.text()}`);
   }
 
-  const setCookie = response.headers()['set-cookie'] ?? '';
-  const cookie = setCookie.split(';')[0];
+  // Use headersArray() for reliable Set-Cookie retrieval
+  const headers = response.headersArray();
+  const setCookieHeader = headers.find((h) => h.name.toLowerCase() === 'set-cookie');
+  const cookie = setCookieHeader?.value.split(';')[0] ?? '';
+  if (!cookie || !cookie.includes('=')) {
+    throw new Error(
+      `createTestUser: no valid Set-Cookie header in register response (got: ${JSON.stringify(setCookieHeader)})`,
+    );
+  }
   const body = await response.json();
 
   return {
     id: body.user.id,
     email,
     name,
+    password,
     cookie,
   };
 }
