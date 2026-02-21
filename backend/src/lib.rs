@@ -6,6 +6,7 @@ pub mod error;
 pub mod github;
 pub mod handlers;
 pub mod models;
+pub mod observability;
 pub mod openapi;
 pub mod services;
 pub mod sse;
