@@ -92,6 +92,30 @@ impl SseEvent {
         Self::GitHubSyncFailed { project_id, error }
     }
 
+    /// Return the project_id associated with this event, if available.
+    ///
+    /// Events that carry a `Task` or explicit `project_id` field return `Some(id)`.
+    /// Events like `TaskDeleted` or `AgentOutput` that don't embed a project_id
+    /// return `None` — these are forwarded to all subscribers regardless of filter.
+    pub fn project_id(&self) -> Option<Uuid> {
+        match self {
+            Self::TaskCreated { task } | Self::TaskUpdated { task } => Some(task.project_id),
+            Self::ProjectMessageCreated { message } => Some(message.project_id),
+            Self::ProjectMessageDeleted { project_id, .. } => Some(*project_id),
+            Self::GitHubSyncCompleted { result } => Some(result.project_id),
+            Self::GitHubSyncFailed { project_id, .. } => Some(*project_id),
+            // Events without an embedded project_id
+            Self::TaskDeleted { .. }
+            | Self::AgentOutput { .. }
+            | Self::AgentSessionStatusChanged { .. }
+            | Self::CommentCreated { .. }
+            | Self::CommentUpdated { .. }
+            | Self::CommentDeleted { .. }
+            | Self::PreviewStatusChanged { .. }
+            | Self::PreviewDeleted { .. } => None,
+        }
+    }
+
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::TaskCreated { .. } => "task_created",
@@ -132,6 +156,76 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }
+    }
+
+    fn create_test_task_with_project(project_id: Uuid) -> Task {
+        Task {
+            id: Uuid::new_v4(),
+            project_id,
+            title: "Test Task".to_string(),
+            description: None,
+            status: TaskStatus::Todo,
+            priority: TaskPriority::Medium,
+            parent_id: None,
+            assigned_to: None,
+            position: 0,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn test_project_id_for_task_events() {
+        let project_id = Uuid::new_v4();
+        let task = create_test_task_with_project(project_id);
+
+        let event = SseEvent::task_created(task.clone());
+        assert_eq!(event.project_id(), Some(project_id));
+
+        let event = SseEvent::task_updated(task);
+        assert_eq!(event.project_id(), Some(project_id));
+
+        let event = SseEvent::task_deleted(Uuid::new_v4());
+        assert_eq!(event.project_id(), None);
+    }
+
+    #[test]
+    fn test_project_id_for_project_message_events() {
+        let project_id = Uuid::new_v4();
+        let msg = crate::models::project_message::ProjectMessage {
+            id: Uuid::new_v4(),
+            project_id,
+            user_id: Uuid::new_v4(),
+            user_name: "test".to_string(),
+            content: "hello".to_string(),
+            created_at: Utc::now(),
+        };
+        let event = SseEvent::project_message_created(msg);
+        assert_eq!(event.project_id(), Some(project_id));
+
+        let event = SseEvent::project_message_deleted(Uuid::new_v4(), project_id);
+        assert_eq!(event.project_id(), Some(project_id));
+    }
+
+    #[test]
+    fn test_project_id_for_github_sync_events() {
+        let project_id = Uuid::new_v4();
+        let result = crate::models::github::SyncResult {
+            project_id,
+            pushed: 1,
+            pulled: 2,
+        };
+        let event = SseEvent::github_sync_completed(result);
+        assert_eq!(event.project_id(), Some(project_id));
+
+        let event = SseEvent::github_sync_failed(project_id, "error".to_string());
+        assert_eq!(event.project_id(), Some(project_id));
+    }
+
+    #[test]
+    fn test_project_id_for_agent_events_is_none() {
+        let event = SseEvent::agent_output(Uuid::new_v4(), "test".to_string());
+        assert_eq!(event.project_id(), None);
     }
 
     #[test]

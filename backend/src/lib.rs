@@ -12,6 +12,7 @@ pub mod sse;
 #[cfg(test)]
 pub mod test_helpers;
 
+use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -45,6 +46,8 @@ pub struct AppState {
     pub preview_manager: Option<Arc<PreviewManager>>,
     pub github_client: Option<Arc<dyn GitHubApi>>,
     pub output_buffer: Arc<OutputBuffer>,
+    /// Shared counter for active SSE + WebSocket connections (for limit enforcement).
+    pub connection_counter: Arc<AtomicUsize>,
     pub started_at: std::time::Instant,
 }
 

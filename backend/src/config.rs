@@ -97,6 +97,10 @@ pub struct Config {
     #[serde(default)]
     pub allowed_hosts: Vec<String>,
 
+    /// Maximum concurrent SSE + WebSocket connections (default: 100)
+    #[serde(default = "default_max_realtime_connections")]
+    pub max_realtime_connections: usize,
+
     /// GitHub Webhook secret for signature verification (env: GANTRY_GITHUB_WEBHOOK_SECRET)
     #[serde(default)]
     pub github_webhook_secret: Option<String>,
@@ -184,6 +188,10 @@ fn default_preview_base_url() -> String {
 
 fn default_github_sync_interval_secs() -> u64 {
     300 // 5 minutes
+}
+
+fn default_max_realtime_connections() -> usize {
+    100
 }
 
 fn default_register_rate_limit_per_second() -> u64 {
@@ -323,6 +331,7 @@ impl Default for Config {
             github_token: None,
             github_sync_interval_secs: default_github_sync_interval_secs(),
             allowed_hosts: Vec::new(),
+            max_realtime_connections: default_max_realtime_connections(),
             github_webhook_secret: None,
             register_rate_limit_per_second: default_register_rate_limit_per_second(),
             register_rate_limit_burst: default_register_rate_limit_burst(),

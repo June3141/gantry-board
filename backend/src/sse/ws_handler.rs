@@ -1,26 +1,51 @@
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::State;
+use axum::extract::{Query, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use serde::Deserialize;
 use tokio::sync::broadcast;
+use uuid::Uuid;
 
 use super::event::SseEvent;
 use crate::auth::middleware::AuthUser;
 use crate::AppState;
+
+/// Query parameters for the WebSocket endpoint.
+#[derive(Debug, Deserialize)]
+pub struct WsQuery {
+    /// Optional project_id to filter events for a specific project.
+    pub project_id: Option<Uuid>,
+}
 
 /// WebSocket endpoint for real-time updates (alternative to SSE).
 ///
 /// Subscribes to the same broadcast hub as the SSE handler and forwards
 /// events as JSON text frames. Clients that cannot use SSE (e.g. behind
 /// certain proxies) can connect here instead.
+///
+/// Accepts an optional `project_id` query parameter for project filtering.
 pub async fn ws_handler(
     _auth: AuthUser,
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
-) -> impl IntoResponse {
+    Query(query): Query<WsQuery>,
+) -> Result<impl IntoResponse, StatusCode> {
+    // Check connection limit
+    let max = state.config.max_realtime_connections;
+    let current = state.connection_counter.fetch_add(1, Ordering::SeqCst);
+    if current >= max {
+        state.connection_counter.fetch_sub(1, Ordering::SeqCst);
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+
     let rx = state.sse_hub.subscribe();
-    ws.on_upgrade(move |socket| handle_socket(socket, rx))
+    let project_filter = query.project_id;
+    let counter = state.connection_counter.clone();
+
+    Ok(ws.on_upgrade(move |socket| handle_socket(socket, rx, project_filter, counter)))
 }
 
 /// Convert an SseEvent into a WebSocket JSON text message.
@@ -37,7 +62,12 @@ fn event_to_ws_message(event: &SseEvent) -> Option<Message> {
     Some(Message::Text(msg.to_string().into()))
 }
 
-async fn handle_socket(mut socket: WebSocket, mut rx: broadcast::Receiver<SseEvent>) {
+async fn handle_socket(
+    mut socket: WebSocket,
+    mut rx: broadcast::Receiver<SseEvent>,
+    project_filter: Option<Uuid>,
+    counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+) {
     metrics::gauge!("gantry_ws_connections_active").increment(1.0);
 
     let mut ping_interval = tokio::time::interval(Duration::from_secs(30));
@@ -48,6 +78,15 @@ async fn handle_socket(mut socket: WebSocket, mut rx: broadcast::Receiver<SseEve
             event = rx.recv() => {
                 match event {
                     Ok(event) => {
+                        // Apply project filter
+                        if let Some(filter_pid) = project_filter {
+                            if let Some(event_pid) = event.project_id() {
+                                if event_pid != filter_pid {
+                                    continue;
+                                }
+                            }
+                        }
+
                         if let Some(msg) = event_to_ws_message(&event) {
                             if socket.send(msg).await.is_err() {
                                 break;
@@ -75,6 +114,7 @@ async fn handle_socket(mut socket: WebSocket, mut rx: broadcast::Receiver<SseEve
         }
     }
 
+    counter.fetch_sub(1, Ordering::SeqCst);
     metrics::gauge!("gantry_ws_connections_active").decrement(1.0);
 }
 
