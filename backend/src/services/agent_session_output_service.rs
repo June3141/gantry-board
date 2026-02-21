@@ -497,4 +497,58 @@ mod tests {
             "Duplicate sequence should fail with database error, got: {result:?}"
         );
     }
+
+    /// Issue #275: OutputBuffer should auto-flush when total buffered bytes exceed the cap.
+    #[tokio::test]
+    async fn test_output_buffer_flushes_when_total_size_exceeded() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        let buf = OutputBuffer::with_limits(pool.clone(), 1000, 1024); // batch=1000 items, max_total_bytes=1 KB
+
+        // Add content that exceeds the 1 KB total limit
+        let chunk = "a".repeat(600); // 600 bytes each
+        buf.add(session_id, 0, chunk.clone())
+            .await
+            .expect("first add should succeed");
+
+        // Second add pushes total past 1 KB → should trigger flush
+        buf.add(session_id, 1, chunk.clone())
+            .await
+            .expect("second add should succeed");
+
+        // Verify that data has been flushed to DB
+        let outputs = get_outputs(&pool, session_id).await.expect("get outputs");
+        assert!(
+            !outputs.is_empty(),
+            "buffer should have flushed to DB when total size exceeded"
+        );
+    }
+
+    /// Issue #275: OutputBuffer should not flush prematurely when under the cap.
+    #[tokio::test]
+    async fn test_output_buffer_does_not_flush_under_cap() {
+        let pool = setup_test_db().await;
+        let session_id = create_test_session(&pool).await;
+
+        // batch=1000 items, max_total_bytes=10 MB (effectively unlimited for this test)
+        let buf = OutputBuffer::with_limits(pool.clone(), 1000, 10 * 1024 * 1024);
+
+        let chunk = "a".repeat(100); // 100 bytes — well under the cap
+        buf.add(session_id, 0, chunk)
+            .await
+            .expect("add should succeed");
+
+        // Data should still be buffered, not flushed yet
+        let outputs = get_outputs(&pool, session_id).await.expect("get outputs");
+        assert!(
+            outputs.is_empty(),
+            "buffer should NOT have flushed yet (under size cap and batch limit)"
+        );
+
+        // Explicit flush should persist it
+        buf.flush().await.expect("flush should succeed");
+        let outputs = get_outputs(&pool, session_id).await.expect("get outputs");
+        assert_eq!(outputs.len(), 1);
+    }
 }

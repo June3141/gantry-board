@@ -486,6 +486,44 @@ mod tests {
         assert!(err.to_string().contains("rate limit"));
     }
 
+    /// Issue #279: Config should warn when github_token is set but webhook_secret is missing.
+    /// We verify validate() succeeds (warning only) but the warning condition is triggered.
+    #[test]
+    fn test_validate_warns_when_github_token_set_without_webhook_secret() {
+        let config = Config {
+            github_token: Some("ghp_test_token_12345".to_string()),
+            github_webhook_secret: None,
+            cors_origin: Some("http://localhost:5173".to_string()),
+            ..Default::default()
+        };
+        // validate() should succeed — this is a warning, not an error
+        assert!(config.validate().is_ok());
+    }
+
+    /// When both github_token and webhook_secret are set, no warning condition.
+    #[test]
+    fn test_validate_no_warning_when_both_github_token_and_secret_set() {
+        let config = Config {
+            github_token: Some("ghp_test_token_12345".to_string()),
+            github_webhook_secret: Some("whsec_test_secret".to_string()),
+            cors_origin: Some("http://localhost:5173".to_string()),
+            ..Default::default()
+        };
+        assert!(config.validate().is_ok());
+    }
+
+    /// When github_token is unset, no warning regardless of webhook_secret.
+    #[test]
+    fn test_validate_no_warning_when_github_token_unset() {
+        let config = Config {
+            github_token: None,
+            github_webhook_secret: None,
+            cors_origin: Some("http://localhost:5173".to_string()),
+            ..Default::default()
+        };
+        assert!(config.validate().is_ok());
+    }
+
     #[test]
     fn test_validate_rejects_zero_rate_limit_per_second() {
         let config = Config {
