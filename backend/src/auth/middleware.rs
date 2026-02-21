@@ -9,6 +9,12 @@ use crate::AppState;
 
 pub const SESSION_COOKIE_NAME: &str = "gantry_session";
 
+/// Stable user/session ID used when authentication is bypassed in debug builds
+/// (`GANTRY_AUTH_DISABLED=true`). Integration tests seed a user row with this ID
+/// so that foreign-key constraints are satisfied even without a real login flow.
+#[cfg(debug_assertions)]
+pub const DEBUG_USER_ID: Uuid = Uuid::nil();
+
 /// Authenticated user extracted from session cookie
 #[derive(Debug, Clone)]
 pub struct AuthUser {
@@ -23,12 +29,14 @@ impl FromRequestParts<AppState> for AuthUser {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        // Auth bypass for development — compiled out of release builds
+        // Auth bypass for development — compiled out of release builds.
+        // Uses DEBUG_USER_ID (nil UUID) so that integration tests can seed a
+        // matching user row and satisfy foreign-key constraints.
         #[cfg(debug_assertions)]
         if state.config.auth_disabled {
             return Ok(AuthUser {
-                user_id: Uuid::nil(),
-                session_id: Uuid::nil(),
+                user_id: DEBUG_USER_ID,
+                session_id: DEBUG_USER_ID,
             });
         }
 
