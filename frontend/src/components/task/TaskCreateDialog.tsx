@@ -1,8 +1,10 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import { useCreateTask } from '@/api/generated/endpoints/tasks/tasks';
 import { TaskPriority, TaskStatus } from '@/api/generated/model';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { invalidateTasks } from '@/services/queryInvalidation';
 import { useUiStore } from '@/stores/uiStore';
 
 interface TaskCreateDialogProps {
@@ -25,6 +27,7 @@ function TaskCreateForm({
   projectId: string;
   defaultStatus: TaskStatus | null;
 }) {
+  const queryClient = useQueryClient();
   const closeTaskModal = useUiStore((s) => s.closeTaskModal);
   const createTask = useCreateTask();
   const { data: members } = useListMembers(projectId);
@@ -54,6 +57,7 @@ function TaskCreateForm({
           ...(assignedTo ? { assigned_to: assignedTo } : {}),
         },
       });
+      invalidateTasks(queryClient);
       closeTaskModal();
     } catch {
       setError('Failed to create task. Please try again.');

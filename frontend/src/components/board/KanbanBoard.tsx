@@ -44,7 +44,10 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const assigneeFilter = useBoardStore((s) => s.assigneeFilter);
   const priorityFilter = useBoardStore((s) => s.priorityFilter);
 
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
 
   const updateTaskMutation = useUpdateTask({
     mutation: {
