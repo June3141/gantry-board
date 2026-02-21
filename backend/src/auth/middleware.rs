@@ -186,4 +186,12 @@ mod tests {
 
         assert!(!cookie.contains("Secure"));
     }
+
+    /// Issue #278: DEBUG_USER_ID must be the nil UUID and be available only in debug builds
+    #[cfg(debug_assertions)]
+    #[test]
+    fn test_debug_user_id_is_nil_uuid() {
+        assert_eq!(DEBUG_USER_ID, Uuid::nil());
+        assert!(DEBUG_USER_ID.is_nil());
+    }
 }

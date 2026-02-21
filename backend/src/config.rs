@@ -504,4 +504,14 @@ mod tests {
         let err = config.validate().unwrap_err();
         assert!(err.to_string().contains("rate limit"));
     }
+
+    /// Issue #269: default_database_url must point to ./data/gantry_board.db
+    #[test]
+    fn test_default_database_url_points_to_data_dir() {
+        let config = Config::default();
+        assert_eq!(
+            config.database_url,
+            "sqlite:./data/gantry_board.db?mode=rwc"
+        );
+    }
 }
