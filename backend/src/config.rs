@@ -144,6 +144,10 @@ pub struct Config {
     /// General API rate limit: burst size (default: 60)
     #[serde(default = "default_general_rate_limit_burst")]
     pub general_rate_limit_burst: u32,
+
+    /// Audit log retention period in days (default: 90)
+    #[serde(default = "default_audit_retention_days")]
+    pub audit_retention_days: u64,
 }
 
 fn default_bind_addr() -> String {
@@ -248,6 +252,10 @@ fn default_general_rate_limit_per_second() -> u64 {
 
 fn default_general_rate_limit_burst() -> u32 {
     60
+}
+
+fn default_audit_retention_days() -> u64 {
+    90
 }
 
 impl Config {
@@ -398,6 +406,7 @@ impl Default for Config {
             login_rate_limit_burst: default_login_rate_limit_burst(),
             general_rate_limit_per_second: default_general_rate_limit_per_second(),
             general_rate_limit_burst: default_general_rate_limit_burst(),
+            audit_retention_days: default_audit_retention_days(),
         }
     }
 }
