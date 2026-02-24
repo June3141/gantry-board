@@ -37,10 +37,13 @@ async fn test_error_response_still_correct_after_trace_layer_changes() {
 async fn test_metrics_endpoint_responds_correctly() {
     let server = create_test_server().await;
 
+    // Warm-up request so that axum-prometheus records at least one HTTP metric
+    server.get("/health").await.assert_status(StatusCode::OK);
+
     let response = server.get("/metrics").await;
     response.assert_status(StatusCode::OK);
 
     let body = response.text();
-    // Basic sanity: Prometheus output should contain standard HTTP metrics
-    assert!(body.contains("axum_http_requests_total"));
+    // The Prometheus output should contain our custom gantry metrics (seeded on startup)
+    assert!(body.contains("gantry_"));
 }
