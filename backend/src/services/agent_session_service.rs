@@ -278,6 +278,43 @@ pub async fn save_prompt_tx(
     Ok(())
 }
 
+/// Recovered session info for logging and worktree cleanup.
+#[derive(Debug)]
+pub struct RecoveredSession {
+    pub id: String,
+    pub task_id: String,
+    pub worktree_name: Option<String>,
+}
+
+/// Recover orphaned agent sessions by marking all active sessions as failed.
+///
+/// This is called on startup to clean up sessions that were left in an active
+/// state (running, paused, pending) due to an unclean shutdown. Sessions in
+/// terminal states (completed, failed, cancelled) are not affected.
+///
+/// This function is idempotent -- calling it multiple times is safe.
+pub async fn recover_orphaned_sessions(pool: &SqlitePool) -> AppResult<Vec<RecoveredSession>> {
+    let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
+        r#"
+        UPDATE agent_sessions
+        SET status = 'failed', finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE status IN ('running', 'paused', 'pending')
+        RETURNING id, task_id, worktree_name
+        "#,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|(id, task_id, worktree_name)| RecoveredSession {
+            id,
+            task_id,
+            worktree_name,
+        })
+        .collect())
+}
+
 fn validate_status_transition(from: &AgentSessionStatus, to: &AgentSessionStatus) -> AppResult<()> {
     use AgentSessionStatus::*;
     let allowed = matches!(
@@ -1211,5 +1248,206 @@ mod tests {
             result.is_err(),
             "New session should be blocked while another is paused"
         );
+    }
+
+    #[tokio::test]
+    async fn test_recover_orphaned_sessions_marks_active_as_failed() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id1) = create_test_task(&pool).await;
+        let (_project_id2, task_id2) = create_test_task(&pool).await;
+        let (_project_id3, task_id3) = create_test_task(&pool).await;
+
+        let req = CreateAgentSessionRequest {
+            agent_type: AgentType::ClaudeCode,
+        };
+
+        // Create a running session
+        let s1 = create_agent_session(&pool, task_id1, &req)
+            .await
+            .expect("create s1");
+        update_agent_session(
+            &pool,
+            task_id1,
+            s1.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("s1 to running");
+
+        // Create a paused session
+        let s2 = create_agent_session(&pool, task_id2, &req)
+            .await
+            .expect("create s2");
+        update_agent_session(
+            &pool,
+            task_id2,
+            s2.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("s2 to running");
+        update_agent_session(
+            &pool,
+            task_id2,
+            s2.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Paused,
+            },
+        )
+        .await
+        .expect("s2 to paused");
+
+        // Create a pending session
+        let s3 = create_agent_session(&pool, task_id3, &req)
+            .await
+            .expect("create s3");
+
+        // Recover orphaned sessions
+        let recovered = recover_orphaned_sessions(&pool)
+            .await
+            .expect("recover should succeed");
+        assert_eq!(
+            recovered.len(),
+            3,
+            "all three active sessions should be recovered"
+        );
+
+        // Verify all are now failed with finished_at set
+        let r1 = get_agent_session(&pool, task_id1, s1.id)
+            .await
+            .expect("get s1");
+        assert_eq!(r1.status, AgentSessionStatus::Failed);
+        assert!(r1.finished_at.is_some());
+
+        let r2 = get_agent_session(&pool, task_id2, s2.id)
+            .await
+            .expect("get s2");
+        assert_eq!(r2.status, AgentSessionStatus::Failed);
+        assert!(r2.finished_at.is_some());
+
+        let r3 = get_agent_session(&pool, task_id3, s3.id)
+            .await
+            .expect("get s3");
+        assert_eq!(r3.status, AgentSessionStatus::Failed);
+        assert!(r3.finished_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_recover_orphaned_sessions_idempotent() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id) = create_test_task(&pool).await;
+
+        let req = CreateAgentSessionRequest {
+            agent_type: AgentType::ClaudeCode,
+        };
+
+        // Create a running session
+        let s = create_agent_session(&pool, task_id, &req)
+            .await
+            .expect("create session");
+        update_agent_session(
+            &pool,
+            task_id,
+            s.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("to running");
+
+        // First recovery
+        let recovered1 = recover_orphaned_sessions(&pool)
+            .await
+            .expect("first recover");
+        assert_eq!(recovered1.len(), 1);
+
+        // Second recovery should be a no-op
+        let recovered2 = recover_orphaned_sessions(&pool)
+            .await
+            .expect("second recover");
+        assert_eq!(recovered2.len(), 0, "second call should be no-op");
+    }
+
+    #[tokio::test]
+    async fn test_recover_orphaned_sessions_does_not_affect_terminal_states() {
+        let pool = setup_test_db().await;
+        let (_project_id, task_id1) = create_test_task(&pool).await;
+        let (_project_id2, task_id2) = create_test_task(&pool).await;
+
+        let req = CreateAgentSessionRequest {
+            agent_type: AgentType::ClaudeCode,
+        };
+
+        // Create a completed session
+        let s1 = create_agent_session(&pool, task_id1, &req)
+            .await
+            .expect("create s1");
+        update_agent_session(
+            &pool,
+            task_id1,
+            s1.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("s1 to running");
+        update_agent_session(
+            &pool,
+            task_id1,
+            s1.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Completed,
+            },
+        )
+        .await
+        .expect("s1 to completed");
+
+        // Create a failed session
+        let s2 = create_agent_session(&pool, task_id2, &req)
+            .await
+            .expect("create s2");
+        update_agent_session(
+            &pool,
+            task_id2,
+            s2.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Running,
+            },
+        )
+        .await
+        .expect("s2 to running");
+        update_agent_session(
+            &pool,
+            task_id2,
+            s2.id,
+            &UpdateAgentSessionRequest {
+                status: AgentSessionStatus::Failed,
+            },
+        )
+        .await
+        .expect("s2 to failed");
+
+        // Recover should not touch them
+        let recovered = recover_orphaned_sessions(&pool)
+            .await
+            .expect("recover should succeed");
+        assert_eq!(recovered.len(), 0, "terminal states should not be affected");
+
+        // Verify statuses unchanged
+        let r1 = get_agent_session(&pool, task_id1, s1.id)
+            .await
+            .expect("get s1");
+        assert_eq!(r1.status, AgentSessionStatus::Completed);
+
+        let r2 = get_agent_session(&pool, task_id2, s2.id)
+            .await
+            .expect("get s2");
+        assert_eq!(r2.status, AgentSessionStatus::Failed);
     }
 }

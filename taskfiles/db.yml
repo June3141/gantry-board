@@ -23,3 +23,14 @@ tasks:
       - sqlx database drop -y
       - sqlx database create
       - sqlx migrate run
+
+  backup:
+    desc: Create a manual SQLite backup
+    cmds:
+      - |
+        mkdir -p ./data/backups
+        BACKUP_FILE="./data/backups/gantry_board_$(date +%Y%m%d_%H%M%S).db"
+        sqlite3 ./data/gantry_board.db "PRAGMA wal_checkpoint(TRUNCATE);"
+        sqlite3 ./data/gantry_board.db "VACUUM INTO '${BACKUP_FILE}';"
+        echo "Backup created: ${BACKUP_FILE}"
+        ls -lh "${BACKUP_FILE}"

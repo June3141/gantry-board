@@ -11,7 +11,9 @@ use gantry_board::config::Config;
 use gantry_board::db;
 use gantry_board::models::agent_session::AgentType;
 use gantry_board::services::preview_service::PreviewManager;
-use gantry_board::services::{agent_session_output_service, session_service};
+use gantry_board::services::{
+    agent_session_output_service, agent_session_service, backup_service, session_service,
+};
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
 use tokio_util::sync::CancellationToken;
@@ -46,6 +48,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let pool = db::init_pool(&config.database_url, config.max_db_connections).await?;
+
+    // Recover orphaned agent sessions from unclean shutdown
+    match agent_session_service::recover_orphaned_sessions(&pool).await {
+        Ok(recovered) if !recovered.is_empty() => {
+            tracing::warn!(
+                count = recovered.len(),
+                "recovered orphaned agent sessions (marked as failed)"
+            );
+            for session in &recovered {
+                tracing::warn!(
+                    session_id = %session.id,
+                    task_id = %session.task_id,
+                    worktree_name = session.worktree_name.as_deref().unwrap_or("-"),
+                    "recovered orphaned session"
+                );
+            }
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "failed to recover orphaned agent sessions");
+        }
+        _ => {}
+    }
+
     let sse_hub = Arc::new(SseHub::new(config.sse_broadcast_capacity));
 
     let repo_path = config
@@ -114,6 +139,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clone values needed by background tasks before moving into AppState
     let sync_github_client = github_client.clone();
     let sync_pool = pool.clone();
+    let backup_pool = pool.clone();
     let sync_sse_hub = Arc::clone(&sse_hub);
 
     let state = AppState {
@@ -225,6 +251,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             interval_secs = sync_interval_secs,
             "background GitHub sync polling started"
         );
+    }
+
+    // Spawn background backup task (if enabled)
+    if config.backup_enabled {
+        backup_service::spawn_backup_task(backup_pool, &config, shutdown_token.clone());
     }
 
     let listener = tokio::net::TcpListener::bind(&config.bind_addr).await?;
