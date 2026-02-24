@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod agent_sessions;
 pub mod auth;
 pub mod github_links;
