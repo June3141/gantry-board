@@ -1,0 +1,108 @@
+# Stage 1: Build backend
+FROM rust:1.85-slim-bookworm AS backend-builder
+
+WORKDIR /workspace
+
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy workspace manifests for dependency caching
+COPY Cargo.toml Cargo.lock ./
+COPY backend/Cargo.toml backend/
+
+# Create dummy src to build dependencies
+RUN mkdir -p backend/src && echo "fn main() {}" > backend/src/main.rs
+RUN cargo build --release -p gantry-board || true
+RUN rm -rf backend/src
+
+# Copy source code
+COPY backend/src backend/src
+COPY backend/migrations backend/migrations
+
+# Build release binary
+RUN cargo build --release -p gantry-board
+
+# Stage 2: Build frontend
+FROM node:22-slim AS frontend-builder
+
+WORKDIR /app
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ .
+RUN npm run build
+
+# Stage 3: Runtime
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    ca-certificates \
+    curl \
+    nginx \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy backend binary
+COPY --from=backend-builder /workspace/target/release/gantry-board /usr/local/bin/gantry-board
+
+# Copy frontend build
+COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Rewrite proxy_pass for single-container mode (backend on localhost, not separate service)
+RUN sed -i 's|http://backend:3000|http://localhost:3000|g' /etc/nginx/conf.d/default.conf
+
+# Create non-root user for runtime
+RUN groupadd --system gantry && useradd --system --gid gantry --create-home gantry \
+    && mkdir -p /data && chown gantry:gantry /data \
+    && chown -R gantry:gantry /usr/share/nginx/html \
+    && chown -R gantry:gantry /var/log/nginx /var/lib/nginx /run
+
+# Copy entrypoint script
+COPY <<'ENTRYPOINT' /usr/local/bin/entrypoint.sh
+#!/bin/bash
+set -e
+
+# Forward termination signals to child processes for graceful shutdown
+terminate() {
+    kill -TERM "$BACKEND_PID" "$NGINX_PID" 2>/dev/null || true
+}
+trap terminate SIGTERM SIGINT
+
+# Start backend in background
+gantry-board &
+BACKEND_PID=$!
+
+# Start nginx in background (non-daemonized)
+nginx -g "daemon off;" &
+NGINX_PID=$!
+
+# Wait for either process to exit
+wait -n "$BACKEND_PID" "$NGINX_PID"
+EXIT_CODE=$?
+
+# Kill remaining process(es) that are still running
+if kill -0 "$BACKEND_PID" 2>/dev/null; then
+    kill "$BACKEND_PID" 2>/dev/null || true
+fi
+if kill -0 "$NGINX_PID" 2>/dev/null; then
+    kill "$NGINX_PID" 2>/dev/null || true
+fi
+
+# Wait for both to fully exit (avoid zombies)
+wait "$BACKEND_PID" "$NGINX_PID" 2>/dev/null || true
+
+exit "$EXIT_CODE"
+ENTRYPOINT
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+USER gantry
+
+EXPOSE 80 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=10s \
+    CMD curl -f http://localhost:3000/health && curl -f http://localhost/ || exit 1
+
+CMD ["/usr/local/bin/entrypoint.sh"]
