@@ -6,13 +6,12 @@ use utoipa::ToSchema;
 
 use crate::auth::middleware::AuthUser;
 use crate::error::AppResult;
-use crate::services::worktree_service;
+use crate::services::{authorization_service, worktree_service};
 use crate::AppState;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct WorktreeResponse {
     pub name: String,
-    pub path: String,
     pub branch: Option<String>,
     pub is_valid: bool,
 }
@@ -21,7 +20,6 @@ impl From<worktree_service::WorktreeInfo> for WorktreeResponse {
     fn from(info: worktree_service::WorktreeInfo) -> Self {
         Self {
             name: info.name,
-            path: info.path.to_string_lossy().to_string(),
             branch: info.branch,
             is_valid: info.is_valid,
         }
@@ -43,8 +41,9 @@ pub struct CreateWorktreeRequest {
 )]
 pub async fn list_worktrees(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
 ) -> AppResult<Json<Vec<WorktreeResponse>>> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     let repo_path = state.config.repo_path();
     let worktrees =
         tokio::task::spawn_blocking(move || worktree_service::list_worktrees(&repo_path))
@@ -66,9 +65,10 @@ pub async fn list_worktrees(
 )]
 pub async fn create_worktree(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Json(body): Json<CreateWorktreeRequest>,
 ) -> AppResult<(StatusCode, Json<WorktreeResponse>)> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     let repo_path = state.config.repo_path();
     let name = body.name.trim().to_string();
     if name.is_empty() || name.len() > 100 {
@@ -95,9 +95,10 @@ pub async fn create_worktree(
 )]
 pub async fn get_worktree(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Path(name): Path<String>,
 ) -> AppResult<Json<WorktreeResponse>> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     let repo_path = state.config.repo_path();
     let info =
         tokio::task::spawn_blocking(move || worktree_service::get_worktree(&repo_path, &name))
@@ -118,9 +119,10 @@ pub async fn get_worktree(
 )]
 pub async fn delete_worktree(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Path(name): Path<String>,
 ) -> AppResult<StatusCode> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     let repo_path = state.config.repo_path();
     tokio::task::spawn_blocking(move || worktree_service::delete_worktree(&repo_path, &name))
         .await

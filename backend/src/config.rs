@@ -250,6 +250,15 @@ impl Config {
             );
         }
 
+        // Warn when github_token is set but webhook_secret is not
+        if self.github_token.is_some() && self.github_webhook_secret.is_none() {
+            tracing::warn!(
+                "GANTRY_GITHUB_TOKEN is set but GANTRY_GITHUB_WEBHOOK_SECRET is not. \
+                 Webhook payloads will not be verified. \
+                 Set GANTRY_GITHUB_WEBHOOK_SECRET to enable signature verification."
+            );
+        }
+
         // Reject zero rate limit values
         if self.register_rate_limit_per_second == 0 || self.register_rate_limit_burst == 0 {
             return Err(ConfigError::RateLimiter(

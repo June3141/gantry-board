@@ -94,6 +94,30 @@ pub async fn require_project_owner(
     }
 }
 
+/// Verify the user is a member of at least one project.
+/// Used for endpoints not scoped to a single project (e.g. worktrees, previews).
+pub async fn require_any_project_membership(pool: &SqlitePool, user_id: Uuid) -> AppResult<()> {
+    // Nil UUID bypass for auth_disabled mode — compiled out of release builds
+    #[cfg(debug_assertions)]
+    if user_id.is_nil() {
+        return Ok(());
+    }
+
+    let count = sqlx::query_scalar::<_, i32>(
+        "SELECT COUNT(*) FROM project_members WHERE user_id = $1 LIMIT 1",
+    )
+    .bind(user_id.to_string())
+    .fetch_one(pool)
+    .await?;
+
+    if count == 0 {
+        return Err(AppError::Forbidden(
+            "user is not a member of any project".to_string(),
+        ));
+    }
+    Ok(())
+}
+
 /// List project IDs the user is a member of.
 pub async fn list_user_project_ids(pool: &SqlitePool, user_id: Uuid) -> AppResult<Vec<Uuid>> {
     let rows = sqlx::query_scalar::<_, String>(

@@ -125,15 +125,22 @@ struct PendingOutput {
 }
 
 /// Buffers agent outputs and flushes them in bulk to reduce DB write contention.
-/// Flushes every `flush_interval` or when the buffer reaches `batch_size`.
+/// Flushes every `flush_interval` or when the buffer reaches `batch_size`,
+/// or when total buffered bytes exceed `max_total_bytes`.
 pub struct OutputBuffer {
     pool: SqlitePool,
     buffer: Mutex<Vec<PendingOutput>>,
     batch_size: usize,
+    /// Maximum total buffered bytes before auto-flush (default: 10 MB).
+    max_total_bytes: usize,
+    /// Current total buffered bytes.
+    total_bytes: Mutex<usize>,
 }
 
 const DEFAULT_BATCH_SIZE: usize = 100;
 const DEFAULT_FLUSH_INTERVAL_MS: u64 = 500;
+/// Default max total buffer size: 10 MB.
+const DEFAULT_MAX_TOTAL_BYTES: usize = 10 * 1024 * 1024;
 
 impl OutputBuffer {
     pub fn new(pool: SqlitePool) -> Self {
@@ -141,10 +148,25 @@ impl OutputBuffer {
             pool,
             buffer: Mutex::new(Vec::new()),
             batch_size: DEFAULT_BATCH_SIZE,
+            max_total_bytes: DEFAULT_MAX_TOTAL_BYTES,
+            total_bytes: Mutex::new(0),
         }
     }
 
-    /// Add an output to the buffer. Flushes automatically when batch_size is reached.
+    /// Create an OutputBuffer with custom limits (for testing).
+    #[cfg(test)]
+    pub fn with_limits(pool: SqlitePool, batch_size: usize, max_total_bytes: usize) -> Self {
+        Self {
+            pool,
+            buffer: Mutex::new(Vec::new()),
+            batch_size,
+            max_total_bytes,
+            total_bytes: Mutex::new(0),
+        }
+    }
+
+    /// Add an output to the buffer. Flushes automatically when batch_size is reached
+    /// or when total buffered bytes exceed `max_total_bytes`.
     pub async fn add(&self, session_id: Uuid, sequence: i64, content: String) -> AppResult<()> {
         if content.len() > MAX_CONTENT_SIZE {
             return Err(AppError::Validation(format!(
@@ -158,14 +180,17 @@ impl OutputBuffer {
             )));
         }
 
+        let content_len = content.len();
         let should_flush = {
             let mut buf = self.buffer.lock().await;
+            let mut total = self.total_bytes.lock().await;
             buf.push(PendingOutput {
                 session_id,
                 sequence,
                 content,
             });
-            buf.len() >= self.batch_size
+            *total += content_len;
+            buf.len() >= self.batch_size || *total >= self.max_total_bytes
         };
 
         if should_flush {
@@ -179,6 +204,8 @@ impl OutputBuffer {
     pub async fn flush(&self) -> AppResult<()> {
         let items = {
             let mut buf = self.buffer.lock().await;
+            let mut total = self.total_bytes.lock().await;
+            *total = 0;
             std::mem::take(&mut *buf)
         };
 
