@@ -63,6 +63,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     worktree_name = session.worktree_name.as_deref().unwrap_or("-"),
                     "recovered orphaned session"
                 );
+                // Best-effort worktree cleanup
+                if let Some(ref wt_name) = session.worktree_name {
+                    let repo_path = config
+                        .repository_path
+                        .as_deref()
+                        .map(PathBuf::from)
+                        .unwrap_or_else(|| PathBuf::from("."));
+                    match gantry_board::services::worktree_service::delete_worktree(
+                        &repo_path, wt_name,
+                    ) {
+                        Ok(()) => {
+                            tracing::info!(worktree = %wt_name, "cleaned up orphaned worktree");
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                worktree = %wt_name,
+                                error = %e,
+                                "failed to clean up orphaned worktree (best-effort)"
+                            );
+                        }
+                    }
+                }
             }
         }
         Err(e) => {

@@ -308,6 +308,20 @@ impl Config {
             }
         }
 
+        // Validate backup configuration
+        if self.backup_enabled {
+            if self.backup_retention_count == 0 {
+                return Err(ConfigError::RateLimiter(
+                    "backup_retention_count must be >= 1 to avoid deleting all backups".to_string(),
+                ));
+            }
+            if self.backup_dir.contains("..") {
+                return Err(ConfigError::RateLimiter(
+                    "backup_dir must not contain '..' path traversal sequences".to_string(),
+                ));
+            }
+        }
+
         Ok(())
     }
 
