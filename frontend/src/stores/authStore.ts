@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { User } from '../api/generated/model';
 import { me } from '../api/generated/endpoints/auth/auth';
+import type { User } from '../api/generated/model';
 
 interface AuthState {
   user: User | null;
