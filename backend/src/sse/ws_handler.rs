@@ -78,12 +78,13 @@ async fn handle_socket(
             event = rx.recv() => {
                 match event {
                     Ok(event) => {
-                        // Apply project filter
+                        // Apply project filter: only forward events that
+                        // belong to the subscribed project. Events without a
+                        // project_id are dropped to prevent cross-project leakage.
                         if let Some(filter_pid) = project_filter {
-                            if let Some(event_pid) = event.project_id() {
-                                if event_pid != filter_pid {
-                                    continue;
-                                }
+                            match event.project_id() {
+                                Some(event_pid) if event_pid == filter_pid => {}
+                                _ => continue,
                             }
                         }
 

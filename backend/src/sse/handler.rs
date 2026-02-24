@@ -47,8 +47,8 @@ impl<S> Drop for TrackedStream<S> {
 /// SSE endpoint for real-time task updates.
 ///
 /// Accepts an optional `project_id` query parameter. When provided, only
-/// events matching that project (or events without an embedded project_id)
-/// are forwarded to the client.
+/// events matching that project are forwarded to the client. Events without
+/// an embedded project_id are dropped for project-filtered subscribers.
 pub async fn sse_handler(
     _auth: AuthUser,
     State(state): State<AppState>,
@@ -69,14 +69,14 @@ pub async fn sse_handler(
     let rx = state.sse_hub.subscribe();
     let stream = BroadcastStream::new(rx).filter_map(move |result| {
         result.ok().and_then(|event| {
-            // Apply project filter if specified
+            // Apply project filter if specified: only forward events
+            // that belong to the subscribed project. Events without a
+            // project_id are dropped to prevent cross-project leakage.
             if let Some(filter_pid) = project_filter {
-                if let Some(event_pid) = event.project_id() {
-                    if event_pid != filter_pid {
-                        return None;
-                    }
+                match event.project_id() {
+                    Some(event_pid) if event_pid == filter_pid => {}
+                    _ => return None,
                 }
-                // Events without project_id pass through
             }
 
             let event_type = event.event_type();

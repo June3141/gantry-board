@@ -56,6 +56,9 @@ export const useAuthStore = create<AuthState>()(
                   isLoading: false,
                 });
               });
+          } else {
+            // Not authenticated — clear loading state immediately
+            useAuthStore.setState({ isLoading: false });
           }
         };
       },
