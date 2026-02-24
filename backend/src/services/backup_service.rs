@@ -173,13 +173,28 @@ pub fn spawn_backup_task(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::setup_test_db;
     use std::fs;
     use tempfile::TempDir;
 
+    /// Create a file-based SQLite pool (VACUUM INTO requires a real file, not :memory:)
+    async fn setup_file_db() -> (TempDir, SqlitePool) {
+        let tmp = TempDir::new().expect("create temp dir");
+        let db_path = tmp.path().join("test.db");
+        let url = format!("sqlite:{}?mode=rwc", db_path.display());
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect(&url)
+            .await
+            .expect("create file-based test db");
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await
+            .expect("run migrations");
+        (tmp, pool)
+    }
+
     #[tokio::test]
     async fn test_create_backup_creates_valid_sqlite_file() {
-        let pool = setup_test_db().await;
+        let (_db_dir, pool) = setup_file_db().await;
         let backup_dir = TempDir::new().expect("create temp dir");
 
         let backup_path = create_backup(&pool, backup_dir.path())
@@ -216,7 +231,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_backup_creates_backup_dir_if_missing() {
-        let pool = setup_test_db().await;
+        let (_db_dir, pool) = setup_file_db().await;
         let base_dir = TempDir::new().expect("create temp dir");
         let backup_dir = base_dir.path().join("nested").join("backups");
 
