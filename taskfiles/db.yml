@@ -34,3 +34,16 @@ tasks:
         sqlite3 ./data/gantry_board.db "VACUUM INTO '${BACKUP_FILE}';"
         echo "Backup created: ${BACKUP_FILE}"
         ls -lh "${BACKUP_FILE}"
+
+  vacuum:
+    desc: Run VACUUM on the SQLite database to reclaim space
+    cmds:
+      - |
+        echo "Running WAL checkpoint..."
+        sqlite3 ./data/gantry_board.db "PRAGMA wal_checkpoint(TRUNCATE);"
+        echo "Running VACUUM..."
+        sqlite3 ./data/gantry_board.db "VACUUM;"
+        echo "Running PRAGMA optimize..."
+        sqlite3 ./data/gantry_board.db "PRAGMA optimize;"
+        echo "Done. Current DB size:"
+        ls -lh ./data/gantry_board.db
