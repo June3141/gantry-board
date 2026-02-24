@@ -11,5 +11,4 @@ export interface WorktreeResponse {
   branch?: WorktreeResponseBranch;
   is_valid: boolean;
   name: string;
-  path: string;
 }
