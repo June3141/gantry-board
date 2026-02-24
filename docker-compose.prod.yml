@@ -7,7 +7,7 @@ services:
       - GANTRY_BIND_ADDR=0.0.0.0:3000
       - GANTRY_DATABASE_URL=sqlite:/data/gantry_board.db?mode=rwc
       - GANTRY_CORS_ORIGIN=${GANTRY_CORS_ORIGIN:-http://localhost}
-      - GANTRY_AUTH_SECRET=${GANTRY_AUTH_SECRET}
+      # Authentication relies on DB-backed sessions; no separate secret is needed.
       - GANTRY_COOKIE_SECURE=${GANTRY_COOKIE_SECURE:-true}
       - GANTRY_GITHUB_TOKEN=${GANTRY_GITHUB_TOKEN:-}
     volumes:
