@@ -29,7 +29,10 @@ async fn test_create_worktree_returns_created() {
     assert_eq!(wt["name"], "my-feature");
     assert_eq!(wt["branch"], "my-feature");
     assert_eq!(wt["is_valid"], true);
-    assert!(wt["path"].is_null(), "path field should not be exposed in API response");
+    assert!(
+        wt["path"].is_null(),
+        "path field should not be exposed in API response"
+    );
 }
 
 #[tokio::test]
