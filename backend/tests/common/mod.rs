@@ -104,6 +104,7 @@ async fn create_test_server_with_executor(
         preview_manager: None,
         github_client: None,
         output_buffer,
+        connection_counter: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         started_at: std::time::Instant::now(),
     };
 
