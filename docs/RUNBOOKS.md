@@ -26,8 +26,8 @@ sqlite3 ./data/gantry_board.db "VACUUM INTO './data/backups/manual_$(date +%Y%m%
 df -h /
 du -sh ./data/gantry_board.db ./data/gantry_board.db-wal ./data/backups/
 
-# Active agent sessions (via API)
-curl -s http://localhost:3000/api/agent-sessions | jq '.[].status'
+# Active agent sessions (via API — requires task_id)
+curl -s http://localhost:3000/api/tasks/<task-id>/sessions | jq '.[].status'
 
 # Worktree list
 curl -s http://localhost:3000/api/worktrees | jq '.[].name'
@@ -41,13 +41,13 @@ curl -s http://localhost:3000/api/worktrees | jq '.[].name'
 
 - カンバンボード上でタスクが「Running」のまま長時間動かない
 - サーバ再起動後に前回のセッションが残っている
-- `GET /api/agent-sessions` で `status: "running"` のセッションが存在するが、対応するプロセスが無い
+- `GET /api/tasks/{task_id}/sessions` で `status: "running"` のセッションが存在するが、対応するプロセスが無い
 
 ### Diagnosis
 
 ```bash
 # 実行中のセッション一覧
-curl -s http://localhost:3000/api/agent-sessions | jq '.[] | select(.status == "running")'
+curl -s http://localhost:3000/api/tasks/<task-id>/sessions | jq '.[] | select(.status == "running")'
 
 # 対応する PID が生きているか確認
 ps -p <PID> -o pid,comm,etime 2>/dev/null || echo "Process not found"
@@ -58,7 +58,7 @@ ps -p <PID> -o pid,comm,etime 2>/dev/null || echo "Process not found"
 サーバ起動時に自動リカバリが動作します（Issue #281 で実装済み）:
 
 1. `status = "running"` のセッションを検出
-2. `status = "crashed"` に更新
+2. `status = "failed"` に更新
 3. 関連する worktree をベストエフォートでクリーンアップ
 
 手動でリカバリする場合:
@@ -68,7 +68,7 @@ ps -p <PID> -o pid,comm,etime 2>/dev/null || echo "Process not found"
 systemctl restart gantry-board
 
 # もしくは API 経由でセッションを停止
-curl -X POST http://localhost:3000/api/agent-sessions/<session-id>/stop
+curl -X POST http://localhost:3000/api/tasks/<task-id>/sessions/<session-id>/stop
 ```
 
 ### Prevention
@@ -258,8 +258,11 @@ export GANTRY_DOCKER_HOST="unix:///path/to/custom/docker.sock"
 4. **TCP 経由の Docker 接続** (リモートホスト):
 
 ```bash
-export GANTRY_DOCKER_HOST="tcp://docker-host:2375"
+# TLS で保護されたリモート Docker デーモン (ポート 2376) を使用
+export GANTRY_DOCKER_HOST="tcp://docker-host:2376"
 ```
+
+> **Warning**: ポート 2375 のような平文・未認証の Docker TCP エンドポイントは、テスト用途以外では使用しないでください。本番環境では TLS + クライアント証明書認証を有効にしてください。
 
 ### Prevention
 
