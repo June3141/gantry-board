@@ -2,8 +2,8 @@ mod common;
 
 use axum::http::{header, StatusCode};
 use common::{
-    add_member, create_auth_test_server, create_auth_test_server_with_repo, create_project,
-    create_test_server, create_test_server_with_repo, register_user,
+    create_auth_test_server_with_repo, create_project, create_test_server,
+    create_test_server_with_repo, register_user,
 };
 use serde_json::json;
 
@@ -132,10 +132,10 @@ async fn test_worktree_endpoints_forbidden_for_non_member() {
 async fn test_worktree_endpoints_allowed_for_project_member() {
     let (_tmp, server) = create_auth_test_server_with_repo().await;
 
-    let (user_id, cookie) = register_user(&server, "member@test.com", "Member").await;
+    let (_user_id, cookie) = register_user(&server, "member@test.com", "Member").await;
 
     // Create a project and add the user as a member
-    let project_id = create_project(&server, &cookie, "Test Project").await;
+    let _project_id = create_project(&server, &cookie, "Test Project").await;
     // The creator is automatically an owner, so we already have membership
 
     // Worktree list should work
