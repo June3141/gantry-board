@@ -191,6 +191,9 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
     let assigned_to = req.assigned_to.or(existing.assigned_to);
     let position = req.position.unwrap_or(existing.position);
 
+    // Track status change for metrics
+    let status_changed = *status != existing.status;
+
     sqlx::query(
         r#"
         UPDATE tasks
@@ -211,6 +214,19 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
     .await?;
 
     tx.commit().await?;
+
+    // Record task status change metric after successful commit
+    if status_changed {
+        let status_label = serde_json::to_string(status)
+            .unwrap_or_else(|_| "unknown".to_string())
+            .trim_matches('"')
+            .to_string();
+        metrics::counter!(
+            crate::observability::metric::TASKS_TOTAL,
+            "status" => status_label,
+        )
+        .increment(1);
+    }
 
     Ok(Task {
         id,

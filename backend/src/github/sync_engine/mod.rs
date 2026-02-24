@@ -3,6 +3,7 @@ mod push;
 
 use sqlx::SqlitePool;
 use std::sync::Arc;
+use std::time::Instant;
 
 use super::api::GitHubApi;
 use crate::error::AppResult;
@@ -24,6 +25,8 @@ impl SyncEngine {
 
     /// Run a full sync for one project: ensure labels, push, pull, detect PRs, update last_synced.
     pub async fn sync_project(&self, link: &GitHubLink) -> AppResult<SyncResult> {
+        let sync_start = Instant::now();
+
         self.ensure_all_labels(&link.repo_owner, &link.repo_name)
             .await?;
 
@@ -47,10 +50,32 @@ impl SyncEngine {
         // Update last_synced_at
         github_link_service::update_last_synced(&self.pool, link.project_id).await?;
 
+        // Record sync duration metric
+        let duration_secs = sync_start.elapsed().as_secs_f64();
+        metrics::histogram!(crate::observability::metric::GITHUB_SYNC_DURATION)
+            .record(duration_secs);
+
+        // Record sync issues counters
+        if pushed > 0 {
+            metrics::counter!(
+                crate::observability::metric::GITHUB_SYNC_ISSUES_TOTAL,
+                "direction" => "push",
+            )
+            .increment(pushed as u64);
+        }
+        let pulled = pulled_created + pulled_updated;
+        if pulled > 0 {
+            metrics::counter!(
+                crate::observability::metric::GITHUB_SYNC_ISSUES_TOTAL,
+                "direction" => "pull",
+            )
+            .increment(pulled as u64);
+        }
+
         Ok(SyncResult {
             project_id: link.project_id,
             pushed,
-            pulled: pulled_created + pulled_updated,
+            pulled,
         })
     }
 

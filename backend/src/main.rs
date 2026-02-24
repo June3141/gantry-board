@@ -223,6 +223,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 _ => {}
             }
+            // Update DB pool connection metrics
+            gantry_board::observability::record_db_pool_metrics(&cleanup_pool);
         }
     });
 
