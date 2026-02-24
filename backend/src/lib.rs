@@ -324,6 +324,8 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             post(handlers::webhooks::github_webhook)
                 .layer(axum::extract::DefaultBodyLimit::max(25 * 1024 * 1024)),
         )
+        // Default body size limit: 2 MB (webhook keeps its own 25 MB limit above)
+        .layer(axum::extract::DefaultBodyLimit::max(2 * 1024 * 1024))
         .merge(
             SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
         )

@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::docker_preview::{CreatePreviewRequest, DockerPreview};
-use crate::services::{preview_repository, worktree_service};
+use crate::services::{authorization_service, preview_repository, worktree_service};
 use crate::sse::event::SseEvent;
 use crate::AppState;
 
@@ -23,9 +23,10 @@ use crate::AppState;
 )]
 pub async fn create_preview(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Json(body): Json<CreatePreviewRequest>,
 ) -> AppResult<(StatusCode, Json<DockerPreview>)> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     let worktree_name = body.worktree_name.trim().to_string();
 
     // Validate worktree exists
@@ -54,8 +55,9 @@ pub async fn create_preview(
 )]
 pub async fn list_previews(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
 ) -> AppResult<Json<Vec<DockerPreview>>> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     let previews = preview_repository::list_previews(&state.pool).await?;
     Ok(Json(previews))
 }
@@ -72,9 +74,10 @@ pub async fn list_previews(
 )]
 pub async fn get_preview(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<DockerPreview>> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     let preview = preview_repository::get_preview(&state.pool, id).await?;
     Ok(Json(preview))
 }
@@ -91,9 +94,10 @@ pub async fn get_preview(
 )]
 pub async fn delete_preview(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     // Cleanup container before deleting DB record (cleanup reads the record)
     if let Some(ref pm) = state.preview_manager {
         let _ = pm.cleanup(id).await;
@@ -118,9 +122,10 @@ pub async fn delete_preview(
 )]
 pub async fn start_preview(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     // Verify preview exists
     preview_repository::get_preview(&state.pool, id).await?;
 
@@ -150,9 +155,10 @@ pub async fn start_preview(
 )]
 pub async fn stop_preview(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<DockerPreview>> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     if let Some(ref pm) = state.preview_manager {
         let preview = pm.stop(id).await?;
         Ok(Json(preview))
@@ -185,9 +191,10 @@ pub async fn stop_preview(
 )]
 pub async fn restart_preview(
     State(state): State<AppState>,
-    _auth: AuthUser,
+    auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
+    authorization_service::require_any_project_membership(&state.pool, auth.user_id).await?;
     // Verify preview exists
     preview_repository::get_preview(&state.pool, id).await?;
 
