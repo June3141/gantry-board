@@ -101,6 +101,22 @@ pub struct Config {
     #[serde(default)]
     pub github_webhook_secret: Option<String>,
 
+    /// Enable automated SQLite backups (default: true)
+    #[serde(default = "default_backup_enabled")]
+    pub backup_enabled: bool,
+
+    /// Directory for SQLite backup files (default: "./data/backups")
+    #[serde(default = "default_backup_dir")]
+    pub backup_dir: String,
+
+    /// Backup interval in seconds (default: 86400 = 24h)
+    #[serde(default = "default_backup_interval_secs")]
+    pub backup_interval_secs: u64,
+
+    /// Number of backup files to retain (default: 7)
+    #[serde(default = "default_backup_retention_count")]
+    pub backup_retention_count: u32,
+
     /// Register rate limit: replenishment interval in seconds (default: 1200)
     #[serde(default = "default_register_rate_limit_per_second")]
     pub register_rate_limit_per_second: u64,
@@ -184,6 +200,22 @@ fn default_preview_base_url() -> String {
 
 fn default_github_sync_interval_secs() -> u64 {
     300 // 5 minutes
+}
+
+fn default_backup_enabled() -> bool {
+    true
+}
+
+fn default_backup_dir() -> String {
+    "./data/backups".to_string()
+}
+
+fn default_backup_interval_secs() -> u64 {
+    86400 // 24 hours
+}
+
+fn default_backup_retention_count() -> u32 {
+    7
 }
 
 fn default_register_rate_limit_per_second() -> u64 {
@@ -276,6 +308,20 @@ impl Config {
             }
         }
 
+        // Validate backup configuration
+        if self.backup_enabled {
+            if self.backup_retention_count == 0 {
+                return Err(ConfigError::RateLimiter(
+                    "backup_retention_count must be >= 1 to avoid deleting all backups".to_string(),
+                ));
+            }
+            if self.backup_dir.contains("..") {
+                return Err(ConfigError::RateLimiter(
+                    "backup_dir must not contain '..' path traversal sequences".to_string(),
+                ));
+            }
+        }
+
         Ok(())
     }
 
@@ -324,6 +370,10 @@ impl Default for Config {
             github_sync_interval_secs: default_github_sync_interval_secs(),
             allowed_hosts: Vec::new(),
             github_webhook_secret: None,
+            backup_enabled: default_backup_enabled(),
+            backup_dir: default_backup_dir(),
+            backup_interval_secs: default_backup_interval_secs(),
+            backup_retention_count: default_backup_retention_count(),
             register_rate_limit_per_second: default_register_rate_limit_per_second(),
             register_rate_limit_burst: default_register_rate_limit_burst(),
             login_rate_limit_per_second: default_login_rate_limit_per_second(),
@@ -484,6 +534,30 @@ mod tests {
         };
         let err = config.validate().unwrap_err();
         assert!(err.to_string().contains("rate limit"));
+    }
+
+    #[test]
+    fn test_backup_enabled_defaults_to_true() {
+        let config = Config::default();
+        assert!(config.backup_enabled);
+    }
+
+    #[test]
+    fn test_backup_dir_defaults_to_data_backups() {
+        let config = Config::default();
+        assert_eq!(config.backup_dir, "./data/backups");
+    }
+
+    #[test]
+    fn test_backup_interval_secs_defaults_to_86400() {
+        let config = Config::default();
+        assert_eq!(config.backup_interval_secs, 86400);
+    }
+
+    #[test]
+    fn test_backup_retention_count_defaults_to_7() {
+        let config = Config::default();
+        assert_eq!(config.backup_retention_count, 7);
     }
 
     #[test]
