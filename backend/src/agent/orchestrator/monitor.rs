@@ -1,12 +1,13 @@
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 use tracing::warn;
 use uuid::Uuid;
 
 use super::AgentOrchestrator;
 use crate::agent::executor::AgentOutputEvent;
-use crate::models::agent_session::{AgentSessionStatus, UpdateAgentSessionRequest};
+use crate::models::agent_session::{AgentSessionStatus, AgentType, UpdateAgentSessionRequest};
 use crate::services::agent_session_service;
 use crate::sse::event::SseEvent;
 
@@ -21,12 +22,14 @@ impl AgentOrchestrator {
         session_id: Uuid,
         repo_path: PathBuf,
         worktree_name: String,
+        agent_type: AgentType,
     ) -> tokio::task::JoinHandle<()> {
         let pool = self.pool.clone();
         let running = Arc::clone(&self.running);
         let sse_hub = Arc::clone(&self.sse_hub);
         let output_buffer = Arc::clone(&self.output_buffer);
         tokio::spawn(async move {
+            let session_start = Instant::now();
             // Track terminal event to determine final status
             let mut final_status = AgentSessionStatus::Completed;
             let mut sequence: i64 = 0;
@@ -92,6 +95,28 @@ impl AgentOrchestrator {
                     }
                 }
             }
+
+            // Record session duration histogram
+            let duration_secs = session_start.elapsed().as_secs_f64();
+            metrics::histogram!(crate::observability::metric::AGENT_SESSION_DURATION)
+                .record(duration_secs);
+
+            // Record session completion counter
+            let status_label = if cancel.is_cancelled() {
+                "cancelled"
+            } else {
+                match &final_status {
+                    AgentSessionStatus::Completed => "completed",
+                    AgentSessionStatus::Failed => "failed",
+                    _ => "unknown",
+                }
+            };
+            metrics::counter!(
+                crate::observability::metric::AGENT_SESSIONS_TOTAL,
+                "agent_type" => agent_type.to_string(),
+                "status" => status_label,
+            )
+            .increment(1);
 
             // Always cleanup worktree (both completion and cancellation)
             let rp = repo_path;

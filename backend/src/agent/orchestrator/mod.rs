@@ -162,6 +162,7 @@ impl AgentOrchestrator {
         }
 
         // Step 6: Start executor
+        let agent_type_for_metrics = req.agent_type.clone();
         let config = AgentConfig {
             agent_type: req.agent_type,
             session_id: session.id,
@@ -214,6 +215,7 @@ impl AgentOrchestrator {
             session.id,
             self.repo_path.clone(),
             worktree_name,
+            agent_type_for_metrics,
         );
 
         // Step 9: Register in running sessions map

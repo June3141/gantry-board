@@ -180,6 +180,17 @@ impl IntoResponse for AppError {
         let error_code = self.error_code();
         let message = self.user_message();
 
+        // Record error metric
+        let error_code_label = serde_json::to_string(&error_code)
+            .unwrap_or_else(|_| "UNKNOWN".to_string())
+            .trim_matches('"')
+            .to_string();
+        metrics::counter!(
+            crate::observability::metric::ERRORS_TOTAL,
+            "error_code" => error_code_label
+        )
+        .increment(1);
+
         let body = ErrorResponse {
             error: ErrorDetail {
                 code: error_code,

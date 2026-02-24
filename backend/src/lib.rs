@@ -305,6 +305,9 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
     let (prometheus_layer, _) = GenericMetricLayer::<'_, PrometheusHandle, Handle>::pair_from(
         Handle(metric_handle.clone()),
     );
+    // Seed custom business metrics after GenericMetricLayer is created
+    // (must happen after recorder setup is fully complete)
+    observability::init_metrics();
 
     Ok(Router::new()
         .route("/health", get(handlers::health::health_check))
@@ -334,21 +337,12 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             auth::host_check::validate_host_header,
         ))
         .layer(PropagateRequestIdLayer::x_request_id())
-        .layer(TraceLayer::new_for_http().make_span_with(
-            |request: &axum::http::Request<axum::body::Body>| {
-                let request_id = request
-                    .headers()
-                    .get("x-request-id")
-                    .and_then(|v| v.to_str().ok())
-                    .unwrap_or("-");
-                tracing::info_span!(
-                    "request",
-                    method = %request.method(),
-                    uri = %request.uri(),
-                    request_id = %request_id,
-                )
-            },
-        ))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(observability::AccessLogMakeSpan)
+                .on_response(observability::AccessLogOnResponse),
+        )
+        .layer(axum::middleware::from_fn(inject_request_path))
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .with_state(state))
 }
@@ -367,6 +361,20 @@ fn init_metrics() -> PrometheusHandle {
             handle
         })
         .clone()
+}
+
+/// Middleware that stores the request path in response extensions
+/// so that `AccessLogOnResponse` can determine log level based on path.
+async fn inject_request_path(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let path = request.uri().path().to_string();
+    let mut response = next.run(request).await;
+    response
+        .extensions_mut()
+        .insert(observability::RequestPath(path));
+    response
 }
 
 fn build_cors_layer(config: &config::Config) -> Result<CorsLayer, config::ConfigError> {

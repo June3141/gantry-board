@@ -25,9 +25,11 @@ pub mod metric {
     pub const DB_POOL_CONNECTIONS: &str = "gantry_db_pool_connections";
 }
 
-/// Register metric descriptions with the global recorder.
+/// Register metric descriptions with the global recorder and seed initial values
+/// so they appear in /metrics output immediately.
 /// Safe to call multiple times (idempotent).
 pub fn init_metrics() {
+    // Register descriptions
     metrics::describe_histogram!(
         metric::AGENT_SESSION_DURATION,
         metrics::Unit::Seconds,
@@ -52,6 +54,18 @@ pub fn init_metrics() {
         metric::DB_POOL_CONNECTIONS,
         "Number of database pool connections by state"
     );
+
+    // Seed initial zero values so metrics appear in /metrics output immediately.
+    // The Prometheus exporter only renders metrics that have been recorded at least once.
+    metrics::histogram!(metric::AGENT_SESSION_DURATION).record(0.0);
+    metrics::counter!(metric::AGENT_SESSIONS_TOTAL, "agent_type" => "init", "status" => "init")
+        .absolute(0);
+    metrics::counter!(metric::TASKS_TOTAL, "status" => "init").absolute(0);
+    metrics::counter!(metric::ERRORS_TOTAL, "error_code" => "init").absolute(0);
+    metrics::histogram!(metric::GITHUB_SYNC_DURATION).record(0.0);
+    metrics::counter!(metric::GITHUB_SYNC_ISSUES_TOTAL, "direction" => "init").absolute(0);
+    metrics::gauge!(metric::DB_POOL_CONNECTIONS, "state" => "active").set(0.0);
+    metrics::gauge!(metric::DB_POOL_CONNECTIONS, "state" => "idle").set(0.0);
 }
 
 /// Record DB pool connection metrics from an `SqlitePool`.
@@ -191,10 +205,7 @@ mod tests {
     fn test_on_response_health_endpoint_uses_debug() {
         // We test that on_response does not panic for health endpoints.
         let on_response = AccessLogOnResponse;
-        let mut resp = Response::builder()
-            .status(StatusCode::OK)
-            .body(())
-            .unwrap();
+        let mut resp = Response::builder().status(StatusCode::OK).body(()).unwrap();
         resp.extensions_mut()
             .insert(RequestPath("/health".to_string()));
 
@@ -205,10 +216,7 @@ mod tests {
     #[test]
     fn test_on_response_metrics_endpoint_uses_debug() {
         let on_response = AccessLogOnResponse;
-        let mut resp = Response::builder()
-            .status(StatusCode::OK)
-            .body(())
-            .unwrap();
+        let mut resp = Response::builder().status(StatusCode::OK).body(()).unwrap();
         resp.extensions_mut()
             .insert(RequestPath("/metrics".to_string()));
 
@@ -247,10 +255,7 @@ mod tests {
     #[test]
     fn test_on_response_2xx_uses_info() {
         let on_response = AccessLogOnResponse;
-        let mut resp = Response::builder()
-            .status(StatusCode::OK)
-            .body(())
-            .unwrap();
+        let mut resp = Response::builder().status(StatusCode::OK).body(()).unwrap();
         resp.extensions_mut()
             .insert(RequestPath("/api/tasks".to_string()));
 
@@ -262,10 +267,7 @@ mod tests {
     fn test_on_response_without_path_extension() {
         // When no RequestPath extension is present, should default to normal logging
         let on_response = AccessLogOnResponse;
-        let resp = Response::builder()
-            .status(StatusCode::OK)
-            .body(())
-            .unwrap();
+        let resp = Response::builder().status(StatusCode::OK).body(()).unwrap();
 
         let span = tracing::info_span!("test");
         on_response.on_response(&resp, std::time::Duration::from_millis(1), &span);
