@@ -337,12 +337,12 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             auth::host_check::validate_host_header,
         ))
         .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(axum::middleware::from_fn(inject_request_path))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(observability::AccessLogMakeSpan)
                 .on_response(observability::AccessLogOnResponse),
         )
-        .layer(axum::middleware::from_fn(inject_request_path))
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .with_state(state))
 }
