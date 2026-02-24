@@ -8,6 +8,7 @@ pub mod handlers;
 pub mod models;
 pub mod observability;
 pub mod openapi;
+pub mod repositories;
 pub mod services;
 pub mod sse;
 #[cfg(test)]
