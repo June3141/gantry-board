@@ -57,16 +57,11 @@ async fn test_worktree_response_does_not_contain_absolute_path() {
     response.assert_status(StatusCode::CREATED);
     let wt: serde_json::Value = response.json();
 
-    // The response should NOT have a "path" field at all,
-    // OR it should not start with "/" (no absolute path)
-    if let Some(path_val) = wt.get("path") {
-        if let Some(path_str) = path_val.as_str() {
-            assert!(
-                !path_str.starts_with('/'),
-                "WorktreeResponse should not contain absolute path, got: {path_str}"
-            );
-        }
-    }
+    // The path field should be absent (removed from WorktreeResponse)
+    assert!(
+        wt.get("path").is_none() || wt["path"].is_null(),
+        "WorktreeResponse should not contain path field"
+    );
 }
 
 /// Verify the list endpoint also doesn't leak absolute paths.
@@ -85,14 +80,10 @@ async fn test_worktree_list_does_not_contain_absolute_path() {
     let worktrees: Vec<serde_json::Value> = response.json();
 
     for wt in &worktrees {
-        if let Some(path_val) = wt.get("path") {
-            if let Some(path_str) = path_val.as_str() {
-                assert!(
-                    !path_str.starts_with('/'),
-                    "WorktreeResponse in list should not contain absolute path, got: {path_str}"
-                );
-            }
-        }
+        assert!(
+            wt.get("path").is_none() || wt["path"].is_null(),
+            "WorktreeResponse in list should not contain path field"
+        );
     }
 }
 
