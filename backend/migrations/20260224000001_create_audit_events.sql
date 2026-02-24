@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS audit_events (
     target_id TEXT,                     -- ID of the target resource
     metadata TEXT,                      -- JSON blob for additional context
     ip_address TEXT,                    -- client IP address
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
 -- Index for listing by time (DESC for most-recent-first)

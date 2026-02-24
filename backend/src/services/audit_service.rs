@@ -1,3 +1,4 @@
+use crate::error::AppResult;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -46,7 +47,7 @@ pub fn log_event(
     tokio::spawn(async move {
         let result = sqlx::query(
             "INSERT INTO audit_events (id, event_type, actor_id, target_type, target_id, metadata, ip_address)
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7)",
         )
         .bind(&id)
         .bind(&event_type)
@@ -70,17 +71,17 @@ pub async fn list_events(
     event_type_filter: Option<&str>,
     limit: i64,
     offset: i64,
-) -> Result<AuditLogResponse, sqlx::Error> {
+) -> AppResult<AuditLogResponse> {
     let (items, total) = if let Some(et) = event_type_filter {
         let total: (i64,) =
-            sqlx::query_as("SELECT COUNT(*) FROM audit_events WHERE event_type = ?")
+            sqlx::query_as("SELECT COUNT(*) FROM audit_events WHERE event_type = $1")
                 .bind(et)
                 .fetch_one(pool)
                 .await?;
 
         let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, String)>(
             "SELECT id, event_type, actor_id, target_type, target_id, metadata, ip_address, created_at
-             FROM audit_events WHERE event_type = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+             FROM audit_events WHERE event_type = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(et)
         .bind(limit)
@@ -96,7 +97,7 @@ pub async fn list_events(
 
         let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, String)>(
             "SELECT id, event_type, actor_id, target_type, target_id, metadata, ip_address, created_at
-             FROM audit_events ORDER BY created_at DESC LIMIT ? OFFSET ?",
+             FROM audit_events ORDER BY created_at DESC LIMIT $1 OFFSET $2",
         )
         .bind(limit)
         .bind(offset)
@@ -129,12 +130,9 @@ pub async fn list_events(
 }
 
 /// Delete audit events older than `retention_days`.
-pub async fn cleanup_old_events(
-    pool: &SqlitePool,
-    retention_days: u64,
-) -> Result<u64, sqlx::Error> {
+pub async fn cleanup_old_events(pool: &SqlitePool, retention_days: u64) -> AppResult<u64> {
     let result = sqlx::query(
-        "DELETE FROM audit_events WHERE created_at < datetime('now', '-' || ? || ' days')",
+        "DELETE FROM audit_events WHERE created_at < datetime('now', '-' || $1 || ' days')",
     )
     .bind(retention_days as i64)
     .execute(pool)
