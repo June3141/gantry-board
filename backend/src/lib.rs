@@ -239,13 +239,30 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             post(handlers::agent_sessions::restart_agent_session)
                 .layer(GovernorLayer::new(agent_restart_governor)),
         )
-        // Worktree endpoints
+        // Worktree endpoints (global, legacy)
         .route("/worktrees", get(handlers::worktrees::list_worktrees))
         .route("/worktrees", post(handlers::worktrees::create_worktree))
         .route("/worktrees/{name}", get(handlers::worktrees::get_worktree))
         .route(
             "/worktrees/{name}",
             delete(handlers::worktrees::delete_worktree),
+        )
+        // Worktree endpoints (project-scoped)
+        .route(
+            "/projects/{project_id}/worktrees",
+            get(handlers::worktrees::list_project_worktrees),
+        )
+        .route(
+            "/projects/{project_id}/worktrees",
+            post(handlers::worktrees::create_project_worktree),
+        )
+        .route(
+            "/projects/{project_id}/worktrees/{name}",
+            get(handlers::worktrees::get_project_worktree),
+        )
+        .route(
+            "/projects/{project_id}/worktrees/{name}",
+            delete(handlers::worktrees::delete_project_worktree),
         )
         // GitHub link endpoints
         .route(
