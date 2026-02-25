@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useRegister } from '@/api/generated/endpoints/auth/auth';
 import { useAuthStore } from '@/stores/authStore';
 
 export function RegisterPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect');
@@ -20,7 +22,7 @@ export function RegisterPage() {
     setError(null);
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('auth.passwordTooShort'));
       return;
     }
 
@@ -31,14 +33,16 @@ export function RegisterPage() {
       setUser(response.user);
       navigate(redirectTo ?? '/', { replace: true });
     } catch {
-      setError('Registration failed. The email may already be in use.');
+      setError(t('auth.registrationFailed'));
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h1 className="mb-6 text-center text-2xl font-bold text-gray-900">Create your account</h1>
+        <h1 className="mb-6 text-center text-2xl font-bold text-gray-900">
+          {t('auth.createAccount')}
+        </h1>
 
         {error && (
           <div
@@ -52,7 +56,7 @@ export function RegisterPage() {
         <form onSubmit={handleSubmit} data-testid="register-form" className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-              Name
+              {t('auth.name')}
             </label>
             <input
               id="name"
@@ -61,13 +65,13 @@ export function RegisterPage() {
               onChange={(e) => setName(e.target.value)}
               required
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="Your name"
+              placeholder={t('auth.namePlaceholder')}
             />
           </div>
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
+              {t('auth.email')}
             </label>
             <input
               id="email"
@@ -76,13 +80,13 @@ export function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
             />
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
+              {t('auth.password')}
             </label>
             <input
               id="password"
@@ -92,7 +96,7 @@ export function RegisterPage() {
               required
               minLength={8}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="At least 8 characters"
+              placeholder={t('auth.passwordMinLength')}
             />
           </div>
 
@@ -101,17 +105,17 @@ export function RegisterPage() {
             disabled={register.isPending}
             className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {register.isPending ? 'Creating account...' : 'Create account'}
+            {register.isPending ? t('auth.creatingAccount') : t('auth.createAccountBtn')}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-600">
-          Already have an account?{' '}
+          {t('auth.hasAccount')}{' '}
           <Link
             to={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login'}
             className="text-blue-600 hover:text-blue-500"
           >
-            Sign in
+            {t('auth.signIn')}
           </Link>
         </p>
       </div>
