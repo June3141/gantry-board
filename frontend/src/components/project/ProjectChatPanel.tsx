@@ -197,9 +197,7 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
               ))}
             </div>
           ) : (
-            <p className="py-8 text-center text-sm text-gray-500">
-              {t('chat.noMessages')}
-            </p>
+            <p className="py-8 text-center text-sm text-gray-500">{t('chat.noMessages')}</p>
           )}
         </div>
 

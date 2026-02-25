@@ -45,7 +45,10 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
     try {
       const result = await syncLink.mutateAsync({ projectId });
       await invalidate();
-      addToast('success', t('github.syncComplete', { pushed: result.pushed, pulled: result.pulled }));
+      addToast(
+        'success',
+        t('github.syncComplete', { pushed: result.pushed, pulled: result.pulled }),
+      );
     } catch {
       addToast('error', t('github.syncFailed'));
     }

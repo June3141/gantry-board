@@ -206,7 +206,9 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
 
         {canManage && (
           <div className="mt-4 border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-700">{t('members.addExistingUser')}</h3>
+            <h3 className="mb-2 text-sm font-medium text-gray-700">
+              {t('members.addExistingUser')}
+            </h3>
             <div className="relative">
               <input
                 type="text"
@@ -342,7 +344,9 @@ function InvitationSection({ projectId }: { projectId: string }) {
                   <p className={`text-xs ${isExpired ? 'text-red-500' : 'text-gray-400'}`}>
                     {isExpired
                       ? t('members.expired')
-                      : t('members.expires', { date: new Date(inv.expires_at).toLocaleDateString() })}
+                      : t('members.expires', {
+                          date: new Date(inv.expires_at).toLocaleDateString(),
+                        })}
                   </p>
                 </div>
                 <button
