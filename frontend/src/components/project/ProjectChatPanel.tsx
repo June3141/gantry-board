@@ -13,17 +13,20 @@ import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import { useUiStore } from '@/stores/uiStore';
 
-function timeAgo(dateStr: string): string {
+function timeAgo(
+  dateStr: string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diffSec = Math.floor((now - then) / 1000);
-  if (diffSec < 60) return 'just now';
+  if (diffSec < 60) return t('common.timeAgo.justNow');
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} min ago`;
+  if (diffMin < 60) return t('common.timeAgo.minutesAgo', { count: diffMin });
   const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffHr < 24) return t('common.timeAgo.hoursAgo', { count: diffHr });
   const diffDay = Math.floor(diffHr / 24);
-  return `${diffDay}d ago`;
+  return t('common.timeAgo.daysAgo', { count: diffDay });
 }
 
 function MessageItem({
@@ -76,7 +79,7 @@ function MessageItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-900">{message.user_name}</span>
-          <span className="text-xs text-gray-500">{timeAgo(message.created_at)}</span>
+          <span className="text-xs text-gray-500">{timeAgo(message.created_at, t)}</span>
           {isOwner && !showDeleteConfirm && (
             <button
               type="button"
