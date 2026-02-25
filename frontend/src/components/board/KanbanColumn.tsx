@@ -1,4 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
+import { Plus } from 'lucide-react';
 import type { ProjectMember, Task } from '@/api/generated/model';
 import { TaskStatus } from '@/api/generated/model';
 import { useUiStore } from '@/stores/uiStore';
@@ -70,9 +71,9 @@ export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanCol
         <button
           type="button"
           onClick={() => openTaskModal(status)}
-          className="w-full rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+          className="flex w-full items-center justify-center gap-1 rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700"
         >
-          + Add Task
+          <Plus className="h-4 w-4" /> Add Task
         </button>
       </div>
     </div>
