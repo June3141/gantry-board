@@ -64,7 +64,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
         });
       }
     } catch {
-      setError(t('task.updateFailed', { field }));
+      setError(t('task.updateFailed', { field: t(`task.${field}`) }));
     } finally {
       setEditingField(null);
     }
@@ -102,7 +102,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
       });
       invalidateTasks(queryClient);
     } catch {
-      setError(t('task.updateFailed', { field }));
+      setError(t('task.updateFailed', { field: t(`task.${field}`) }));
     }
   };
 

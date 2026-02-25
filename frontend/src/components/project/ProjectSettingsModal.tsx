@@ -94,10 +94,14 @@ function ProjectSettingsContent({
         queryClient.invalidateQueries({
           queryKey: getGetProjectQueryKey(projectId),
         });
-        addToast('success', t('project.fieldUpdated', { field }));
+        const fieldLabelKey =
+          field === 'repository_path' ? 'project.repositoryPath' : `project.${field}`;
+        addToast('success', t('project.fieldUpdated', { field: t(fieldLabelKey) }));
       }
     } catch {
-      addToast('error', t('project.fieldUpdateFailed', { field }));
+      const fieldLabelKey =
+        field === 'repository_path' ? 'project.repositoryPath' : `project.${field}`;
+      addToast('error', t('project.fieldUpdateFailed', { field: t(fieldLabelKey) }));
     } finally {
       setEditingField(null);
     }

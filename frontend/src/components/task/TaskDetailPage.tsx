@@ -57,7 +57,7 @@ export function TaskDetailPage() {
         invalidateTasks(queryClient);
       }
     } catch {
-      setError(t('task.updateFailed', { field }));
+      setError(t('task.updateFailed', { field: t(`task.${field}`) }));
     } finally {
       setEditingField(null);
     }
@@ -101,7 +101,7 @@ export function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: getGetTaskQueryKey(taskId) });
       invalidateTasks(queryClient);
     } catch {
-      setError(t('task.updateFailed', { field }));
+      setError(t('task.updateFailed', { field: t(`task.${field}`) }));
     }
   };
 
