@@ -5,10 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from './App';
 import * as authApi from './api/generated/endpoints/auth/auth';
-import * as membersApi from './api/generated/endpoints/project-members/project-members';
 import * as projectsApi from './api/generated/endpoints/projects/projects';
-import * as tasksApi from './api/generated/endpoints/tasks/tasks';
-import * as usersApi from './api/generated/endpoints/users/users';
 import { useAuthStore } from './stores/authStore';
 import { useUiStore } from './stores/uiStore';
 
@@ -28,25 +25,7 @@ vi.mock('./api/generated/endpoints/projects/projects', () => ({
   useUpdateProject: vi.fn(),
   useDeleteProject: vi.fn(),
   getListProjectsQueryKey: vi.fn(() => ['/api/projects']),
-}));
-
-vi.mock('./api/generated/endpoints/project-members/project-members', () => ({
-  useListMembers: vi.fn(),
-  useAddMember: vi.fn(),
-  useUpdateMember: vi.fn(),
-  useRemoveMember: vi.fn(),
-  getListMembersQueryKey: vi.fn(() => ['/api/projects/members']),
-}));
-
-vi.mock('./api/generated/endpoints/users/users', () => ({
-  useSearchUsers: vi.fn(),
-}));
-
-vi.mock('./api/generated/endpoints/tasks/tasks', () => ({
-  useListTasks: vi.fn(),
-  useUpdateTask: vi.fn(),
-  useCreateTask: vi.fn(),
-  getListTasksQueryKey: vi.fn(() => ['/api/tasks']),
+  getGetProjectQueryKey: vi.fn(() => ['/api/projects']),
 }));
 
 vi.mock('./api/generated/endpoints/auth/auth', () => ({
@@ -78,80 +57,32 @@ const renderWithProviders = (ui: React.ReactElement, { route = '/' } = {}) => {
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset auth store
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
       isLoading: false,
     });
-    // Mock useMe to not fetch by default
     vi.mocked(authApi.useMe).mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: false,
     } as ReturnType<typeof authApi.useMe>);
-    // Mock useLogout
     vi.mocked(authApi.useLogout).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof authApi.useLogout>);
-    // Mock useLogin
     vi.mocked(authApi.useLogin).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof authApi.useLogin>);
-    // Mock useRegister
     vi.mocked(authApi.useRegister).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof authApi.useRegister>);
-    // Mock useCreateProject
     vi.mocked(projectsApi.useCreateProject).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof projectsApi.useCreateProject>);
-    // Mock useCreateTask
-    vi.mocked(tasksApi.useCreateTask).mockReturnValue({
-      mutateAsync: vi.fn(),
-      isPending: false,
-    } as unknown as ReturnType<typeof tasksApi.useCreateTask>);
-    // Mock project detail hooks
-    vi.mocked(projectsApi.useGetProject).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: false,
-    } as unknown as ReturnType<typeof projectsApi.useGetProject>);
-    vi.mocked(projectsApi.useUpdateProject).mockReturnValue({
-      mutateAsync: vi.fn(),
-      isPending: false,
-    } as unknown as ReturnType<typeof projectsApi.useUpdateProject>);
-    vi.mocked(projectsApi.useDeleteProject).mockReturnValue({
-      mutateAsync: vi.fn(),
-      isPending: false,
-    } as unknown as ReturnType<typeof projectsApi.useDeleteProject>);
-    // Mock member hooks
-    vi.mocked(membersApi.useListMembers).mockReturnValue({
-      data: [],
-      isLoading: false,
-    } as unknown as ReturnType<typeof membersApi.useListMembers>);
-    vi.mocked(membersApi.useAddMember).mockReturnValue({
-      mutateAsync: vi.fn(),
-      isPending: false,
-    } as unknown as ReturnType<typeof membersApi.useAddMember>);
-    vi.mocked(membersApi.useUpdateMember).mockReturnValue({
-      mutateAsync: vi.fn(),
-      isPending: false,
-    } as unknown as ReturnType<typeof membersApi.useUpdateMember>);
-    vi.mocked(membersApi.useRemoveMember).mockReturnValue({
-      mutateAsync: vi.fn(),
-      isPending: false,
-    } as unknown as ReturnType<typeof membersApi.useRemoveMember>);
-    // Mock user search
-    vi.mocked(usersApi.useSearchUsers).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as unknown as ReturnType<typeof usersApi.useSearchUsers>);
-    // Reset ui store
     useUiStore.setState({
       isTaskModalOpen: false,
       defaultStatus: null,
@@ -170,7 +101,6 @@ describe('App', () => {
 
       renderWithProviders(<AppRoutes />);
 
-      // Should show login page
       expect(screen.getByText('Sign in to Gantry Board')).toBeInTheDocument();
     });
   });
@@ -212,7 +142,7 @@ describe('App', () => {
       expect(screen.getByText('Gantry Board')).toBeInTheDocument();
     });
 
-    it('renders project selector', () => {
+    it('renders project list page with project cards', () => {
       vi.mocked(projectsApi.useListProjects).mockReturnValue({
         data: {
           data: [
@@ -228,12 +158,11 @@ describe('App', () => {
 
       renderWithProviders(<AppRoutes />);
 
-      expect(screen.getByLabelText('Project:')).toBeInTheDocument();
       expect(screen.getByText('Project One')).toBeInTheDocument();
       expect(screen.getByText('Project Two')).toBeInTheDocument();
     });
 
-    it('shows placeholder when no project is selected', () => {
+    it('shows empty state when no projects', () => {
       vi.mocked(projectsApi.useListProjects).mockReturnValue({
         data: { data: [], total: 0, limit: 50, offset: 0 },
         isLoading: false,
@@ -241,7 +170,7 @@ describe('App', () => {
 
       renderWithProviders(<AppRoutes />);
 
-      expect(screen.getByText('Select a project to view its tasks')).toBeInTheDocument();
+      expect(screen.getByText(/no projects/i)).toBeInTheDocument();
     });
 
     it('shows user name and logout button', () => {
@@ -253,7 +182,7 @@ describe('App', () => {
       renderWithProviders(<AppRoutes />);
 
       expect(screen.getByText('Test User')).toBeInTheDocument();
-      expect(screen.getByText('Logout')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
     });
 
     it('renders new project button', () => {
@@ -275,7 +204,7 @@ describe('App', () => {
       } as ReturnType<typeof projectsApi.useListProjects>);
 
       renderWithProviders(<AppRoutes />);
-      await user.click(screen.getByRole('button', { name: /new project/i }));
+      await user.click(screen.getAllByRole('button', { name: /new project/i })[0]);
 
       expect(useUiStore.getState().isProjectModalOpen).toBe(true);
     });

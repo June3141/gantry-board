@@ -1,158 +1,25 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { FolderPlus, LogOut, MessageSquare, Settings, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { useLogout, useMe } from '@/api/generated/endpoints/auth/auth';
-import { useListProjects } from '@/api/generated/endpoints/projects/projects';
-import { KanbanBoard } from '@/components/board';
+import { useMe } from '@/api/generated/endpoints/auth/auth';
+import { ProjectBoardPage } from '@/components/board';
 import { ErrorBoundary, ToastContainer } from '@/components/common';
 import {
+  AppLayout,
   GuestRoute,
   InvitationAcceptPage,
   LoginPage,
   ProtectedRoute,
   RegisterPage,
 } from '@/components/layout';
-import {
-  ProjectChatPanel,
-  ProjectCreateDialog,
-  ProjectMembersPanel,
-  ProjectSettingsModal,
-} from '@/components/project';
-import { TaskCreateDialog, TaskDetailModal } from '@/components/task';
-import { connectEventSource } from '@/hooks/useEventSource';
+import { ProjectCreateDialog, ProjectListPage } from '@/components/project';
+import { TaskDetailPage } from '@/components/task';
 import { useAuthStore } from '@/stores/authStore';
-import { useUiStore } from '@/stores/uiStore';
-
-function KanbanApp() {
-  const queryClient = useQueryClient();
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const { data: projects, isLoading: projectsLoading } = useListProjects();
-  const user = useAuthStore((state) => state.user);
-  const logout = useLogout();
-  const setUser = useAuthStore((state) => state.setUser);
-  const openProjectModal = useUiStore((s) => s.openProjectModal);
-  const openProjectSettings = useUiStore((s) => s.openProjectSettings);
-  const openProjectMembers = useUiStore((s) => s.openProjectMembers);
-  const openProjectChat = useUiStore((s) => s.openProjectChat);
-
-  // Connect to real-time updates (WebSocket with SSE fallback)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: queryClient is stable from provider
-  useEffect(() => {
-    const cleanup = connectEventSource(queryClient);
-    return cleanup;
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await logout.mutateAsync();
-      setUser(null);
-    } catch {
-      // If logout fails on server, still clear local state
-      setUser(null);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">Gantry Board</h1>
-          <div className="flex items-center gap-4">
-            <label htmlFor="project-select" className="text-sm font-medium text-gray-700">
-              Project:
-            </label>
-            <select
-              id="project-select"
-              value={selectedProjectId ?? ''}
-              onChange={(e) => setSelectedProjectId(e.target.value || null)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              disabled={projectsLoading}
-            >
-              <option value="">Select a project...</option>
-              {projects?.data?.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={openProjectModal}
-              className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-            >
-              <FolderPlus className="h-4 w-4" /> New Project
-            </button>
-            {selectedProjectId && (
-              <>
-                <button
-                  type="button"
-                  onClick={openProjectSettings}
-                  className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <Settings className="h-4 w-4" /> Settings
-                </button>
-                <button
-                  type="button"
-                  onClick={openProjectMembers}
-                  className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <Users className="h-4 w-4" /> Members
-                </button>
-                <button
-                  type="button"
-                  onClick={openProjectChat}
-                  className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <MessageSquare className="h-4 w-4" /> Project Chat
-                </button>
-              </>
-            )}
-
-            <div className="flex items-center gap-2 border-l pl-4">
-              <span className="text-sm text-gray-600">{user?.name ?? user?.email}</span>
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={logout.isPending}
-                className="flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
-              >
-                <LogOut className="h-4 w-4" /> Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-      <main>
-        {selectedProjectId ? (
-          <KanbanBoard projectId={selectedProjectId} />
-        ) : (
-          <div className="flex items-center justify-center p-12">
-            <p className="text-gray-500">Select a project to view its tasks</p>
-          </div>
-        )}
-      </main>
-      <ProjectCreateDialog />
-      {selectedProjectId && <TaskCreateDialog projectId={selectedProjectId} />}
-      <TaskDetailModal />
-      {selectedProjectId && (
-        <ProjectSettingsModal
-          projectId={selectedProjectId}
-          onProjectDeleted={() => setSelectedProjectId(null)}
-        />
-      )}
-      {selectedProjectId && <ProjectMembersPanel projectId={selectedProjectId} />}
-      {selectedProjectId && <ProjectChatPanel projectId={selectedProjectId} />}
-    </div>
-  );
-}
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const setUser = useAuthStore((state) => state.setUser);
   const setLoading = useAuthStore((state) => state.setLoading);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  // Only fetch /me if we think we're authenticated (from persisted state)
   const {
     data: user,
     isLoading,
@@ -167,10 +34,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isAuthenticated) {
       if (isLoading) {
-        // Keep loading while /me query is in-flight
         setLoading(true);
       } else if (isError) {
-        // Session expired or invalid
         setUser(null);
       } else if (user) {
         setUser(user);
@@ -207,15 +72,19 @@ export function AppRoutes() {
         />
         <Route path="/invite/:token" element={<InvitationAcceptPage />} />
         <Route
-          path="/"
           element={
             <ProtectedRoute>
-              <KanbanApp />
+              <AppLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<ProjectListPage />} />
+          <Route path="projects/:projectId" element={<ProjectBoardPage />} />
+          <Route path="projects/:projectId/tasks/:taskId" element={<TaskDetailPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <ProjectCreateDialog />
     </AuthProvider>
   );
 }
