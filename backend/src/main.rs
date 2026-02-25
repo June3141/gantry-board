@@ -12,7 +12,8 @@ use gantry_board::db;
 use gantry_board::models::agent_session::AgentType;
 use gantry_board::services::preview_service::PreviewManager;
 use gantry_board::services::{
-    agent_session_output_service, agent_session_service, backup_service, session_service,
+    agent_session_output_service, agent_session_service, audit_service, backup_service,
+    session_service,
 };
 use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
@@ -118,6 +119,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cleanup_pool = pool.clone();
     let cleanup_orchestrator = Arc::clone(&orchestrator);
     let output_retention_days = config.output_retention_days;
+    let audit_retention_days = config.audit_retention_days;
+    let cleanup_database_url = config.database_url.clone();
 
     let preview_manager = match PreviewManager::new(
         Arc::new(config.clone()),
@@ -225,8 +228,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 _ => {}
             }
+            // Cleanup old audit events
+            match audit_service::cleanup_old_events(&cleanup_pool, audit_retention_days).await {
+                Ok(count) if count > 0 => {
+                    tracing::info!(count, "cleaned up old audit events");
+                }
+                Err(e) => {
+                    tracing::debug!(error = %e, "audit cleanup error details");
+                    tracing::error!("failed to cleanup old audit events");
+                }
+                _ => {}
+            }
+
             // Update DB pool connection metrics
             gantry_board::observability::record_db_pool_metrics(&cleanup_pool);
+
+            // DB file size metrics
+            gantry_board::observability::record_db_file_metrics(&cleanup_database_url);
+
+            // WAL checkpoint + PRAGMA optimize
+            gantry_board::observability::run_db_maintenance(&cleanup_pool).await;
 
             // Periodic task_locks cleanup to prevent unbounded growth
             cleanup_orchestrator.cleanup_task_locks().await;

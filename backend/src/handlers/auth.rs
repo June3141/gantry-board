@@ -7,7 +7,7 @@ use garde::Validate;
 use crate::auth::middleware::{create_session_cookie, delete_session_cookie, AuthUser};
 use crate::error::{AppError, AppResult};
 use crate::models::user::{AuthResponse, LoginRequest, RegisterRequest, User};
-use crate::services::{session_service, user_service};
+use crate::services::{audit_service, session_service, user_service};
 use crate::AppState;
 
 #[utoipa::path(
@@ -57,6 +57,16 @@ pub async fn register(
 
     let response = AuthResponse { user };
 
+    audit_service::log_event(
+        state.pool.clone(),
+        "auth.register",
+        Some(&response.user.id.to_string()),
+        Some("user"),
+        Some(&response.user.id.to_string()),
+        None,
+        None,
+    );
+
     Ok((
         StatusCode::CREATED,
         [(header::SET_COOKIE, cookie)],
@@ -101,6 +111,16 @@ pub async fn login(
 
     let response = AuthResponse { user };
 
+    audit_service::log_event(
+        state.pool.clone(),
+        "auth.login",
+        Some(&response.user.id.to_string()),
+        Some("user"),
+        Some(&response.user.id.to_string()),
+        None,
+        None,
+    );
+
     Ok((
         StatusCode::OK,
         [(header::SET_COOKIE, cookie)],
@@ -120,6 +140,16 @@ pub async fn login(
 pub async fn logout(State(state): State<AppState>, auth: AuthUser) -> AppResult<impl IntoResponse> {
     // Delete session from database
     session_service::delete_session(&state.pool, auth.session_id).await?;
+
+    audit_service::log_event(
+        state.pool.clone(),
+        "auth.logout",
+        Some(&auth.user_id.to_string()),
+        Some("user"),
+        Some(&auth.user_id.to_string()),
+        None,
+        None,
+    );
 
     // Clear cookie
     let cookie = delete_session_cookie(state.config.cookie_secure);

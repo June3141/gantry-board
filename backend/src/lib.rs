@@ -285,6 +285,9 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
             "/previews/{id}/restart",
             post(handlers::previews::restart_preview),
         )
+        // Admin endpoints
+        .route("/admin/status", get(handlers::admin::admin_status))
+        .route("/admin/audit-log", get(handlers::admin::audit_log))
         // CSRF protection: require X-Requested-With header on state-changing requests
         .layer(axum::middleware::from_fn(auth::csrf::csrf_check))
         // General API rate limit applied to all routes

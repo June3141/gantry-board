@@ -23,6 +23,10 @@ pub mod metric {
     pub const GITHUB_SYNC_ISSUES_TOTAL: &str = "gantry_github_sync_issues_total";
     /// Gauge: DB pool connections (labels: state).
     pub const DB_POOL_CONNECTIONS: &str = "gantry_db_pool_connections";
+    /// Gauge: WAL file size in bytes.
+    pub const DB_WAL_SIZE_BYTES: &str = "gantry_db_wal_size_bytes";
+    /// Gauge: main DB file size in bytes.
+    pub const DB_SIZE_BYTES: &str = "gantry_db_size_bytes";
 }
 
 /// Register metric descriptions with the global recorder and seed initial values
@@ -66,6 +70,18 @@ pub fn init_metrics() {
     metrics::counter!(metric::GITHUB_SYNC_ISSUES_TOTAL, "direction" => "init").absolute(0);
     metrics::gauge!(metric::DB_POOL_CONNECTIONS, "state" => "active").set(0.0);
     metrics::gauge!(metric::DB_POOL_CONNECTIONS, "state" => "idle").set(0.0);
+    metrics::describe_gauge!(
+        metric::DB_WAL_SIZE_BYTES,
+        metrics::Unit::Bytes,
+        "Size of the SQLite WAL file in bytes"
+    );
+    metrics::describe_gauge!(
+        metric::DB_SIZE_BYTES,
+        metrics::Unit::Bytes,
+        "Size of the main SQLite database file in bytes"
+    );
+    metrics::gauge!(metric::DB_WAL_SIZE_BYTES).set(0.0);
+    metrics::gauge!(metric::DB_SIZE_BYTES).set(0.0);
 }
 
 /// Record DB pool connection metrics from an `SqlitePool`.
@@ -75,6 +91,46 @@ pub fn record_db_pool_metrics(pool: &sqlx::SqlitePool) {
     let active = size - idle;
     metrics::gauge!(metric::DB_POOL_CONNECTIONS, "state" => "active").set(active);
     metrics::gauge!(metric::DB_POOL_CONNECTIONS, "state" => "idle").set(idle);
+}
+
+/// Record DB file size metrics from the database URL.
+/// Extracts the file path from the `sqlite:` URL and reports main DB + WAL sizes.
+pub fn record_db_file_metrics(database_url: &str) {
+    let path = database_url
+        .strip_prefix("sqlite:")
+        .unwrap_or(database_url)
+        .split('?')
+        .next()
+        .unwrap_or(database_url);
+
+    if let Ok(meta) = std::fs::metadata(path) {
+        metrics::gauge!(metric::DB_SIZE_BYTES).set(meta.len() as f64);
+    }
+
+    let wal_path = format!("{}-wal", path);
+    match std::fs::metadata(&wal_path) {
+        Ok(meta) => metrics::gauge!(metric::DB_WAL_SIZE_BYTES).set(meta.len() as f64),
+        Err(_) => metrics::gauge!(metric::DB_WAL_SIZE_BYTES).set(0.0),
+    }
+}
+
+/// Run SQLite WAL checkpoint (PASSIVE) and PRAGMA optimize.
+/// Returns Ok(()) on success; errors are logged but not fatal.
+pub async fn run_db_maintenance(pool: &sqlx::SqlitePool) {
+    // WAL checkpoint (PASSIVE mode — does not block writers)
+    match sqlx::query("PRAGMA wal_checkpoint(PASSIVE)")
+        .execute(pool)
+        .await
+    {
+        Ok(_) => tracing::debug!("WAL checkpoint (PASSIVE) completed"),
+        Err(e) => tracing::warn!(error = %e, "WAL checkpoint failed"),
+    }
+
+    // PRAGMA optimize — lets SQLite update internal statistics
+    match sqlx::query("PRAGMA optimize").execute(pool).await {
+        Ok(_) => tracing::debug!("PRAGMA optimize completed"),
+        Err(e) => tracing::warn!(error = %e, "PRAGMA optimize failed"),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -286,6 +342,8 @@ mod tests {
         assert!(metric::GITHUB_SYNC_DURATION.starts_with("gantry_"));
         assert!(metric::GITHUB_SYNC_ISSUES_TOTAL.starts_with("gantry_"));
         assert!(metric::DB_POOL_CONNECTIONS.starts_with("gantry_"));
+        assert!(metric::DB_WAL_SIZE_BYTES.starts_with("gantry_"));
+        assert!(metric::DB_SIZE_BYTES.starts_with("gantry_"));
 
         // Counters should end with _total
         assert!(metric::AGENT_SESSIONS_TOTAL.ends_with("_total"));
@@ -296,6 +354,10 @@ mod tests {
         // Histograms should have unit suffix
         assert!(metric::AGENT_SESSION_DURATION.ends_with("_seconds"));
         assert!(metric::GITHUB_SYNC_DURATION.ends_with("_seconds"));
+
+        // Gauges with byte unit should end with _bytes
+        assert!(metric::DB_WAL_SIZE_BYTES.ends_with("_bytes"));
+        assert!(metric::DB_SIZE_BYTES.ends_with("_bytes"));
     }
 
     // -----------------------------------------------------------------------
@@ -311,6 +373,30 @@ mod tests {
 
         // Should not panic
         record_db_pool_metrics(&pool);
+    }
+
+    // -----------------------------------------------------------------------
+    // DB maintenance: WAL checkpoint + PRAGMA optimize
+    // -----------------------------------------------------------------------
+    #[tokio::test]
+    async fn test_run_db_maintenance_does_not_panic() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(2)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        // Should not panic
+        run_db_maintenance(&pool).await;
+    }
+
+    // -----------------------------------------------------------------------
+    // DB file metrics: record_db_file_metrics with non-existent path
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_record_db_file_metrics_with_nonexistent_path() {
+        // Should not panic even with a nonexistent path
+        record_db_file_metrics("sqlite:/tmp/nonexistent_test_db_12345.db");
     }
 
     // -----------------------------------------------------------------------

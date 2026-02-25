@@ -1,5 +1,6 @@
 pub mod agent_session_output_service;
 pub mod agent_session_service;
+pub mod audit_service;
 pub mod authorization_service;
 pub mod backup_service;
 pub mod github_link_service;
