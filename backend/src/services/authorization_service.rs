@@ -184,6 +184,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Test Project".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -232,6 +233,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Test".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -251,6 +253,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Test".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -297,6 +300,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Test".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -334,6 +338,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Test".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -355,6 +360,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Project 1".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -364,6 +370,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Project 2".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -374,6 +381,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Project 3".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -493,6 +501,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Test".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -522,6 +531,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Test".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await
@@ -574,6 +584,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Test".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await

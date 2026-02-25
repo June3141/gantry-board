@@ -192,6 +192,7 @@ mod tests {
             &CreateProjectRequest {
                 name: "Test Project".to_string(),
                 description: None,
+                repository_path: None,
             },
         )
         .await

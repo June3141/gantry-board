@@ -11,6 +11,8 @@ struct ProjectRow {
     id: String,
     name: String,
     description: Option<String>,
+    #[sqlx(default)]
+    repository_path: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
@@ -23,6 +25,7 @@ impl TryFrom<ProjectRow> for Project {
             id: row.id.parse()?,
             name: row.name,
             description: row.description,
+            repository_path: row.repository_path,
             created_at: row.created_at,
             updated_at: row.updated_at,
         })
@@ -52,6 +55,7 @@ pub async fn create_project(pool: &SqlitePool, req: &CreateProjectRequest) -> Ap
         id,
         name: req.name.clone(),
         description: req.description.clone(),
+        repository_path: None,
         created_at: now,
         updated_at: now,
     })
@@ -223,9 +227,17 @@ pub async fn update_project(
         id,
         name: name.clone(),
         description: description.cloned(),
+        repository_path: None,
         created_at: existing.created_at,
         updated_at: now,
     })
+}
+
+/// Validate that a repository path points to a valid git repository.
+pub fn validate_repository_path(path: &str) -> AppResult<()> {
+    let _ = path;
+    // TODO: implement validation
+    Ok(())
 }
 
 #[tracing::instrument(skip(pool), fields(project_id = %id))]
@@ -258,6 +270,7 @@ mod tests {
         let req = CreateProjectRequest {
             name: "Test Project".to_string(),
             description: Some("A test project".to_string()),
+            repository_path: None,
         };
 
         let project = create_project(&pool, &req)
@@ -275,6 +288,7 @@ mod tests {
         let req = CreateProjectRequest {
             name: "Test Project".to_string(),
             description: None,
+            repository_path: None,
         };
         let created = create_project(&pool, &req)
             .await
@@ -313,10 +327,12 @@ mod tests {
         let req1 = CreateProjectRequest {
             name: "Project 1".to_string(),
             description: None,
+            repository_path: None,
         };
         let req2 = CreateProjectRequest {
             name: "Project 2".to_string(),
             description: None,
+            repository_path: None,
         };
         create_project(&pool, &req1)
             .await
@@ -340,6 +356,7 @@ mod tests {
                 &CreateProjectRequest {
                     name: format!("Project {}", i),
                     description: None,
+                    repository_path: None,
                 },
             )
             .await
@@ -364,6 +381,7 @@ mod tests {
                 &CreateProjectRequest {
                     name: format!("Project {}", i),
                     description: None,
+                    repository_path: None,
                 },
             )
             .await
@@ -384,6 +402,7 @@ mod tests {
         let req = CreateProjectRequest {
             name: "Original Name".to_string(),
             description: None,
+            repository_path: None,
         };
         let created = create_project(&pool, &req)
             .await
@@ -392,6 +411,7 @@ mod tests {
         let update_req = UpdateProjectRequest {
             name: Some("Updated Name".to_string()),
             description: None,
+            repository_path: None,
         };
         let updated = update_project(&pool, created.id, &update_req)
             .await
@@ -406,6 +426,7 @@ mod tests {
         let req = CreateProjectRequest {
             name: "Test Project".to_string(),
             description: Some("Original description".to_string()),
+            repository_path: None,
         };
         let created = create_project(&pool, &req)
             .await
@@ -414,6 +435,7 @@ mod tests {
         let update_req = UpdateProjectRequest {
             name: None,
             description: Some("Updated description".to_string()),
+            repository_path: None,
         };
         let updated = update_project(&pool, created.id, &update_req)
             .await
@@ -428,6 +450,7 @@ mod tests {
         let req = CreateProjectRequest {
             name: "To Be Deleted".to_string(),
             description: None,
+            repository_path: None,
         };
         let created = create_project(&pool, &req)
             .await
@@ -449,5 +472,143 @@ mod tests {
         let result = delete_project(&pool, random_id).await;
 
         assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_create_project_with_repository_path() {
+        let pool = setup_test_db().await;
+        let req = CreateProjectRequest {
+            name: "Repo Project".to_string(),
+            description: None,
+            repository_path: Some("/home/user/my-repo".to_string()),
+        };
+
+        let project = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
+
+        assert_eq!(
+            project.repository_path,
+            Some("/home/user/my-repo".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_project_without_repository_path() {
+        let pool = setup_test_db().await;
+        let req = CreateProjectRequest {
+            name: "No Repo Project".to_string(),
+            description: None,
+            repository_path: None,
+        };
+
+        let project = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
+
+        assert!(project.repository_path.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_project_returns_repository_path() {
+        let pool = setup_test_db().await;
+        let req = CreateProjectRequest {
+            name: "Repo Project".to_string(),
+            description: None,
+            repository_path: Some("/opt/repos/project".to_string()),
+        };
+        let created = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
+
+        let found = get_project(&pool, created.id)
+            .await
+            .expect("Failed to get project");
+
+        assert_eq!(
+            found.repository_path,
+            Some("/opt/repos/project".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_update_project_sets_repository_path() {
+        let pool = setup_test_db().await;
+        let req = CreateProjectRequest {
+            name: "Test Project".to_string(),
+            description: None,
+            repository_path: None,
+        };
+        let created = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
+
+        let update_req = UpdateProjectRequest {
+            name: None,
+            description: None,
+            repository_path: Some("/new/repo/path".to_string()),
+        };
+        let updated = update_project(&pool, created.id, &update_req)
+            .await
+            .expect("Failed to update project");
+
+        assert_eq!(updated.repository_path, Some("/new/repo/path".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_update_project_preserves_repository_path_when_not_provided() {
+        let pool = setup_test_db().await;
+        let req = CreateProjectRequest {
+            name: "Test Project".to_string(),
+            description: None,
+            repository_path: Some("/existing/path".to_string()),
+        };
+        let created = create_project(&pool, &req)
+            .await
+            .expect("Failed to create project");
+
+        let update_req = UpdateProjectRequest {
+            name: Some("Updated Name".to_string()),
+            description: None,
+            repository_path: None,
+        };
+        let updated = update_project(&pool, created.id, &update_req)
+            .await
+            .expect("Failed to update project");
+
+        assert_eq!(updated.repository_path, Some("/existing/path".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_validate_repository_path_rejects_nonexistent() {
+        let result = validate_repository_path("/nonexistent/path/that/does/not/exist");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_repository_path_rejects_non_directory() {
+        let dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+        let file_path = dir.path().join("not-a-dir.txt");
+        std::fs::write(&file_path, "test").expect("Failed to create file");
+
+        let result = validate_repository_path(file_path.to_str().unwrap());
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_repository_path_rejects_non_git_repo() {
+        let dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+
+        let result = validate_repository_path(dir.path().to_str().unwrap());
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_repository_path_accepts_valid_git_repo() {
+        let dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+        git2::Repository::init(dir.path()).expect("Failed to init repo");
+
+        let result = validate_repository_path(dir.path().to_str().unwrap());
+        assert!(result.is_ok());
     }
 }

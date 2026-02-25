@@ -8,6 +8,7 @@ pub struct Project {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
+    pub repository_path: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -40,6 +41,8 @@ pub struct CreateProjectRequest {
     pub name: String,
     #[garde(length(max = 2000))]
     pub description: Option<String>,
+    #[garde(length(max = 500))]
+    pub repository_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, garde::Validate)]
@@ -48,6 +51,8 @@ pub struct UpdateProjectRequest {
     pub name: Option<String>,
     #[garde(length(max = 2000))]
     pub description: Option<String>,
+    #[garde(length(max = 500))]
+    pub repository_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, garde::Validate)]
