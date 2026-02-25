@@ -39,13 +39,14 @@ pub async fn create_project(pool: &SqlitePool, req: &CreateProjectRequest) -> Ap
 
     sqlx::query(
         r#"
-        INSERT INTO projects (id, name, description, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO projects (id, name, description, repository_path, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
         "#,
     )
     .bind(id.to_string())
     .bind(&req.name)
     .bind(&req.description)
+    .bind(&req.repository_path)
     .bind(now)
     .bind(now)
     .execute(pool)
@@ -55,7 +56,7 @@ pub async fn create_project(pool: &SqlitePool, req: &CreateProjectRequest) -> Ap
         id,
         name: req.name.clone(),
         description: req.description.clone(),
-        repository_path: None,
+        repository_path: req.repository_path.clone(),
         created_at: now,
         updated_at: now,
     })
@@ -64,7 +65,7 @@ pub async fn create_project(pool: &SqlitePool, req: &CreateProjectRequest) -> Ap
 pub async fn get_project(pool: &SqlitePool, id: Uuid) -> AppResult<Project> {
     let row = sqlx::query_as::<_, ProjectRow>(
         r#"
-        SELECT id, name, description, created_at, updated_at
+        SELECT id, name, description, repository_path, created_at, updated_at
         FROM projects
         WHERE id = $1
         "#,
@@ -82,7 +83,7 @@ pub async fn get_project(pool: &SqlitePool, id: Uuid) -> AppResult<Project> {
 pub async fn list_projects(pool: &SqlitePool) -> AppResult<Vec<Project>> {
     let rows = sqlx::query_as::<_, ProjectRow>(
         r#"
-        SELECT id, name, description, created_at, updated_at
+        SELECT id, name, description, repository_path, created_at, updated_at
         FROM projects
         ORDER BY created_at DESC
         "#,
@@ -111,7 +112,7 @@ pub async fn list_projects_paginated(
 
     let rows = sqlx::query_as::<_, ProjectRow>(
         r#"
-        SELECT id, name, description, created_at, updated_at
+        SELECT id, name, description, repository_path, created_at, updated_at
         FROM projects
         ORDER BY created_at DESC
         LIMIT $1 OFFSET $2
@@ -134,7 +135,7 @@ pub async fn list_projects_paginated(
 pub async fn list_projects_for_user(pool: &SqlitePool, user_id: Uuid) -> AppResult<Vec<Project>> {
     let rows = sqlx::query_as::<_, ProjectRow>(
         r#"
-        SELECT p.id, p.name, p.description, p.created_at, p.updated_at
+        SELECT p.id, p.name, p.description, p.repository_path, p.created_at, p.updated_at
         FROM projects p
         INNER JOIN project_members pm ON p.id = pm.project_id
         WHERE pm.user_id = $1
@@ -171,7 +172,7 @@ pub async fn list_projects_for_user_paginated(
 
     let rows = sqlx::query_as::<_, ProjectRow>(
         r#"
-        SELECT p.id, p.name, p.description, p.created_at, p.updated_at
+        SELECT p.id, p.name, p.description, p.repository_path, p.created_at, p.updated_at
         FROM projects p
         INNER JOIN project_members pm ON p.id = pm.project_id
         WHERE pm.user_id = $1
@@ -208,16 +209,21 @@ pub async fn update_project(
     // To support explicitly setting description to NULL, use Option<Option<String>>
     // or a custom enum in UpdateProjectRequest. This is acceptable for Phase 1.
     let description = req.description.as_ref().or(existing.description.as_ref());
+    let repository_path = req
+        .repository_path
+        .as_ref()
+        .or(existing.repository_path.as_ref());
 
     sqlx::query(
         r#"
         UPDATE projects
-        SET name = $1, description = $2, updated_at = $3
-        WHERE id = $4
+        SET name = $1, description = $2, repository_path = $3, updated_at = $4
+        WHERE id = $5
         "#,
     )
     .bind(name)
     .bind(description)
+    .bind(repository_path)
     .bind(now)
     .bind(id.to_string())
     .execute(pool)
@@ -227,7 +233,7 @@ pub async fn update_project(
         id,
         name: name.clone(),
         description: description.cloned(),
-        repository_path: None,
+        repository_path: repository_path.cloned(),
         created_at: existing.created_at,
         updated_at: now,
     })
@@ -235,8 +241,19 @@ pub async fn update_project(
 
 /// Validate that a repository path points to a valid git repository.
 pub fn validate_repository_path(path: &str) -> AppResult<()> {
-    let _ = path;
-    // TODO: implement validation
+    let p = std::path::Path::new(path);
+    if !p.exists() {
+        return Err(AppError::Validation(format!(
+            "repository path does not exist: {path}"
+        )));
+    }
+    if !p.is_dir() {
+        return Err(AppError::Validation(format!(
+            "repository path is not a directory: {path}"
+        )));
+    }
+    git2::Repository::open(p)
+        .map_err(|_| AppError::Validation(format!("path is not a valid git repository: {path}")))?;
     Ok(())
 }
 

@@ -87,6 +87,9 @@ pub async fn create_project(
 ) -> AppResult<(StatusCode, Json<Project>)> {
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
+    if let Some(ref path) = body.repository_path {
+        project_service::validate_repository_path(path)?;
+    }
     let project = project_service::create_project(&state.pool, &body).await?;
 
     // Auto-add creator as owner (skip in auth_disabled mode for debug builds)
@@ -157,6 +160,9 @@ pub async fn update_project(
     authorization_service::require_project_admin(&state.pool, auth.user_id, id).await?;
     body.validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
+    if let Some(ref path) = body.repository_path {
+        project_service::validate_repository_path(path)?;
+    }
     let project = project_service::update_project(&state.pool, id, &body).await?;
     Ok(Json(project))
 }
