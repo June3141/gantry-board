@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useToastStore } from '@/stores/toastStore';
 
 const typeStyles = {
@@ -7,6 +8,7 @@ const typeStyles = {
 };
 
 export function ToastContainer() {
+  const { t } = useTranslation();
   const toasts = useToastStore((s) => s.toasts);
   const removeToast = useToastStore((s) => s.removeToast);
 
@@ -25,7 +27,7 @@ export function ToastContainer() {
           <button
             type="button"
             onClick={() => removeToast(toast.id)}
-            aria-label="Dismiss"
+            aria-label={t('common.dismiss')}
             className="ml-2 text-lg leading-none opacity-60 hover:opacity-100"
           >
             &times;

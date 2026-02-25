@@ -18,25 +18,6 @@ class MockEventSource {
 }
 vi.stubGlobal('EventSource', MockEventSource);
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        'app.title': 'Gantry Board',
-        'auth.logout': 'Logout',
-        'auth.signInTo': 'Sign in to Gantry Board',
-        'project.projects': 'Projects',
-        'project.newProject': 'New Project',
-        'project.noProjects': 'No projects yet',
-        'project.createFirst': 'Create your first project',
-        'project.loadingProjects': 'Loading projects...',
-      };
-      return translations[key] ?? key;
-    },
-    i18n: { language: 'en', changeLanguage: vi.fn() },
-  }),
-}));
-
 vi.mock('./api/generated/endpoints/projects/projects', () => ({
   useListProjects: vi.fn(),
   useCreateProject: vi.fn(),

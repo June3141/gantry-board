@@ -170,6 +170,8 @@
     "claudeCode": "Claude Code",
     "geminiCli": "Gemini CLI",
     "promptPlaceholder": "Enter prompt for the agent...",
+    "loadingOutput": "Loading output...",
+    "noOutput": "No output yet",
     "startFailed": "Failed to start agent session.",
     "stopFailed": "Failed to stop agent session.",
     "status": {

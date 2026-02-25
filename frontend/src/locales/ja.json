@@ -170,6 +170,8 @@
     "claudeCode": "Claude Code",
     "geminiCli": "Gemini CLI",
     "promptPlaceholder": "エージェントへのプロンプトを入力...",
+    "loadingOutput": "出力を読み込み中...",
+    "noOutput": "まだ出力がありません",
     "startFailed": "エージェントセッションの開始に失敗しました。",
     "stopFailed": "エージェントセッションの停止に失敗しました。",
     "status": {

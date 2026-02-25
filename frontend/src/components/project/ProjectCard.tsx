@@ -1,4 +1,5 @@
 import { Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { Project } from '@/api/generated/model';
 
@@ -8,6 +9,7 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, onSettings }: ProjectCardProps) {
+  const { t } = useTranslation();
   return (
     <div className="group relative rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <Link to={`/projects/${project.id}`} className="block">
@@ -24,7 +26,7 @@ export function ProjectCard({ project, onSettings }: ProjectCardProps) {
             onSettings(project.id);
           }}
           className="absolute right-3 top-3 rounded p-1 text-gray-400 opacity-0 hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
-          aria-label="Project settings"
+          aria-label={t('project.projectSettings')}
         >
           <Settings className="h-4 w-4" />
         </button>
