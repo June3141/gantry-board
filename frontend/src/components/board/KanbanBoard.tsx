@@ -9,6 +9,7 @@ import {
 } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import {
   getListTasksQueryKey,
@@ -35,6 +36,7 @@ const COLUMN_ORDER: TaskStatus[] = [
 ];
 
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const { data: tasksResponse, isLoading, error } = useListTasks({ project_id: projectId });
@@ -162,7 +164,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   if (isLoading) {
     return (
       <div data-testid="kanban-loading" className="flex items-center justify-center p-8">
-        <div className="text-gray-500">Loading tasks...</div>
+        <div className="text-gray-500">{t('board.loadingTasks')}</div>
       </div>
     );
   }
@@ -170,7 +172,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   if (error) {
     return (
       <div data-testid="kanban-error" className="flex items-center justify-center p-8">
-        <div className="text-red-500">Failed to load tasks</div>
+        <div className="text-red-500">{t('board.loadFailed')}</div>
       </div>
     );
   }
