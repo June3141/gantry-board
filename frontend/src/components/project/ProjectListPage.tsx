@@ -4,7 +4,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { ProjectCard } from './ProjectCard';
 
 export function ProjectListPage() {
-  const { data: projectsResponse, isLoading } = useListProjects();
+  const { data: projectsResponse, isLoading, isError } = useListProjects();
   const openProjectModal = useUiStore((s) => s.openProjectModal);
   const projects = projectsResponse?.data;
 
@@ -12,6 +12,14 @@ export function ProjectListPage() {
     return (
       <div className="flex items-center justify-center p-12">
         <p className="text-gray-500">Loading projects...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <p className="text-red-500">Failed to load projects.</p>
       </div>
     );
   }

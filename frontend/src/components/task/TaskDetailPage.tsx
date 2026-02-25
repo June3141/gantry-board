@@ -3,7 +3,12 @@ import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
-import { useDeleteTask, useGetTask, useUpdateTask } from '@/api/generated/endpoints/tasks/tasks';
+import {
+  getGetTaskQueryKey,
+  useDeleteTask,
+  useGetTask,
+  useUpdateTask,
+} from '@/api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '@/api/generated/model';
 import { invalidateTasks } from '@/services/queryInvalidation';
 import { PullRequestList } from '../github/PullRequestList';
@@ -46,6 +51,8 @@ export function TaskDetailPage() {
           id: taskId,
           data: { [field]: trimmed },
         });
+        queryClient.invalidateQueries({ queryKey: getGetTaskQueryKey(taskId) });
+        invalidateTasks(queryClient);
       }
     } catch {
       setError(`Failed to update ${field}. Please try again.`);
@@ -72,6 +79,8 @@ export function TaskDetailPage() {
         id: taskId,
         data: { assigned_to: value || null },
       });
+      queryClient.invalidateQueries({ queryKey: getGetTaskQueryKey(taskId) });
+      invalidateTasks(queryClient);
     } catch {
       setError('Failed to update assignee. Please try again.');
     }
@@ -87,6 +96,7 @@ export function TaskDetailPage() {
         id: taskId,
         data: { [field]: value },
       });
+      queryClient.invalidateQueries({ queryKey: getGetTaskQueryKey(taskId) });
       invalidateTasks(queryClient);
     } catch {
       setError(`Failed to update ${field}. Please try again.`);

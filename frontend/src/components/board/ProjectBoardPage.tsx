@@ -1,12 +1,13 @@
 import { MessageSquare, Settings, Users } from 'lucide-react';
-import { useParams } from 'react-router-dom';
-import { KanbanBoard } from '@/components/board';
+import { useNavigate, useParams } from 'react-router-dom';
+import { KanbanBoard } from './KanbanBoard';
 import { ProjectChatPanel, ProjectMembersPanel, ProjectSettingsModal } from '@/components/project';
-import { TaskCreateDialog, TaskDetailModal } from '@/components/task';
+import { TaskCreateDialog } from '@/components/task';
 import { useUiStore } from '@/stores/uiStore';
 
 export function ProjectBoardPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const openProjectSettings = useUiStore((s) => s.openProjectSettings);
   const openProjectMembers = useUiStore((s) => s.openProjectMembers);
   const openProjectChat = useUiStore((s) => s.openProjectChat);
@@ -40,8 +41,7 @@ export function ProjectBoardPage() {
       </div>
       <KanbanBoard projectId={projectId} />
       <TaskCreateDialog projectId={projectId} />
-      <TaskDetailModal />
-      <ProjectSettingsModal projectId={projectId} onProjectDeleted={() => {}} />
+      <ProjectSettingsModal projectId={projectId} onProjectDeleted={() => navigate('/')} />
       <ProjectMembersPanel projectId={projectId} />
       <ProjectChatPanel projectId={projectId} />
     </>
