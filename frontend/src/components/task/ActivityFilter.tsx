@@ -8,7 +8,7 @@ export function ActivityFilter({
   onChange: (value: ActivityFilterValue) => void;
 }) {
   return (
-    <div className="inline-flex rounded-md border border-gray-200" role="group" aria-label="Activity filter">
+    <div className="inline-flex rounded-md border border-gray-200">
       <button
         type="button"
         aria-pressed={value === 'all'}
