@@ -19,7 +19,9 @@
     "dismiss": "Dismiss",
     "reloadPage": "Reload Page",
     "noDescription": "No description",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "add": "Add",
+    "areYouSure": "Are you sure?"
   },
   "auth": {
     "signIn": "Sign in",
@@ -96,6 +98,13 @@
     "revoke": "Revoke",
     "pendingInvitations": "Pending Invitations",
     "inviteMember": "Invite Member",
+    "addExistingUser": "Add Existing User",
+    "invitationLinks": "Invitation Links",
+    "createLink": "Create Link",
+    "expired": "Expired",
+    "expires": "Expires {{date}}",
+    "noPendingInvitations": "No pending invitations.",
+    "loadFailed": "Failed to load members.",
     "role": {
       "owner": "Owner",
       "admin": "Admin",
@@ -174,6 +183,7 @@
   },
   "worktree": {
     "worktrees": "Worktrees",
+    "worktreeName": "Worktree Name",
     "namePlaceholder": "Worktree name...",
     "createFailed": "Failed to create worktree.",
     "deleteFailed": "Failed to delete worktree.",
@@ -200,8 +210,15 @@
   "github": {
     "github": "GitHub",
     "owner": "Owner",
+    "repository": "Repository",
     "ownerPlaceholder": "owner",
     "repoPlaceholder": "repo",
+    "loadingPullRequests": "Loading pull requests...",
+    "loadPullRequestsFailed": "Failed to load pull requests.",
+    "noPullRequests": "No pull requests",
+    "prOpen": "open",
+    "prMerged": "merged",
+    "prClosed": "closed",
     "linked": "GitHub repository linked.",
     "linkFailed": "Failed to link repository.",
     "syncComplete": "Sync complete: {{pushed}} pushed, {{pulled}} pulled.",
@@ -215,6 +232,9 @@
   "chat": {
     "projectChat": "Project Chat",
     "placeholder": "Type a message...",
+    "loadingMessages": "Loading messages...",
+    "noMessages": "No messages yet. Start the conversation!",
+    "deleteMessageConfirm": "Delete this message?",
     "sendFailed": "Failed to send message.",
     "deleteFailed": "Failed to delete message."
   },

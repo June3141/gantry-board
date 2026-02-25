@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getListProjectWorktreesQueryKey,
   useCreateProjectWorktree,
@@ -8,6 +9,7 @@ import {
 } from '@/api/generated/endpoints/worktrees/worktrees';
 
 export function WorktreePanel({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [deletingName, setDeletingName] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
       setName('');
       await invalidateList();
     } catch {
-      setError('Failed to create worktree. Please try again.');
+      setError(t('worktree.createFailed'));
     }
   };
 
@@ -42,16 +44,16 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
       setDeletingName(null);
       await invalidateList();
     } catch {
-      setError('Failed to delete worktree. Please try again.');
+      setError(t('worktree.deleteFailed'));
     }
   };
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500">Loading worktrees...</p>;
+    return <p className="text-sm text-gray-500">{t('worktree.loadingWorktrees')}</p>;
   }
 
   if (isError) {
-    return <p className="text-sm text-red-500">Failed to load worktrees.</p>;
+    return <p className="text-sm text-red-500">{t('worktree.loadFailed')}</p>;
   }
 
   return (
@@ -70,20 +72,20 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
                 {wt.branch && <span className="text-gray-500">{wt.branch}</span>}
                 {!wt.is_valid && (
                   <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                    invalid
+                    {t('worktree.invalid')}
                   </span>
                 )}
               </div>
               {deletingName === wt.name ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-red-600">Are you sure?</span>
+                  <span className="text-xs text-red-600">{t('worktree.deleteConfirm')}</span>
                   <button
                     type="button"
                     onClick={() => setDeletingName(null)}
                     disabled={deleteWorktree.isPending}
                     className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="button"
@@ -91,7 +93,7 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
                     disabled={deleteWorktree.isPending}
                     className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700 disabled:opacity-50"
                   >
-                    Confirm
+                    {t('common.confirm')}
                   </button>
                 </div>
               ) : (
@@ -100,27 +102,27 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
                   onClick={() => setDeletingName(wt.name)}
                   className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               )}
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-gray-500">No worktrees</p>
+        <p className="text-sm text-gray-500">{t('worktree.noWorktrees')}</p>
       )}
 
       <div className="flex gap-2">
         <div className="flex-1">
           <label htmlFor="worktree-name-input" className="sr-only">
-            Worktree Name
+            {t('worktree.worktreeName')}
           </label>
           <input
             id="worktree-name-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Worktree name..."
+            placeholder={t('worktree.namePlaceholder')}
             className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
@@ -130,7 +132,7 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
           disabled={!name.trim() || createWorktree.isPending}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          Create
+          {t('common.create')}
         </button>
       </div>
     </div>

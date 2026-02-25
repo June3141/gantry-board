@@ -19,7 +19,9 @@
     "dismiss": "閉じる",
     "reloadPage": "ページを再読み込み",
     "noDescription": "説明なし",
-    "unassigned": "未割り当て"
+    "unassigned": "未割り当て",
+    "add": "追加",
+    "areYouSure": "本当に削除しますか？"
   },
   "auth": {
     "signIn": "ログイン",
@@ -96,6 +98,13 @@
     "revoke": "取り消し",
     "pendingInvitations": "保留中の招待",
     "inviteMember": "メンバーを招待",
+    "addExistingUser": "既存ユーザーを追加",
+    "invitationLinks": "招待リンク",
+    "createLink": "リンクを作成",
+    "expired": "期限切れ",
+    "expires": "{{date}} に期限切れ",
+    "noPendingInvitations": "保留中の招待はありません。",
+    "loadFailed": "メンバーの読み込みに失敗しました。",
     "role": {
       "owner": "オーナー",
       "admin": "管理者",
@@ -174,6 +183,7 @@
   },
   "worktree": {
     "worktrees": "ワークツリー",
+    "worktreeName": "ワークツリー名",
     "namePlaceholder": "ワークツリー名...",
     "createFailed": "ワークツリーの作成に失敗しました。",
     "deleteFailed": "ワークツリーの削除に失敗しました。",
@@ -200,8 +210,15 @@
   "github": {
     "github": "GitHub",
     "owner": "オーナー",
+    "repository": "リポジトリ",
     "ownerPlaceholder": "owner",
     "repoPlaceholder": "repo",
+    "loadingPullRequests": "プルリクエストを読み込み中...",
+    "loadPullRequestsFailed": "プルリクエストの読み込みに失敗しました。",
+    "noPullRequests": "プルリクエストなし",
+    "prOpen": "オープン",
+    "prMerged": "マージ済み",
+    "prClosed": "クローズ",
     "linked": "GitHub リポジトリをリンクしました。",
     "linkFailed": "リポジトリのリンクに失敗しました。",
     "syncComplete": "同期完了: {{pushed}} プッシュ、{{pulled}} プル。",
@@ -215,6 +232,9 @@
   "chat": {
     "projectChat": "プロジェクトチャット",
     "placeholder": "メッセージを入力...",
+    "loadingMessages": "メッセージを読み込み中...",
+    "noMessages": "メッセージはありません。会話を始めましょう！",
+    "deleteMessageConfirm": "このメッセージを削除しますか？",
     "sendFailed": "メッセージの送信に失敗しました。",
     "deleteFailed": "メッセージの削除に失敗しました。"
   },

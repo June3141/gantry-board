@@ -1,19 +1,21 @@
+import { useTranslation } from 'react-i18next';
 import { useListPullRequests } from '@/api/generated/endpoints/pull-requests/pull-requests';
 import type { GitHubPullRequest } from '@/api/generated/model';
 
 export function PullRequestList({ taskId }: { taskId: string }) {
+  const { t } = useTranslation();
   const { data: pullRequests, isLoading, isError } = useListPullRequests(taskId);
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500">Loading pull requests...</p>;
+    return <p className="text-sm text-gray-500">{t('github.loadingPullRequests')}</p>;
   }
 
   if (isError) {
-    return <p className="text-sm text-red-500">Failed to load pull requests.</p>;
+    return <p className="text-sm text-red-500">{t('github.loadPullRequestsFailed')}</p>;
   }
 
   if (!pullRequests || pullRequests.length === 0) {
-    return <p className="text-sm text-gray-500">No pull requests</p>;
+    return <p className="text-sm text-gray-500">{t('github.noPullRequests')}</p>;
   }
 
   return (
@@ -26,7 +28,8 @@ export function PullRequestList({ taskId }: { taskId: string }) {
 }
 
 function PullRequestItem({ pr }: { pr: GitHubPullRequest }) {
-  const badge = getBadge(pr);
+  const { t } = useTranslation();
+  const badge = getBadge(pr, t);
 
   return (
     <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
@@ -51,12 +54,15 @@ function PullRequestItem({ pr }: { pr: GitHubPullRequest }) {
   );
 }
 
-function getBadge(pr: GitHubPullRequest): { label: string; classes: string } {
+function getBadge(
+  pr: GitHubPullRequest,
+  t: (key: string) => string,
+): { label: string; classes: string } {
   if (pr.state === 'open') {
-    return { label: 'open', classes: 'bg-green-100 text-green-800' };
+    return { label: t('github.prOpen'), classes: 'bg-green-100 text-green-800' };
   }
   if (pr.is_merged) {
-    return { label: 'merged', classes: 'bg-purple-100 text-purple-800' };
+    return { label: t('github.prMerged'), classes: 'bg-purple-100 text-purple-800' };
   }
-  return { label: 'closed', classes: 'bg-red-100 text-red-800' };
+  return { label: t('github.prClosed'), classes: 'bg-red-100 text-red-800' };
 }
