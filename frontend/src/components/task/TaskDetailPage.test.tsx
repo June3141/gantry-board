@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import * as membersApi from '@/api/generated/endpoints/project-members/project-members';
 import * as tasksApi from '@/api/generated/endpoints/tasks/tasks';
 import { TaskPriority, TaskStatus } from '@/api/generated/model';
 import { TaskDetailPage } from './TaskDetailPage';
@@ -21,6 +20,9 @@ vi.mock('@/api/generated/endpoints/project-members/project-members', () => ({
 vi.mock('@/api/generated/endpoints/agent-sessions/agent-sessions', () => ({
   useListAgentSessions: vi.fn(() => ({ data: undefined })),
   useStartAgentSession: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useStopAgentSession: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useGetAgentSessionOutputs: vi.fn(() => ({ data: undefined })),
+  getListAgentSessionsQueryKey: vi.fn(() => ['/api/agent-sessions']),
 }));
 
 vi.mock('@/api/generated/endpoints/task-comments/task-comments', () => ({
@@ -40,8 +42,7 @@ vi.mock('@/api/generated/endpoints/worktrees/worktrees', () => ({
   getListWorktreesQueryKey: vi.fn(() => ['/api/worktrees']),
 }));
 
-const createQueryClient = () =>
-  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 const renderWithProviders = (taskId = 'task-1', projectId = 'proj-1') =>
   render(
