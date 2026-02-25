@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import i18n from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 import { LanguageSwitcher } from './LanguageSwitcher';
+
+const mockChangeLanguage = vi.fn();
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -15,7 +16,7 @@ vi.mock('react-i18next', () => ({
     },
     i18n: {
       language: 'en',
-      changeLanguage: vi.fn(),
+      changeLanguage: mockChangeLanguage,
     },
   }),
 }));
@@ -46,7 +47,6 @@ describe('LanguageSwitcher', () => {
     const select = screen.getByRole('combobox');
     await user.selectOptions(select, 'ja');
 
-    const { useTranslation } = await import('react-i18next');
-    expect(useTranslation().i18n.changeLanguage).toHaveBeenCalledWith('ja');
+    expect(mockChangeLanguage).toHaveBeenCalledWith('ja');
   });
 });

@@ -1,12 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { LogOut } from 'lucide-react';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, Outlet } from 'react-router-dom';
 import { useLogout } from '@/api/generated/endpoints/auth/auth';
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { connectEventSource } from '@/hooks/useEventSource';
 import { useAuthStore } from '@/stores/authStore';
 
 export function AppLayout() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const logout = useLogout();
@@ -33,9 +36,10 @@ export function AppLayout() {
       <header className="bg-white shadow">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-gray-700">
-            Gantry Board
+            {t('app.title')}
           </Link>
           <div className="flex items-center gap-2 border-l pl-4">
+            <LanguageSwitcher />
             <span className="text-sm text-gray-600">{user?.name ?? user?.email}</span>
             <button
               type="button"
@@ -43,7 +47,7 @@ export function AppLayout() {
               disabled={logout.isPending}
               className="flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
             >
-              <LogOut className="h-4 w-4" /> Logout
+              <LogOut className="h-4 w-4" /> {t('auth.logout')}
             </button>
           </div>
         </div>
