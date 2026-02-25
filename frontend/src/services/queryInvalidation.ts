@@ -29,7 +29,13 @@ export function invalidateMembers(queryClient: QueryClient, projectId: string) {
   });
 }
 
-export function invalidateWorktrees(queryClient: QueryClient) {
+export function invalidateWorktrees(queryClient: QueryClient, projectId?: string) {
+  if (projectId) {
+    queryClient.invalidateQueries({
+      queryKey: [`/api/projects/${projectId}/worktrees`],
+      exact: false,
+    });
+  }
   queryClient.invalidateQueries({ queryKey: ['/api/worktrees'], exact: false });
 }
 

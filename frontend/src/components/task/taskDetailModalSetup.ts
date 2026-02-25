@@ -81,18 +81,18 @@ export function setupMocks() {
     data: undefined,
     isLoading: false,
   } as unknown as ReturnType<typeof agentSessionsApi.useGetAgentSessionOutputs>);
-  vi.mocked(worktreesApi.useListWorktrees).mockReturnValue({
+  vi.mocked(worktreesApi.useListProjectWorktrees).mockReturnValue({
     data: [],
     isLoading: false,
-  } as unknown as ReturnType<typeof worktreesApi.useListWorktrees>);
-  vi.mocked(worktreesApi.useCreateWorktree).mockReturnValue({
+  } as unknown as ReturnType<typeof worktreesApi.useListProjectWorktrees>);
+  vi.mocked(worktreesApi.useCreateProjectWorktree).mockReturnValue({
     mutateAsync: vi.fn(),
     isPending: false,
-  } as unknown as ReturnType<typeof worktreesApi.useCreateWorktree>);
-  vi.mocked(worktreesApi.useDeleteWorktree).mockReturnValue({
+  } as unknown as ReturnType<typeof worktreesApi.useCreateProjectWorktree>);
+  vi.mocked(worktreesApi.useDeleteProjectWorktree).mockReturnValue({
     mutateAsync: vi.fn(),
     isPending: false,
-  } as unknown as ReturnType<typeof worktreesApi.useDeleteWorktree>);
+  } as unknown as ReturnType<typeof worktreesApi.useDeleteProjectWorktree>);
   vi.mocked(commentsApi.useListComments).mockReturnValue({
     data: [],
     isLoading: false,

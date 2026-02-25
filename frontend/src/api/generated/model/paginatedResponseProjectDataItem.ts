@@ -6,11 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PaginatedResponseProjectDataItemDescription } from './paginatedResponseProjectDataItemDescription';
+import type { PaginatedResponseProjectDataItemRepositoryPath } from './paginatedResponseProjectDataItemRepositoryPath';
 
 export type PaginatedResponseProjectDataItem = {
   created_at: string;
   description?: PaginatedResponseProjectDataItemDescription;
   id: string;
   name: string;
+  repository_path?: PaginatedResponseProjectDataItemRepositoryPath;
   updated_at: string;
 };

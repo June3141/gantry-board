@@ -20,6 +20,7 @@ function ProjectCreateForm() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [repositoryPath, setRepositoryPath] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEscapeKey(closeProjectModal);
@@ -34,6 +35,7 @@ function ProjectCreateForm() {
         data: {
           name: name.trim(),
           description: description.trim() || undefined,
+          repository_path: repositoryPath.trim() || undefined,
         },
       });
       invalidateProjects(queryClient);
@@ -87,6 +89,22 @@ function ProjectCreateForm() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="project-repository-path"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Repository Path
+            </label>
+            <input
+              id="project-repository-path"
+              type="text"
+              value={repositoryPath}
+              onChange={(e) => setRepositoryPath(e.target.value)}
+              placeholder="/path/to/git/repo (optional)"
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>

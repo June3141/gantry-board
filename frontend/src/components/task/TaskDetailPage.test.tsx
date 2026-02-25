@@ -36,10 +36,10 @@ vi.mock('@/api/generated/endpoints/pull-requests/pull-requests', () => ({
 }));
 
 vi.mock('@/api/generated/endpoints/worktrees/worktrees', () => ({
-  useListWorktrees: vi.fn(() => ({ data: undefined, isLoading: false })),
-  useCreateWorktree: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
-  useDeleteWorktree: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
-  getListWorktreesQueryKey: vi.fn(() => ['/api/worktrees']),
+  useListProjectWorktrees: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useCreateProjectWorktree: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useDeleteProjectWorktree: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  getListProjectWorktreesQueryKey: vi.fn(() => ['worktrees']),
 }));
 
 const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });

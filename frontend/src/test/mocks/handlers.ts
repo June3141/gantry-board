@@ -44,8 +44,13 @@ export const handlers = [
     return HttpResponse.json([]);
   }),
 
-  // Worktrees
+  // Worktrees (global)
   http.get('*/api/worktrees', () => {
+    return HttpResponse.json([]);
+  }),
+
+  // Worktrees (project-scoped)
+  http.get('*/api/projects/:projectId/worktrees', () => {
     return HttpResponse.json([]);
   }),
 

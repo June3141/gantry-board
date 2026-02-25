@@ -6,8 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreateProjectRequestDescription } from './createProjectRequestDescription';
+import type { CreateProjectRequestRepositoryPath } from './createProjectRequestRepositoryPath';
 
 export interface CreateProjectRequest {
   description?: CreateProjectRequestDescription;
   name: string;
+  repository_path?: CreateProjectRequestRepositoryPath;
 }

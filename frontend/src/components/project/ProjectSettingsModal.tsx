@@ -44,7 +44,9 @@ function ProjectSettingsContent({
   const currentUser = useAuthStore((s) => s.user);
   const addToast = useToastStore((s) => s.addToast);
 
-  const [editingField, setEditingField] = useState<'name' | 'description' | null>(null);
+  const [editingField, setEditingField] = useState<
+    'name' | 'description' | 'repository_path' | null
+  >(null);
   const [editValue, setEditValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -61,18 +63,23 @@ function ProjectSettingsContent({
   }, [editingField]);
   useEscapeKey(closeProjectSettings, escapeGuard);
 
-  const startEditing = (field: 'name' | 'description', value: string) => {
+  const startEditing = (field: 'name' | 'description' | 'repository_path', value: string) => {
     setEditingField(field);
     setEditValue(value);
   };
 
-  const saveField = async (field: 'name' | 'description') => {
+  const saveField = async (field: 'name' | 'description' | 'repository_path') => {
     const trimmed = editValue.trim();
     if (field === 'name' && !trimmed) {
       setEditingField(null);
       return;
     }
-    const currentValue = field === 'name' ? project?.name : project?.description;
+    const currentValue =
+      field === 'name'
+        ? project?.name
+        : field === 'description'
+          ? project?.description
+          : project?.repository_path;
     try {
       if (trimmed !== (currentValue ?? '')) {
         await updateProject.mutateAsync({
@@ -185,6 +192,33 @@ function ProjectSettingsContent({
               ) : (
                 <p className="mt-1 px-1 text-sm text-gray-600">
                   {project.description || 'No description'}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-700">Repository Path</h3>
+              {editingField === 'repository_path' ? (
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => saveField('repository_path')}
+                  placeholder="/path/to/git/repo"
+                  className="mt-1 block w-full rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+              ) : canEdit ? (
+                <button
+                  type="button"
+                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-600 hover:bg-gray-100"
+                  onClick={() => startEditing('repository_path', project.repository_path ?? '')}
+                >
+                  {project.repository_path || 'Not set (using global)'}
+                </button>
+              ) : (
+                <p className="mt-1 px-1 text-sm text-gray-600">
+                  {project.repository_path || 'Not set (using global)'}
                 </p>
               )}
             </div>

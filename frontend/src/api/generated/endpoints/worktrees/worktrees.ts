@@ -24,6 +24,382 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
 import type { CreateWorktreeRequest, WorktreeResponse } from '../../model';
 
+export const listProjectWorktrees = (projectId: string, signal?: AbortSignal) => {
+  return customInstance<WorktreeResponse[]>({
+    url: `/api/projects/${projectId}/worktrees`,
+    method: 'GET',
+    signal,
+  });
+};
+
+export const getListProjectWorktreesQueryKey = (projectId?: string) => {
+  return [`/api/projects/${projectId}/worktrees`] as const;
+};
+
+export const getListProjectWorktreesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProjectWorktrees>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectWorktrees>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListProjectWorktreesQueryKey(projectId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectWorktrees>>> = ({ signal }) =>
+    listProjectWorktrees(projectId, signal);
+
+  return { queryKey, queryFn, enabled: !!projectId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listProjectWorktrees>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListProjectWorktreesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProjectWorktrees>>
+>;
+export type ListProjectWorktreesQueryError = void;
+
+export function useListProjectWorktrees<
+  TData = Awaited<ReturnType<typeof listProjectWorktrees>>,
+  TError = void,
+>(
+  projectId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectWorktrees>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectWorktrees>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectWorktrees>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProjectWorktrees<
+  TData = Awaited<ReturnType<typeof listProjectWorktrees>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectWorktrees>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectWorktrees>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectWorktrees>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProjectWorktrees<
+  TData = Awaited<ReturnType<typeof listProjectWorktrees>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectWorktrees>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useListProjectWorktrees<
+  TData = Awaited<ReturnType<typeof listProjectWorktrees>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectWorktrees>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListProjectWorktreesQueryOptions(projectId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const createProjectWorktree = (
+  projectId: string,
+  createWorktreeRequest: CreateWorktreeRequest,
+  signal?: AbortSignal,
+) => {
+  return customInstance<WorktreeResponse>({
+    url: `/api/projects/${projectId}/worktrees`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createWorktreeRequest,
+    signal,
+  });
+};
+
+export const getCreateProjectWorktreeMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProjectWorktree>>,
+    TError,
+    { projectId: string; data: CreateWorktreeRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createProjectWorktree>>,
+  TError,
+  { projectId: string; data: CreateWorktreeRequest },
+  TContext
+> => {
+  const mutationKey = ['createProjectWorktree'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProjectWorktree>>,
+    { projectId: string; data: CreateWorktreeRequest }
+  > = (props) => {
+    const { projectId, data } = props ?? {};
+
+    return createProjectWorktree(projectId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateProjectWorktreeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createProjectWorktree>>
+>;
+export type CreateProjectWorktreeMutationBody = CreateWorktreeRequest;
+export type CreateProjectWorktreeMutationError = void;
+
+export const useCreateProjectWorktree = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createProjectWorktree>>,
+      TError,
+      { projectId: string; data: CreateWorktreeRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createProjectWorktree>>,
+  TError,
+  { projectId: string; data: CreateWorktreeRequest },
+  TContext
+> => {
+  const mutationOptions = getCreateProjectWorktreeMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+export const getProjectWorktree = (projectId: string, name: string, signal?: AbortSignal) => {
+  return customInstance<WorktreeResponse>({
+    url: `/api/projects/${projectId}/worktrees/${name}`,
+    method: 'GET',
+    signal,
+  });
+};
+
+export const getGetProjectWorktreeQueryKey = (projectId?: string, name?: string) => {
+  return [`/api/projects/${projectId}/worktrees/${name}`] as const;
+};
+
+export const getGetProjectWorktreeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProjectWorktree>>,
+  TError = void,
+>(
+  projectId: string,
+  name: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectWorktree>>, TError, TData>>;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProjectWorktreeQueryKey(projectId, name);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectWorktree>>> = ({ signal }) =>
+    getProjectWorktree(projectId, name, signal);
+
+  return { queryKey, queryFn, enabled: !!(projectId && name), ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProjectWorktree>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetProjectWorktreeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProjectWorktree>>
+>;
+export type GetProjectWorktreeQueryError = void;
+
+export function useGetProjectWorktree<
+  TData = Awaited<ReturnType<typeof getProjectWorktree>>,
+  TError = void,
+>(
+  projectId: string,
+  name: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectWorktree>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectWorktree>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectWorktree>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetProjectWorktree<
+  TData = Awaited<ReturnType<typeof getProjectWorktree>>,
+  TError = void,
+>(
+  projectId: string,
+  name: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getProjectWorktree>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectWorktree>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectWorktree>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetProjectWorktree<
+  TData = Awaited<ReturnType<typeof getProjectWorktree>>,
+  TError = void,
+>(
+  projectId: string,
+  name: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectWorktree>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useGetProjectWorktree<
+  TData = Awaited<ReturnType<typeof getProjectWorktree>>,
+  TError = void,
+>(
+  projectId: string,
+  name: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectWorktree>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetProjectWorktreeQueryOptions(projectId, name, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const deleteProjectWorktree = (projectId: string, name: string) => {
+  return customInstance<void>({
+    url: `/api/projects/${projectId}/worktrees/${name}`,
+    method: 'DELETE',
+  });
+};
+
+export const getDeleteProjectWorktreeMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProjectWorktree>>,
+    TError,
+    { projectId: string; name: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteProjectWorktree>>,
+  TError,
+  { projectId: string; name: string },
+  TContext
+> => {
+  const mutationKey = ['deleteProjectWorktree'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteProjectWorktree>>,
+    { projectId: string; name: string }
+  > = (props) => {
+    const { projectId, name } = props ?? {};
+
+    return deleteProjectWorktree(projectId, name);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteProjectWorktreeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteProjectWorktree>>
+>;
+
+export type DeleteProjectWorktreeMutationError = void;
+
+export const useDeleteProjectWorktree = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteProjectWorktree>>,
+      TError,
+      { projectId: string; name: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteProjectWorktree>>,
+  TError,
+  { projectId: string; name: string },
+  TContext
+> => {
+  const mutationOptions = getDeleteProjectWorktreeMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
 export const listWorktrees = (signal?: AbortSignal) => {
   return customInstance<WorktreeResponse[]>({ url: `/api/worktrees`, method: 'GET', signal });
 };

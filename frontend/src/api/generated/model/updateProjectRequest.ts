@@ -7,8 +7,10 @@
  */
 import type { UpdateProjectRequestDescription } from './updateProjectRequestDescription';
 import type { UpdateProjectRequestName } from './updateProjectRequestName';
+import type { UpdateProjectRequestRepositoryPath } from './updateProjectRequestRepositoryPath';
 
 export interface UpdateProjectRequest {
   description?: UpdateProjectRequestDescription;
   name?: UpdateProjectRequestName;
+  repository_path?: UpdateProjectRequestRepositoryPath;
 }

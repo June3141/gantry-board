@@ -6,11 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ProjectDescription } from './projectDescription';
+import type { ProjectRepositoryPath } from './projectRepositoryPath';
 
 export interface Project {
   created_at: string;
   description?: ProjectDescription;
   id: string;
   name: string;
+  repository_path?: ProjectRepositoryPath;
   updated_at: string;
 }
