@@ -1,0 +1,221 @@
+{
+  "common": {
+    "loading": "読み込み中...",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "save": "保存",
+    "delete": "削除",
+    "create": "作成",
+    "edit": "編集",
+    "close": "閉じる",
+    "back": "戻る",
+    "send": "送信",
+    "post": "投稿",
+    "start": "開始",
+    "stop": "停止",
+    "remove": "削除",
+    "search": "検索",
+    "clearAll": "すべてクリア",
+    "dismiss": "閉じる",
+    "reloadPage": "ページを再読み込み",
+    "noDescription": "説明なし",
+    "unassigned": "未割り当て"
+  },
+  "auth": {
+    "signIn": "ログイン",
+    "signInTo": "Gantry Board にログイン",
+    "signingIn": "ログイン中...",
+    "signUp": "新規登録",
+    "createAccount": "アカウントを作成",
+    "creatingAccount": "アカウント作成中...",
+    "createAccountBtn": "アカウントを作成",
+    "email": "メールアドレス",
+    "emailPlaceholder": "you@example.com",
+    "password": "パスワード",
+    "passwordPlaceholder": "パスワードを入力",
+    "passwordMinLength": "8文字以上",
+    "name": "名前",
+    "namePlaceholder": "お名前",
+    "noAccount": "アカウントをお持ちでないですか？",
+    "hasAccount": "すでにアカウントをお持ちですか？",
+    "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
+    "registrationFailed": "登録に失敗しました。メールアドレスが既に使用されている可能性があります。",
+    "passwordTooShort": "パスワードは8文字以上にしてください",
+    "logout": "ログアウト"
+  },
+  "invitation": {
+    "title": "プロジェクト招待",
+    "invalidLink": "無効な招待リンクです。",
+    "loadingInvitation": "招待を読み込み中...",
+    "expiredOrInvalid": "無効または期限切れの招待リンクです。",
+    "invitedYou": "があなたを招待しました",
+    "role": "ロール:",
+    "alreadyAccepted": "この招待は既に受理されています。",
+    "expired": "この招待は期限切れです。",
+    "loginRequired": "招待を受けるにはログインしてください。",
+    "logIn": "ログイン",
+    "accept": "招待を受ける",
+    "accepting": "受理中...",
+    "acceptFailed": "招待の受理に失敗しました。期限切れまたは既に使用されている可能性があります。"
+  },
+  "project": {
+    "projects": "プロジェクト",
+    "newProject": "新規プロジェクト",
+    "createProject": "プロジェクトを作成",
+    "noProjects": "プロジェクトがありません",
+    "createFirst": "最初のプロジェクトを作成",
+    "settings": "プロジェクト設定",
+    "projectSettings": "プロジェクト設定",
+    "name": "名前",
+    "description": "説明",
+    "repositoryPath": "リポジトリパス",
+    "repositoryPathPlaceholder": "/path/to/git/repo (任意)",
+    "notSetGlobal": "未設定 (グローバル設定を使用)",
+    "fieldUpdated": "プロジェクトの{{field}}を更新しました。",
+    "fieldUpdateFailed": "{{field}}の更新に失敗しました。",
+    "deleted": "プロジェクトを削除しました。",
+    "deleteFailed": "プロジェクトの削除に失敗しました。",
+    "createFailed": "プロジェクトの作成に失敗しました。もう一度お試しください。",
+    "deleteConfirm": "本当に削除しますか？この操作は取り消せません。",
+    "deleteProject": "プロジェクトを削除",
+    "loadingProjects": "プロジェクトを読み込み中...",
+    "loadFailed": "プロジェクトの読み込みに失敗しました。"
+  },
+  "members": {
+    "members": "メンバー",
+    "searchPlaceholder": "名前またはメールで検索...",
+    "addedSuccess": "{{name}}を追加しました。",
+    "addFailed": "メンバーの追加に失敗しました。",
+    "roleUpdateFailed": "ロールの更新に失敗しました。",
+    "removed": "メンバーを削除しました。",
+    "removeFailed": "メンバーの削除に失敗しました。",
+    "inviteCopied": "招待リンクをクリップボードにコピーしました！",
+    "inviteCreated": "招待を作成しました: {{url}}",
+    "inviteFailed": "招待の作成に失敗しました。",
+    "revokeFailed": "招待の取り消しに失敗しました。",
+    "revoke": "取り消し",
+    "pendingInvitations": "保留中の招待",
+    "inviteMember": "メンバーを招待",
+    "role": {
+      "owner": "オーナー",
+      "admin": "管理者",
+      "member": "メンバー"
+    }
+  },
+  "board": {
+    "loadingTasks": "タスクを読み込み中...",
+    "loadFailed": "タスクの読み込みに失敗しました",
+    "noTasks": "タスクなし",
+    "addTask": "タスクを追加",
+    "searchPlaceholder": "タスクを検索...",
+    "assignee": "担当者",
+    "priority": "優先度",
+    "status": {
+      "backlog": "バックログ",
+      "todo": "未着手",
+      "in_progress": "進行中",
+      "in_review": "レビュー中",
+      "done": "完了"
+    },
+    "priorityLabel": {
+      "urgent": "緊急",
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    }
+  },
+  "task": {
+    "createTask": "タスクを作成",
+    "title": "タイトル",
+    "description": "説明",
+    "status": "ステータス",
+    "priority": "優先度",
+    "assignedTo": "担当者",
+    "createFailed": "タスクの作成に失敗しました。もう一度お試しください。",
+    "updateFailed": "{{field}}の更新に失敗しました。もう一度お試しください。",
+    "deleteFailed": "タスクの削除に失敗しました。もう一度お試しください。",
+    "backToBoard": "ボードに戻る",
+    "editComment": "コメントを編集"
+  },
+  "activity": {
+    "title": "アクティビティ",
+    "filterAll": "すべてのアクティビティ",
+    "filterComments": "コメントのみ",
+    "filterLabel": "アクティビティフィルタ",
+    "noActivity": "アクティビティはありません。",
+    "loadingActivity": "アクティビティを読み込み中...",
+    "commentPlaceholder": "コメントを追加...",
+    "commentFailed": "コメントの投稿に失敗しました。",
+    "commentUpdateFailed": "コメントの更新に失敗しました。",
+    "commentDeleteFailed": "コメントの削除に失敗しました。"
+  },
+  "agent": {
+    "agentType": "エージェントタイプ",
+    "claudeCode": "Claude Code",
+    "geminiCli": "Gemini CLI",
+    "promptPlaceholder": "エージェントへのプロンプトを入力...",
+    "startFailed": "エージェントセッションの開始に失敗しました。",
+    "stopFailed": "エージェントセッションの停止に失敗しました。",
+    "status": {
+      "pending": "待機中",
+      "running": "実行中",
+      "paused": "一時停止",
+      "completed": "完了",
+      "failed": "失敗",
+      "cancelled": "キャンセル"
+    }
+  },
+  "worktree": {
+    "worktrees": "ワークツリー",
+    "namePlaceholder": "ワークツリー名...",
+    "createFailed": "ワークツリーの作成に失敗しました。",
+    "deleteFailed": "ワークツリーの削除に失敗しました。"
+  },
+  "preview": {
+    "start": "開始",
+    "stop": "停止",
+    "restart": "再起動",
+    "delete": "削除",
+    "worktreeName": "ワークツリー名",
+    "status": {
+      "pending": "待機中",
+      "building": "ビルド中",
+      "running": "実行中",
+      "stopped": "停止済み",
+      "failed": "失敗"
+    }
+  },
+  "github": {
+    "github": "GitHub",
+    "owner": "オーナー",
+    "ownerPlaceholder": "owner",
+    "repoPlaceholder": "repo",
+    "linked": "GitHub リポジトリをリンクしました。",
+    "linkFailed": "リポジトリのリンクに失敗しました。",
+    "syncComplete": "同期完了: {{pushed}} プッシュ、{{pulled}} プル。",
+    "syncFailed": "同期に失敗しました。",
+    "unlinked": "GitHub リポジトリのリンクを解除しました。",
+    "unlinkFailed": "リポジトリのリンク解除に失敗しました。",
+    "link": "リンク",
+    "unlink": "リンク解除",
+    "sync": "同期"
+  },
+  "chat": {
+    "projectChat": "プロジェクトチャット",
+    "placeholder": "メッセージを入力...",
+    "sendFailed": "メッセージの送信に失敗しました。",
+    "deleteFailed": "メッセージの削除に失敗しました。"
+  },
+  "error": {
+    "somethingWrong": "問題が発生しました",
+    "unexpectedError": "予期しないエラーが発生しました。ページを再読み込みしてください。"
+  },
+  "language": {
+    "switchLanguage": "言語",
+    "en": "English",
+    "ja": "日本語"
+  },
+  "app": {
+    "title": "Gantry Board"
+  }
+}
