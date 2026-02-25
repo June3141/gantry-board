@@ -88,4 +88,44 @@ describe('KanbanColumn', () => {
 
     expect(openTaskModal).toHaveBeenCalledWith(TaskStatus.in_progress);
   });
+
+  it('applies status-specific background color', () => {
+    const { container, rerender } = render(
+      <KanbanColumn status={TaskStatus.backlog} tasks={[]} />,
+    );
+    const column = container.firstChild as HTMLElement;
+    expect(column.className).toContain('bg-slate-50');
+
+    rerender(<KanbanColumn status={TaskStatus.todo} tasks={[]} />);
+    expect((container.firstChild as HTMLElement).className).toContain('bg-blue-50');
+
+    rerender(<KanbanColumn status={TaskStatus.in_progress} tasks={[]} />);
+    expect((container.firstChild as HTMLElement).className).toContain('bg-amber-50');
+
+    rerender(<KanbanColumn status={TaskStatus.in_review} tasks={[]} />);
+    expect((container.firstChild as HTMLElement).className).toContain('bg-purple-50');
+
+    rerender(<KanbanColumn status={TaskStatus.done} tasks={[]} />);
+    expect((container.firstChild as HTMLElement).className).toContain('bg-green-50');
+  });
+
+  it('applies status-specific badge color', () => {
+    const { rerender } = render(<KanbanColumn status={TaskStatus.backlog} tasks={[]} />);
+
+    const getBadge = () => screen.getByText('0');
+
+    expect(getBadge().className).toContain('bg-slate-200');
+
+    rerender(<KanbanColumn status={TaskStatus.todo} tasks={[]} />);
+    expect(getBadge().className).toContain('bg-blue-200');
+
+    rerender(<KanbanColumn status={TaskStatus.in_progress} tasks={[]} />);
+    expect(getBadge().className).toContain('bg-amber-200');
+
+    rerender(<KanbanColumn status={TaskStatus.in_review} tasks={[]} />);
+    expect(getBadge().className).toContain('bg-purple-200');
+
+    rerender(<KanbanColumn status={TaskStatus.done} tasks={[]} />);
+    expect(getBadge().className).toContain('bg-green-200');
+  });
 });
