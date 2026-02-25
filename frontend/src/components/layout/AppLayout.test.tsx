@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/stores/authStore';
@@ -19,8 +18,7 @@ vi.mock('@/api/generated/endpoints/auth/auth', () => ({
   useLogout: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
-const createQueryClient = () =>
-  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 const renderWithProviders = (route = '/') => {
   const queryClient = createQueryClient();

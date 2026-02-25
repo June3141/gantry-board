@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import * as projectsApi from '@/api/generated/endpoints/projects/projects';
-import { useUiStore } from '@/stores/uiStore';
 import { ProjectListPage } from './ProjectListPage';
 
 vi.mock('@/api/generated/endpoints/projects/projects', () => ({
@@ -12,8 +11,7 @@ vi.mock('@/api/generated/endpoints/projects/projects', () => ({
   getListProjectsQueryKey: vi.fn(() => ['/api/projects']),
 }));
 
-const createQueryClient = () =>
-  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 const renderWithProviders = (ui: React.ReactElement) =>
   render(
@@ -49,7 +47,13 @@ describe('ProjectListPage', () => {
     vi.mocked(projectsApi.useListProjects).mockReturnValue({
       data: {
         data: [
-          { id: 'p1', name: 'Project Alpha', description: 'Desc A', created_at: '', updated_at: '' },
+          {
+            id: 'p1',
+            name: 'Project Alpha',
+            description: 'Desc A',
+            created_at: '',
+            updated_at: '',
+          },
           { id: 'p2', name: 'Project Beta', created_at: '', updated_at: '' },
         ],
         total: 2,

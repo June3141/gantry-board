@@ -3,15 +3,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { ProjectCard } from './ProjectCard';
 
-const renderWithRouter = (ui: React.ReactElement) =>
-  render(<MemoryRouter>{ui}</MemoryRouter>);
+const renderWithRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe('ProjectCard', () => {
   it('renders project name', () => {
     renderWithRouter(
-      <ProjectCard
-        project={{ id: 'p1', name: 'My Project', created_at: '', updated_at: '' }}
-      />,
+      <ProjectCard project={{ id: 'p1', name: 'My Project', created_at: '', updated_at: '' }} />,
     );
 
     expect(screen.getByText('My Project')).toBeInTheDocument();
@@ -35,9 +32,7 @@ describe('ProjectCard', () => {
 
   it('links to project board', () => {
     renderWithRouter(
-      <ProjectCard
-        project={{ id: 'p1', name: 'My Project', created_at: '', updated_at: '' }}
-      />,
+      <ProjectCard project={{ id: 'p1', name: 'My Project', created_at: '', updated_at: '' }} />,
     );
 
     const link = screen.getByRole('link');
