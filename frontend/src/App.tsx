@@ -5,7 +5,13 @@ import { useLogout, useMe } from '@/api/generated/endpoints/auth/auth';
 import { useListProjects } from '@/api/generated/endpoints/projects/projects';
 import { KanbanBoard } from '@/components/board';
 import { ErrorBoundary, ToastContainer } from '@/components/common';
-import { InvitationAcceptPage, LoginPage, ProtectedRoute, RegisterPage } from '@/components/layout';
+import {
+  GuestRoute,
+  InvitationAcceptPage,
+  LoginPage,
+  ProtectedRoute,
+  RegisterPage,
+} from '@/components/layout';
 import {
   ProjectChatPanel,
   ProjectCreateDialog,
@@ -182,8 +188,22 @@ export function AppRoutes() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <LoginPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <RegisterPage />
+            </GuestRoute>
+          }
+        />
         <Route path="/invite/:token" element={<InvitationAcceptPage />} />
         <Route
           path="/"

@@ -90,9 +90,7 @@ describe('KanbanColumn', () => {
   });
 
   it('applies status-specific background color', () => {
-    const { container, rerender } = render(
-      <KanbanColumn status={TaskStatus.backlog} tasks={[]} />,
-    );
+    const { container, rerender } = render(<KanbanColumn status={TaskStatus.backlog} tasks={[]} />);
     const column = container.firstChild as HTMLElement;
     expect(column.className).toContain('bg-slate-50');
 

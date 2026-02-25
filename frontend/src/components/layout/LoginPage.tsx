@@ -23,7 +23,7 @@ export function LoginPage() {
         data: { email, password },
       });
       setUser(response.user);
-      navigate(redirectTo ?? '/');
+      navigate(redirectTo ?? '/', { replace: true });
     } catch {
       setError('Invalid email or password. Please try again.');
     }
