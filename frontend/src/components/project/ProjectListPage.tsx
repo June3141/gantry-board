@@ -1,9 +1,11 @@
 import { FolderPlus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useListProjects } from '@/api/generated/endpoints/projects/projects';
 import { useUiStore } from '@/stores/uiStore';
 import { ProjectCard } from './ProjectCard';
 
 export function ProjectListPage() {
+  const { t } = useTranslation();
   const { data: projectsResponse, isLoading, isError } = useListProjects();
   const openProjectModal = useUiStore((s) => s.openProjectModal);
   const projects = projectsResponse?.data;
@@ -11,7 +13,7 @@ export function ProjectListPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <p className="text-gray-500">Loading projects...</p>
+        <p className="text-gray-500">{t('project.loadingProjects')}</p>
       </div>
     );
   }
@@ -19,7 +21,7 @@ export function ProjectListPage() {
   if (isError) {
     return (
       <div className="flex items-center justify-center p-12">
-        <p className="text-red-500">Failed to load projects.</p>
+        <p className="text-red-500">{t('project.loadFailed')}</p>
       </div>
     );
   }
@@ -27,25 +29,25 @@ export function ProjectListPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Projects</h2>
+        <h2 className="text-xl font-semibold text-gray-900">{t('project.projects')}</h2>
         <button
           type="button"
           onClick={openProjectModal}
           className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
         >
-          <FolderPlus className="h-4 w-4" /> New Project
+          <FolderPlus className="h-4 w-4" /> {t('project.newProject')}
         </button>
       </div>
 
       {!projects || projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-16">
-          <p className="text-gray-500">No projects yet</p>
+          <p className="text-gray-500">{t('project.noProjects')}</p>
           <button
             type="button"
             onClick={openProjectModal}
             className="mt-4 flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
           >
-            <FolderPlus className="h-4 w-4" /> Create your first project
+            <FolderPlus className="h-4 w-4" /> {t('project.createFirst')}
           </button>
         </div>
       ) : (

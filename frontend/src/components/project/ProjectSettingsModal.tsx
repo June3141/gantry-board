@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import {
   getGetProjectQueryKey,
@@ -35,6 +36,7 @@ function ProjectSettingsContent({
   projectId: string;
   onProjectDeleted: () => void;
 }) {
+  const { t } = useTranslation();
   const closeProjectSettings = useUiStore((s) => s.closeProjectSettings);
   const { data: project, isLoading, isError } = useGetProject(projectId);
   const { data: members } = useListMembers(projectId);
@@ -92,10 +94,10 @@ function ProjectSettingsContent({
         queryClient.invalidateQueries({
           queryKey: getGetProjectQueryKey(projectId),
         });
-        addToast('success', `Project ${field} updated.`);
+        addToast('success', t('project.fieldUpdated', { field }));
       }
     } catch {
-      addToast('error', `Failed to update ${field}.`);
+      addToast('error', t('project.fieldUpdateFailed', { field }));
     } finally {
       setEditingField(null);
     }
@@ -109,9 +111,9 @@ function ProjectSettingsContent({
       });
       closeProjectSettings();
       onProjectDeleted();
-      addToast('success', 'Project deleted.');
+      addToast('success', t('project.deleted'));
     } catch {
-      addToast('error', 'Failed to delete project.');
+      addToast('error', t('project.deleteFailed'));
     }
   };
 
@@ -128,26 +130,26 @@ function ProjectSettingsContent({
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 id="project-settings-title" className="text-lg font-semibold text-gray-900">
-            Project Settings
+            {t('project.settings')}
           </h2>
           <button
             type="button"
             onClick={closeProjectSettings}
             className="text-gray-400 hover:text-gray-600"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-sm text-gray-500">{t('common.loading')}</p>
         ) : isError || !project ? (
-          <p className="text-sm text-red-500">Failed to load project.</p>
+          <p className="text-sm text-red-500">{t('project.loadFailed')}</p>
         ) : (
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-medium text-gray-700">Name</h3>
+              <h3 className="text-sm font-medium text-gray-700">{t('project.name')}</h3>
               {editingField === 'name' ? (
                 <input
                   type="text"
@@ -171,7 +173,7 @@ function ProjectSettingsContent({
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-700">Description</h3>
+              <h3 className="text-sm font-medium text-gray-700">{t('project.description')}</h3>
               {editingField === 'description' ? (
                 <textarea
                   value={editValue}
@@ -187,17 +189,17 @@ function ProjectSettingsContent({
                   className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-600 hover:bg-gray-100"
                   onClick={() => startEditing('description', project.description ?? '')}
                 >
-                  {project.description || 'No description'}
+                  {project.description || t('common.noDescription')}
                 </button>
               ) : (
                 <p className="mt-1 px-1 text-sm text-gray-600">
-                  {project.description || 'No description'}
+                  {project.description || t('common.noDescription')}
                 </p>
               )}
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-700">Repository Path</h3>
+              <h3 className="text-sm font-medium text-gray-700">{t('project.repositoryPath')}</h3>
               {editingField === 'repository_path' ? (
                 <input
                   type="text"
@@ -214,18 +216,18 @@ function ProjectSettingsContent({
                   className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-600 hover:bg-gray-100"
                   onClick={() => startEditing('repository_path', project.repository_path ?? '')}
                 >
-                  {project.repository_path || 'Not set (using global)'}
+                  {project.repository_path || t('project.notSetGlobal')}
                 </button>
               ) : (
                 <p className="mt-1 px-1 text-sm text-gray-600">
-                  {project.repository_path || 'Not set (using global)'}
+                  {project.repository_path || t('project.notSetGlobal')}
                 </p>
               )}
             </div>
 
             {canEdit && (
               <div className="border-t pt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">GitHub</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">{t('github.github')}</h3>
                 <GitHubLinkSettings projectId={projectId} />
               </div>
             )}
@@ -234,21 +236,21 @@ function ProjectSettingsContent({
               <div className="border-t pt-4">
                 {showDeleteConfirm ? (
                   <div className="flex items-center justify-between rounded-md bg-red-50 p-3">
-                    <p className="text-sm text-red-700">Are you sure? This cannot be undone.</p>
+                    <p className="text-sm text-red-700">{t('project.deleteConfirm')}</p>
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setShowDeleteConfirm(false)}
                         className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                       <button
                         type="button"
                         onClick={handleDelete}
                         className="rounded-md bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
                       >
-                        Confirm
+                        {t('common.confirm')}
                       </button>
                     </div>
                   </div>
@@ -258,7 +260,7 @@ function ProjectSettingsContent({
                     onClick={() => setShowDeleteConfirm(true)}
                     className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50"
                   >
-                    Delete Project
+                    {t('project.deleteProject')}
                   </button>
                 )}
               </div>
