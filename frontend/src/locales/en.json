@@ -138,6 +138,9 @@
     "deleteConfirm": "Are you sure you want to delete this task?",
     "pullRequests": "Pull Requests",
     "backToBoard": "Back to Board",
+    "loadingTask": "Loading task...",
+    "loadFailed": "Failed to load task.",
+    "assigneeFailed": "Failed to update assignee. Please try again.",
     "editComment": "Edit comment"
   },
   "activity": {
@@ -150,7 +153,8 @@
     "commentPlaceholder": "Add a comment...",
     "commentFailed": "Failed to post comment.",
     "commentUpdateFailed": "Failed to update comment.",
-    "commentDeleteFailed": "Failed to delete comment."
+    "commentDeleteFailed": "Failed to delete comment.",
+    "deleteCommentConfirm": "Delete this comment?"
   },
   "agent": {
     "agentType": "Agent Type",

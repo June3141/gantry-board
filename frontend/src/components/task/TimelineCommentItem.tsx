@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getListCommentsQueryKey,
   useDeleteComment,
@@ -18,6 +19,7 @@ export function TimelineCommentItem({
   taskId: string;
   isOwner: boolean;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -42,7 +44,7 @@ export function TimelineCommentItem({
       setEditing(false);
       invalidateComments();
     } catch {
-      addToast('error', 'Failed to update comment.');
+      addToast('error', t('activity.commentUpdateFailed'));
     }
   };
 
@@ -52,7 +54,7 @@ export function TimelineCommentItem({
       setShowDeleteConfirm(false);
       invalidateComments();
     } catch {
-      addToast('error', 'Failed to delete comment.');
+      addToast('error', t('activity.commentDeleteFailed'));
     }
   };
 
@@ -69,22 +71,22 @@ export function TimelineCommentItem({
             <div className="ml-auto flex gap-1">
               <button
                 type="button"
-                aria-label="Edit"
+                aria-label={t('common.edit')}
                 onClick={() => {
                   setEditing(true);
                   setEditValue(comment.content);
                 }}
                 className="text-xs text-gray-400 hover:text-gray-600"
               >
-                Edit
+                {t('common.edit')}
               </button>
               <button
                 type="button"
-                aria-label="Delete"
+                aria-label={t('common.delete')}
                 onClick={() => setShowDeleteConfirm(true)}
                 className="text-xs text-gray-400 hover:text-red-600"
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           )}
@@ -92,7 +94,7 @@ export function TimelineCommentItem({
         {editing ? (
           <div className="mt-1 space-y-1">
             <textarea
-              aria-label="Edit comment"
+              aria-label={t('task.editComment')}
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               rows={2}
@@ -104,33 +106,33 @@ export function TimelineCommentItem({
                 onClick={handleSave}
                 className="rounded bg-blue-600 px-2 py-0.5 text-xs text-white hover:bg-blue-700"
               >
-                Save
+                {t('common.save')}
               </button>
               <button
                 type="button"
                 onClick={() => setEditing(false)}
                 className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </div>
         ) : showDeleteConfirm ? (
           <div className="mt-1 flex items-center gap-2 rounded bg-red-50 px-2 py-1">
-            <span className="text-xs text-red-700">Delete this comment?</span>
+            <span className="text-xs text-red-700">{t('activity.deleteCommentConfirm')}</span>
             <button
               type="button"
               onClick={handleDelete}
               className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
             >
-              Confirm
+              {t('common.confirm')}
             </button>
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(false)}
               className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         ) : (

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import {
@@ -16,6 +17,7 @@ import { WorktreePanel } from '../preview/WorktreePanel';
 import { TaskTimeline } from './TaskTimeline';
 
 export function TaskDetailPage() {
+  const { t } = useTranslation();
   const { projectId, taskId } = useParams<{ projectId: string; taskId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -55,7 +57,7 @@ export function TaskDetailPage() {
         invalidateTasks(queryClient);
       }
     } catch {
-      setError(`Failed to update ${field}. Please try again.`);
+      setError(t('task.updateFailed', { field }));
     } finally {
       setEditingField(null);
     }
@@ -68,7 +70,7 @@ export function TaskDetailPage() {
       invalidateTasks(queryClient);
       navigate(`/projects/${projectId}`);
     } catch {
-      setError('Failed to delete task. Please try again.');
+      setError(t('task.deleteFailed'));
     }
   };
 
@@ -82,7 +84,7 @@ export function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: getGetTaskQueryKey(taskId) });
       invalidateTasks(queryClient);
     } catch {
-      setError('Failed to update assignee. Please try again.');
+      setError(t('task.assigneeFailed'));
     }
   };
 
@@ -99,14 +101,14 @@ export function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: getGetTaskQueryKey(taskId) });
       invalidateTasks(queryClient);
     } catch {
-      setError(`Failed to update ${field}. Please try again.`);
+      setError(t('task.updateFailed', { field }));
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <p className="text-gray-500">Loading task...</p>
+        <p className="text-gray-500">{t('task.loadingTask')}</p>
       </div>
     );
   }
@@ -118,9 +120,9 @@ export function TaskDetailPage() {
           to={`/projects/${projectId}`}
           className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Board
+          <ArrowLeft className="h-4 w-4" /> {t('task.backToBoard')}
         </Link>
-        <p className="text-red-500">Failed to load task.</p>
+        <p className="text-red-500">{t('task.loadFailed')}</p>
       </div>
     );
   }
@@ -131,7 +133,7 @@ export function TaskDetailPage() {
         to={`/projects/${projectId}`}
         className="mb-6 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
       >
-        <ArrowLeft className="h-4 w-4" /> Back to Board
+        <ArrowLeft className="h-4 w-4" /> {t('task.backToBoard')}
       </Link>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -163,7 +165,7 @@ export function TaskDetailPage() {
 
           {/* Description */}
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-700">Description</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-700">{t('task.description')}</h3>
             {editingField === 'description' ? (
               <textarea
                 value={editValue}
@@ -179,14 +181,14 @@ export function TaskDetailPage() {
                 className="w-full cursor-pointer rounded px-2 py-1 text-left text-sm text-gray-600 hover:bg-gray-100"
                 onClick={() => startEditing('description', task.description ?? '')}
               >
-                {task.description || 'No description'}
+                {task.description || t('common.noDescription')}
               </button>
             )}
           </div>
 
           {/* Activity */}
           <div className="border-t pt-6">
-            <h3 className="mb-3 text-sm font-medium text-gray-700">Activity</h3>
+            <h3 className="mb-3 text-sm font-medium text-gray-700">{t('activity.title')}</h3>
             <TaskTimeline taskId={task.id} />
           </div>
         </div>
@@ -195,7 +197,7 @@ export function TaskDetailPage() {
         <div className="space-y-6">
           <div>
             <label htmlFor="task-status" className="block text-sm font-medium text-gray-700">
-              Status
+              {t('task.status')}
             </label>
             <select
               id="task-status"
@@ -203,17 +205,17 @@ export function TaskDetailPage() {
               onChange={(e) => handleSelectChange('status', e.target.value as TaskStatus)}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="backlog">Backlog</option>
-              <option value="todo">To Do</option>
-              <option value="in_progress">In Progress</option>
-              <option value="in_review">In Review</option>
-              <option value="done">Done</option>
+              <option value="backlog">{t('board.status.backlog')}</option>
+              <option value="todo">{t('board.status.todo')}</option>
+              <option value="in_progress">{t('board.status.in_progress')}</option>
+              <option value="in_review">{t('board.status.in_review')}</option>
+              <option value="done">{t('board.status.done')}</option>
             </select>
           </div>
 
           <div>
             <label htmlFor="task-priority" className="block text-sm font-medium text-gray-700">
-              Priority
+              {t('task.priority')}
             </label>
             <select
               id="task-priority"
@@ -221,16 +223,16 @@ export function TaskDetailPage() {
               onChange={(e) => handleSelectChange('priority', e.target.value as TaskPriority)}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
+              <option value="low">{t('board.priorityLabel.low')}</option>
+              <option value="medium">{t('board.priorityLabel.medium')}</option>
+              <option value="high">{t('board.priorityLabel.high')}</option>
+              <option value="urgent">{t('board.priorityLabel.urgent')}</option>
             </select>
           </div>
 
           <div>
             <label htmlFor="task-assignee" className="block text-sm font-medium text-gray-700">
-              Assignee
+              {t('board.assignee')}
             </label>
             <select
               id="task-assignee"
@@ -238,7 +240,7 @@ export function TaskDetailPage() {
               onChange={(e) => handleAssigneeChange(e.target.value)}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="">Unassigned</option>
+              <option value="">{t('common.unassigned')}</option>
               {members?.map((m) => (
                 <option key={m.user_id} value={m.user_id}>
                   {m.user_name}
@@ -248,12 +250,12 @@ export function TaskDetailPage() {
           </div>
 
           <div className="border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-700">Worktrees</h3>
+            <h3 className="mb-2 text-sm font-medium text-gray-700">{t('worktree.worktrees')}</h3>
             <WorktreePanel projectId={projectId ?? ''} />
           </div>
 
           <div className="border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-700">Pull Requests</h3>
+            <h3 className="mb-2 text-sm font-medium text-gray-700">{t('task.pullRequests')}</h3>
             <PullRequestList taskId={task.id} />
           </div>
 
@@ -261,7 +263,7 @@ export function TaskDetailPage() {
             {showDeleteConfirm ? (
               <div className="rounded-md bg-red-50 p-3">
                 <p className="mb-2 text-sm text-red-700">
-                  Are you sure you want to delete this task?
+                  {t('task.deleteConfirm')}
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -269,14 +271,14 @@ export function TaskDetailPage() {
                     onClick={() => setShowDeleteConfirm(false)}
                     className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="button"
                     onClick={handleDelete}
                     className="rounded-md bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
                   >
-                    Confirm
+                    {t('common.confirm')}
                   </button>
                 </div>
               </div>
@@ -286,7 +288,7 @@ export function TaskDetailPage() {
                 onClick={() => setShowDeleteConfirm(true)}
                 className="w-full rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50"
               >
-                Delete Task
+                {t('task.deleteTask')}
               </button>
             )}
           </div>

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import { useDeleteTask, useGetTask, useUpdateTask } from '@/api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '@/api/generated/model';
@@ -21,6 +22,7 @@ export function TaskDetailModal() {
 }
 
 function TaskDetailContent({ taskId }: { taskId: string }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const closeTaskDetail = useUiStore((s) => s.closeTaskDetail);
   const { data: task, isLoading, isError } = useGetTask(taskId);
@@ -62,7 +64,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
         });
       }
     } catch {
-      setError(`Failed to update ${field}. Please try again.`);
+      setError(t('task.updateFailed', { field }));
     } finally {
       setEditingField(null);
     }
@@ -74,7 +76,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
       invalidateTasks(queryClient);
       closeTaskDetail();
     } catch {
-      setError('Failed to delete task. Please try again.');
+      setError(t('task.deleteFailed'));
     }
   };
 
@@ -85,7 +87,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
         data: { assigned_to: value || null },
       });
     } catch {
-      setError('Failed to update assignee. Please try again.');
+      setError(t('task.assigneeFailed'));
     }
   };
 
@@ -100,7 +102,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
       });
       invalidateTasks(queryClient);
     } catch {
-      setError(`Failed to update ${field}. Please try again.`);
+      setError(t('task.updateFailed', { field }));
     }
   };
 
@@ -119,9 +121,9 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
         className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
       >
         {isLoading ? (
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-sm text-gray-500">{t('common.loading')}</p>
         ) : isError || !task ? (
-          <p className="text-sm text-red-500">Failed to load task.</p>
+          <p className="text-sm text-red-500">{t('task.loadFailed')}</p>
         ) : (
           <div className="space-y-4">
             {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -150,14 +152,14 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                 type="button"
                 onClick={closeTaskDetail}
                 className="text-gray-400 hover:text-gray-600"
-                aria-label="Close"
+                aria-label={t('common.close')}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-700">Description</h3>
+              <h3 className="text-sm font-medium text-gray-700">{t('task.description')}</h3>
               {editingField === 'description' ? (
                 <textarea
                   value={editValue}
@@ -173,7 +175,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-600 hover:bg-gray-100"
                   onClick={() => startEditing('description', task.description ?? '')}
                 >
-                  {task.description || 'No description'}
+                  {task.description || t('common.noDescription')}
                 </button>
               )}
             </div>
@@ -184,7 +186,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   htmlFor="task-detail-status"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Status
+                  {t('task.status')}
                 </label>
                 <select
                   id="task-detail-status"
@@ -192,11 +194,11 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   onChange={(e) => handleSelectChange('status', e.target.value as TaskStatus)}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 >
-                  <option value="backlog">Backlog</option>
-                  <option value="todo">To Do</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="in_review">In Review</option>
-                  <option value="done">Done</option>
+                  <option value="backlog">{t('board.status.backlog')}</option>
+                  <option value="todo">{t('board.status.todo')}</option>
+                  <option value="in_progress">{t('board.status.in_progress')}</option>
+                  <option value="in_review">{t('board.status.in_review')}</option>
+                  <option value="done">{t('board.status.done')}</option>
                 </select>
               </div>
               <div>
@@ -204,7 +206,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   htmlFor="task-detail-priority"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Priority
+                  {t('task.priority')}
                 </label>
                 <select
                   id="task-detail-priority"
@@ -212,10 +214,10 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   onChange={(e) => handleSelectChange('priority', e.target.value as TaskPriority)}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
+                  <option value="low">{t('board.priorityLabel.low')}</option>
+                  <option value="medium">{t('board.priorityLabel.medium')}</option>
+                  <option value="high">{t('board.priorityLabel.high')}</option>
+                  <option value="urgent">{t('board.priorityLabel.urgent')}</option>
                 </select>
               </div>
               <div>
@@ -223,7 +225,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   htmlFor="task-detail-assignee"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Assignee
+                  {t('board.assignee')}
                 </label>
                 <select
                   id="task-detail-assignee"
@@ -231,7 +233,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   onChange={(e) => handleAssigneeChange(e.target.value)}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">{t('common.unassigned')}</option>
                   {members?.map((m) => (
                     <option key={m.user_id} value={m.user_id}>
                       {m.user_name}
@@ -242,38 +244,38 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Worktrees</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">{t('worktree.worktrees')}</h3>
               <WorktreePanel projectId={task.project_id} />
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Pull Requests</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">{t('task.pullRequests')}</h3>
               <PullRequestList taskId={taskId} />
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Activity</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">{t('activity.title')}</h3>
               <TaskTimeline taskId={taskId} />
             </div>
 
             <div className="border-t pt-4">
               {showDeleteConfirm ? (
                 <div className="flex items-center justify-between rounded-md bg-red-50 p-3">
-                  <p className="text-sm text-red-700">Are you sure you want to delete this task?</p>
+                  <p className="text-sm text-red-700">{t('task.deleteConfirm')}</p>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setShowDeleteConfirm(false)}
                       className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       type="button"
                       onClick={handleDelete}
                       className="rounded-md bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
                     >
-                      Confirm
+                      {t('common.confirm')}
                     </button>
                   </div>
                 </div>
@@ -283,7 +285,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   onClick={() => setShowDeleteConfirm(true)}
                   className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               )}
             </div>

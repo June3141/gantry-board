@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import { useCreateTask } from '@/api/generated/endpoints/tasks/tasks';
 import { TaskPriority, TaskStatus } from '@/api/generated/model';
@@ -27,6 +28,7 @@ function TaskCreateForm({
   projectId: string;
   defaultStatus: TaskStatus | null;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const closeTaskModal = useUiStore((s) => s.closeTaskModal);
   const createTask = useCreateTask();
@@ -60,7 +62,7 @@ function TaskCreateForm({
       invalidateTasks(queryClient);
       closeTaskModal();
     } catch {
-      setError('Failed to create task. Please try again.');
+      setError(t('task.createFailed'));
     }
   };
 
@@ -79,13 +81,13 @@ function TaskCreateForm({
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
       >
         <h2 id="task-create-title" className="mb-4 text-lg font-semibold">
-          Create Task
+          {t('task.createTask')}
         </h2>
         {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="task-title" className="block text-sm font-medium text-gray-700">
-              Title
+              {t('task.title')}
             </label>
             <input
               id="task-title"
@@ -98,7 +100,7 @@ function TaskCreateForm({
           </div>
           <div>
             <label htmlFor="task-description" className="block text-sm font-medium text-gray-700">
-              Description
+              {t('task.description')}
             </label>
             <textarea
               id="task-description"
@@ -111,7 +113,7 @@ function TaskCreateForm({
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label htmlFor="task-status" className="block text-sm font-medium text-gray-700">
-                Status
+                {t('task.status')}
               </label>
               <select
                 id="task-status"
@@ -119,16 +121,16 @@ function TaskCreateForm({
                 onChange={(e) => setStatus(e.target.value as TaskStatus)}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               >
-                <option value={TaskStatus.backlog}>Backlog</option>
-                <option value={TaskStatus.todo}>To Do</option>
-                <option value={TaskStatus.in_progress}>In Progress</option>
-                <option value={TaskStatus.in_review}>In Review</option>
-                <option value={TaskStatus.done}>Done</option>
+                <option value={TaskStatus.backlog}>{t('board.status.backlog')}</option>
+                <option value={TaskStatus.todo}>{t('board.status.todo')}</option>
+                <option value={TaskStatus.in_progress}>{t('board.status.in_progress')}</option>
+                <option value={TaskStatus.in_review}>{t('board.status.in_review')}</option>
+                <option value={TaskStatus.done}>{t('board.status.done')}</option>
               </select>
             </div>
             <div>
               <label htmlFor="task-priority" className="block text-sm font-medium text-gray-700">
-                Priority
+                {t('task.priority')}
               </label>
               <select
                 id="task-priority"
@@ -136,15 +138,15 @@ function TaskCreateForm({
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               >
-                <option value={TaskPriority.low}>Low</option>
-                <option value={TaskPriority.medium}>Medium</option>
-                <option value={TaskPriority.high}>High</option>
-                <option value={TaskPriority.urgent}>Urgent</option>
+                <option value={TaskPriority.low}>{t('board.priorityLabel.low')}</option>
+                <option value={TaskPriority.medium}>{t('board.priorityLabel.medium')}</option>
+                <option value={TaskPriority.high}>{t('board.priorityLabel.high')}</option>
+                <option value={TaskPriority.urgent}>{t('board.priorityLabel.urgent')}</option>
               </select>
             </div>
             <div>
               <label htmlFor="task-assignee" className="block text-sm font-medium text-gray-700">
-                Assignee
+                {t('board.assignee')}
               </label>
               <select
                 id="task-assignee"
@@ -152,7 +154,7 @@ function TaskCreateForm({
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               >
-                <option value="">Unassigned</option>
+                <option value="">{t('common.unassigned')}</option>
                 {members?.map((m) => (
                   <option key={m.user_id} value={m.user_id}>
                     {m.user_name}
@@ -167,14 +169,14 @@ function TaskCreateForm({
               onClick={closeTaskModal}
               className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={createTask.isPending}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              Create
+              {t('common.create')}
             </button>
           </div>
         </form>
