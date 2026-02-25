@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getListAgentSessionsQueryKey,
   useGetAgentSessionOutputs,
@@ -28,6 +29,7 @@ export type { TimelineItem } from './timelineUtils';
 export { mergeTimeline } from './timelineUtils';
 
 export function TaskTimeline({ taskId }: { taskId: string }) {
+  const { t } = useTranslation();
   const { data: comments, isLoading: commentsLoading } = useListComments(taskId);
   const { data: sessions, isLoading: sessionsLoading } = useListAgentSessions(taskId);
   const createComment = useCreateComment();
@@ -112,7 +114,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
       setPrompt('');
       invalidateSessions();
     } catch {
-      setAgentError('Failed to start agent session.');
+      setAgentError(t('agent.startFailed'));
     } finally {
       isStartingRef.current = false;
     }
@@ -125,7 +127,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
       reset();
       invalidateSessions();
     } catch {
-      setAgentError('Failed to stop agent session.');
+      setAgentError(t('agent.stopFailed'));
     }
   };
 
@@ -137,7 +139,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
       setNewComment('');
       queryClient.invalidateQueries({ queryKey: getListCommentsQueryKey(taskId) });
     } catch {
-      addToast('error', 'Failed to post comment.');
+      addToast('error', t('activity.commentFailed'));
     }
   };
 
@@ -178,7 +180,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
               disabled={stopSession.isPending}
               className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
             >
-              Stop
+              {t('common.stop')}
             </button>
           </div>
           <AgentOutputViewer lines={outputLines} isLoading={false} />
@@ -201,7 +203,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
                   }}
                   className="text-sm text-blue-600 hover:text-blue-800"
                 >
-                  Back
+                  {t('common.back')}
                 </button>
                 <span className="text-sm text-gray-600">
                   {AGENT_LABELS[viewingSession.agent_type] ?? viewingSession.agent_type}
@@ -229,7 +231,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
                 htmlFor="timeline-agent-type"
                 className="block text-sm font-medium text-gray-700"
               >
-                Agent Type
+                {t('agent.agentType')}
               </label>
               <select
                 id="timeline-agent-type"
@@ -237,8 +239,8 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
                 onChange={(e) => setAgentType(e.target.value as AgentType)}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               >
-                <option value="claude_code">Claude Code</option>
-                <option value="gemini_cli">Gemini CLI</option>
+                <option value="claude_code">{t('agent.claudeCode')}</option>
+                <option value="gemini_cli">{t('agent.geminiCli')}</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -248,14 +250,14 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
                 disabled={!prompt.trim() || startSession.isPending}
                 className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                Start
+                {t('common.start')}
               </button>
             </div>
           </div>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Enter prompt for the agent..."
+            placeholder={t('agent.promptPlaceholder')}
             rows={2}
             className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
@@ -273,7 +275,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
               handleSubmitComment();
             }
           }}
-          placeholder="Add a comment..."
+          placeholder={t('activity.commentPlaceholder')}
           rows={2}
           className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
         />
@@ -283,7 +285,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
           disabled={!newComment.trim() || createComment.isPending}
           className="self-end rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          Post
+          {t('common.post')}
         </button>
       </div>
 
@@ -292,9 +294,9 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
 
       {/* Timeline */}
       {isLoading ? (
-        <p className="text-sm text-gray-500">Loading activity...</p>
+        <p className="text-sm text-gray-500">{t('activity.loadingActivity')}</p>
       ) : timeline.length === 0 ? (
-        <p className="text-sm text-gray-500">No activity yet.</p>
+        <p className="text-sm text-gray-500">{t('activity.noActivity')}</p>
       ) : (
         <div className="divide-y">
           {timeline.map((item) =>
