@@ -378,4 +378,72 @@ describe('TaskTimeline component', () => {
     // After clicking, the historical viewer should be shown with a Back button
     expect(screen.getByText('Back')).toBeInTheDocument();
   });
+
+  describe('activity filter', () => {
+    const setupMixed = () => {
+      const comments = [
+        createComment({
+          id: 'c1',
+          user_name: 'Alice',
+          content: 'First comment',
+          created_at: '2026-01-01T12:00:00Z',
+        }),
+      ];
+      const sessions = [
+        createSession({
+          id: 's1',
+          agent_type: AgentType.claude_code,
+          status: AgentSessionStatus.completed,
+          created_at: '2026-01-01T10:00:00Z',
+        }),
+      ];
+      vi.mocked(commentsApi.useListComments).mockReturnValue({
+        data: comments,
+        isLoading: false,
+      } as unknown as ReturnType<typeof commentsApi.useListComments>);
+      vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+        data: sessions,
+        isLoading: false,
+      } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+    };
+
+    it('renders filter toggle buttons', () => {
+      setupMixed();
+      renderWithProviders(<TaskTimeline taskId="task-1" />);
+
+      expect(screen.getByRole('button', { name: /all activity/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /comments only/i })).toBeInTheDocument();
+    });
+
+    it('shows all items by default', () => {
+      setupMixed();
+      renderWithProviders(<TaskTimeline taskId="task-1" />);
+
+      expect(screen.getByText('First comment')).toBeInTheDocument();
+      expect(screen.getByTestId('timeline-session')).toBeInTheDocument();
+    });
+
+    it('shows only comments when "Comments Only" is selected', async () => {
+      setupMixed();
+      const user = userEvent.setup();
+      renderWithProviders(<TaskTimeline taskId="task-1" />);
+
+      await user.click(screen.getByRole('button', { name: /comments only/i }));
+
+      expect(screen.getByText('First comment')).toBeInTheDocument();
+      expect(screen.queryByTestId('timeline-session')).not.toBeInTheDocument();
+    });
+
+    it('shows all items again when "All Activity" is re-selected', async () => {
+      setupMixed();
+      const user = userEvent.setup();
+      renderWithProviders(<TaskTimeline taskId="task-1" />);
+
+      await user.click(screen.getByRole('button', { name: /comments only/i }));
+      await user.click(screen.getByRole('button', { name: /all activity/i }));
+
+      expect(screen.getByText('First comment')).toBeInTheDocument();
+      expect(screen.getByTestId('timeline-session')).toBeInTheDocument();
+    });
+  });
 });
