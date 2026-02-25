@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getListMessagesQueryKey,
   useCreateMessage,
@@ -40,6 +41,7 @@ function MessageItem({
   projectId: string;
   isOwner: boolean;
 }) {
+  const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const queryClient = useQueryClient();
   const deleteMessage = useDeleteMessage();
@@ -55,7 +57,7 @@ function MessageItem({
       setShowDeleteConfirm(false);
       invalidateMessages();
     } catch {
-      addToast('error', 'Failed to delete message.');
+      addToast('error', t('chat.deleteFailed'));
     }
   };
 
@@ -78,30 +80,30 @@ function MessageItem({
           {isOwner && !showDeleteConfirm && (
             <button
               type="button"
-              aria-label="Delete"
+              aria-label={t('common.delete')}
               onClick={() => setShowDeleteConfirm(true)}
               className="ml-auto text-xs text-gray-400 hover:text-red-600"
             >
-              Delete
+              {t('common.delete')}
             </button>
           )}
         </div>
         {showDeleteConfirm ? (
           <div className="mt-1 flex items-center gap-2 rounded bg-red-50 px-2 py-1">
-            <span className="text-xs text-red-700">Delete this message?</span>
+            <span className="text-xs text-red-700">{t('chat.deleteMessageConfirm')}</span>
             <button
               type="button"
               onClick={handleDelete}
               className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
             >
-              Confirm
+              {t('common.confirm')}
             </button>
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(false)}
               className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         ) : (
@@ -119,6 +121,7 @@ export function ProjectChatPanel({ projectId }: { projectId: string }) {
 }
 
 function ProjectChatContent({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
   const closeProjectChat = useUiStore((s) => s.closeProjectChat);
   const { data: messages, isLoading } = useListMessages(projectId);
   const createMessage = useCreateMessage();
@@ -140,7 +143,7 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
       setNewMessage('');
       queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey(projectId) });
     } catch {
-      addToast('error', 'Failed to send message.');
+      addToast('error', t('chat.sendFailed'));
     }
   };
 
@@ -167,13 +170,13 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
       <div className="flex h-[600px] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 id="project-chat-title" className="text-lg font-semibold text-gray-900">
-            Project Chat
+            {t('chat.projectChat')}
           </h2>
           <button
             type="button"
             onClick={closeProjectChat}
             className="text-gray-400 hover:text-gray-600"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X className="h-5 w-5" />
           </button>
@@ -181,7 +184,7 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
 
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {isLoading ? (
-            <p className="text-sm text-gray-500">Loading messages...</p>
+            <p className="text-sm text-gray-500">{t('chat.loadingMessages')}</p>
           ) : displayMessages.length > 0 ? (
             <div className="divide-y">
               {displayMessages.map((m) => (
@@ -195,7 +198,7 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
             </div>
           ) : (
             <p className="py-8 text-center text-sm text-gray-500">
-              No messages yet. Start the conversation!
+              {t('chat.noMessages')}
             </p>
           )}
         </div>
@@ -206,18 +209,18 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
+              placeholder={t('chat.placeholder')}
               rows={2}
               className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             <button
               type="button"
-              aria-label="Send"
+              aria-label={t('common.send')}
               onClick={handleSubmit}
               disabled={!newMessage.trim() || createMessage.isPending}
               className="self-end rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              Send
+              {t('common.send')}
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getListInvitationsQueryKey,
   useCreateInvitation,
@@ -29,6 +30,7 @@ export function ProjectMembersPanel({ projectId }: { projectId: string }) {
 }
 
 function ProjectMembersContent({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
   const closeProjectMembers = useUiStore((s) => s.closeProjectMembers);
   const { data: members, isLoading, isError } = useListMembers(projectId);
   const addMember = useAddMember();
@@ -74,9 +76,9 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
       invalidateMembers();
       setSelectedUser(null);
       setSearchQuery('');
-      addToast('success', `${selectedUser.name} added.`);
+      addToast('success', t('members.addedSuccess', { name: selectedUser.name }));
     } catch {
-      addToast('error', 'Failed to add member.');
+      addToast('error', t('members.addFailed'));
     }
   };
 
@@ -89,7 +91,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
       });
       invalidateMembers();
     } catch {
-      addToast('error', 'Failed to update role.');
+      addToast('error', t('members.roleUpdateFailed'));
     }
   };
 
@@ -98,9 +100,9 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
       await removeMember.mutateAsync({ projectId, userId });
       invalidateMembers();
       setRemovingUserId(null);
-      addToast('success', 'Member removed.');
+      addToast('success', t('members.removed'));
     } catch {
-      addToast('error', 'Failed to remove member.');
+      addToast('error', t('members.removeFailed'));
     }
   };
 
@@ -123,22 +125,22 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
       <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 id="project-members-title" className="text-lg font-semibold text-gray-900">
-            Members
+            {t('members.members')}
           </h2>
           <button
             type="button"
             onClick={closeProjectMembers}
             className="text-gray-400 hover:text-gray-600"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-sm text-gray-500">{t('common.loading')}</p>
         ) : isError ? (
-          <p className="text-sm text-red-500">Failed to load members.</p>
+          <p className="text-sm text-red-500">{t('members.loadFailed')}</p>
         ) : (
           <div className="space-y-3">
             {members?.map((m) => (
@@ -153,7 +155,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
 
                 {m.user_id === currentUser?.id || !canManageMember(m.role) ? (
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                    {m.role}
+                    {t(`members.role.${m.role}`)}
                   </span>
                 ) : removingUserId === m.user_id ? (
                   <div className="flex items-center gap-1">
@@ -162,14 +164,14 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                       onClick={() => handleRemove(m.user_id)}
                       className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
                     >
-                      Confirm
+                      {t('common.confirm')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setRemovingUserId(null)}
                       className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                 ) : (
@@ -181,17 +183,17 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                       }
                       className="rounded border border-gray-300 px-1 py-0.5 text-xs"
                     >
-                      <option value="owner">owner</option>
-                      <option value="admin">admin</option>
-                      <option value="member">member</option>
+                      <option value="owner">{t('members.role.owner')}</option>
+                      <option value="admin">{t('members.role.admin')}</option>
+                      <option value="member">{t('members.role.member')}</option>
                     </select>
                     <button
                       type="button"
                       onClick={() => setRemovingUserId(m.user_id)}
                       className="text-xs text-gray-400 hover:text-red-600"
-                      aria-label="Remove"
+                      aria-label={t('common.remove')}
                     >
-                      Remove
+                      {t('common.remove')}
                     </button>
                   </div>
                 )}
@@ -204,7 +206,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
 
         {canManage && (
           <div className="mt-4 border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-700">Add Existing User</h3>
+            <h3 className="mb-2 text-sm font-medium text-gray-700">{t('members.addExistingUser')}</h3>
             <div className="relative">
               <input
                 type="text"
@@ -213,7 +215,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                   setSearchQuery(e.target.value);
                   setSelectedUser(null);
                 }}
-                placeholder="Search users by name or email..."
+                placeholder={t('members.searchPlaceholder')}
                 className="block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               {!selectedUser && filteredResults && filteredResults.length > 0 && (
@@ -242,8 +244,8 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                 onChange={(e) => setInviteRole(e.target.value as MemberRoleType)}
                 className="rounded border border-gray-300 px-2 py-1.5 text-sm"
               >
-                <option value="member">member</option>
-                <option value="admin">admin</option>
+                <option value="member">{t('members.role.member')}</option>
+                <option value="admin">{t('members.role.admin')}</option>
               </select>
               <button
                 type="button"
@@ -251,7 +253,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                 disabled={!selectedUser || addMember.isPending}
                 className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                Add
+                {t('common.add')}
               </button>
             </div>
           </div>
@@ -262,6 +264,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
 }
 
 function InvitationSection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
   const { data: invitations } = useListInvitations(projectId);
   const createInvitation = useCreateInvitation();
   const deleteInvitation = useDeleteInvitation();
@@ -283,12 +286,12 @@ function InvitationSection({ projectId }: { projectId: string }) {
       invalidateInvitations();
       try {
         await navigator.clipboard.writeText(result.invite_url);
-        addToast('success', 'Invitation link copied to clipboard!');
+        addToast('success', t('members.inviteCopied'));
       } catch {
-        addToast('success', `Invitation created: ${result.invite_url}`);
+        addToast('success', t('members.inviteCreated', { url: result.invite_url }));
       }
     } catch {
-      addToast('error', 'Failed to create invitation.');
+      addToast('error', t('members.inviteFailed'));
     }
   };
 
@@ -297,7 +300,7 @@ function InvitationSection({ projectId }: { projectId: string }) {
       await deleteInvitation.mutateAsync({ projectId, invitationId });
       invalidateInvitations();
     } catch {
-      addToast('error', 'Failed to revoke invitation.');
+      addToast('error', t('members.revokeFailed'));
     }
   };
 
@@ -310,7 +313,7 @@ function InvitationSection({ projectId }: { projectId: string }) {
   return (
     <div className="mt-4 border-t pt-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-700">Invitation Links</h3>
+        <h3 className="text-sm font-medium text-gray-700">{t('members.invitationLinks')}</h3>
         <button
           type="button"
           onClick={handleCreate}
@@ -318,7 +321,7 @@ function InvitationSection({ projectId }: { projectId: string }) {
           className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700 disabled:opacity-50"
           data-testid="create-invitation-btn"
         >
-          Create Link
+          {t('members.createLink')}
         </button>
       </div>
 
@@ -338,24 +341,24 @@ function InvitationSection({ projectId }: { projectId: string }) {
                   </p>
                   <p className={`text-xs ${isExpired ? 'text-red-500' : 'text-gray-400'}`}>
                     {isExpired
-                      ? 'Expired'
-                      : `Expires ${new Date(inv.expires_at).toLocaleDateString()}`}
+                      ? t('members.expired')
+                      : t('members.expires', { date: new Date(inv.expires_at).toLocaleDateString() })}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleDelete(inv.id)}
                   className="text-xs text-gray-400 hover:text-red-600"
-                  aria-label="Revoke"
+                  aria-label={t('members.revoke')}
                 >
-                  Revoke
+                  {t('members.revoke')}
                 </button>
               </div>
             );
           })}
         </div>
       ) : (
-        <p className="text-xs text-gray-500">No pending invitations.</p>
+        <p className="text-xs text-gray-500">{t('members.noPendingInvitations')}</p>
       )}
     </div>
   );
