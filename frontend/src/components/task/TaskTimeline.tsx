@@ -261,6 +261,12 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
         <textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              handleSubmitComment();
+            }
+          }}
           placeholder="Add a comment..."
           rows={2}
           className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"

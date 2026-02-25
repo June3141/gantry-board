@@ -296,6 +296,34 @@ describe('TaskTimeline component', () => {
     });
   });
 
+  it('submits comment on Ctrl+Enter', async () => {
+    const mockCreate = vi.fn().mockResolvedValue({});
+    vi.mocked(commentsApi.useCreateComment).mockReturnValue({
+      mutateAsync: mockCreate,
+      isPending: false,
+    } as unknown as ReturnType<typeof commentsApi.useCreateComment>);
+    vi.mocked(commentsApi.useListComments).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof commentsApi.useListComments>);
+    vi.mocked(agentSessionsApi.useListAgentSessions).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof agentSessionsApi.useListAgentSessions>);
+
+    const user = userEvent.setup();
+    renderWithProviders(<TaskTimeline taskId="task-1" />);
+
+    const textarea = screen.getByPlaceholderText(/add a comment/i);
+    await user.type(textarea, 'Ctrl+Enter comment');
+    await user.keyboard('{Control>}{Enter}{/Control}');
+
+    expect(mockCreate).toHaveBeenCalledWith({
+      taskId: 'task-1',
+      data: { content: 'Ctrl+Enter comment' },
+    });
+  });
+
   it('starts agent session when Start is clicked', async () => {
     const mockStart = vi.fn().mockResolvedValue({ session: { id: 'new-session' } });
     vi.mocked(agentSessionsApi.useStartAgentSession).mockReturnValue({
