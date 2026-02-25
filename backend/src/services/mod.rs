@@ -7,13 +7,13 @@ pub mod github_pr_service;
 pub mod github_sync_service;
 pub mod invitation_service;
 pub mod member_service;
-pub mod preview_repository;
+/// Re-export from repositories layer for backward compatibility.
+pub use crate::repositories::preview_repository;
 pub mod preview_service;
 pub mod project_message_service;
 pub mod project_service;
 pub mod session_service;
 pub mod task_comment_service;
 pub mod task_service;
-pub mod traits;
 pub mod user_service;
 pub mod worktree_service;
