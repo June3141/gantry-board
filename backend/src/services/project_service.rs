@@ -241,19 +241,24 @@ pub async fn update_project(
 
 /// Validate that a repository path points to a valid git repository.
 pub fn validate_repository_path(path: &str) -> AppResult<()> {
-    let p = std::path::Path::new(path);
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err(AppError::Validation("repository path is empty".to_string()));
+    }
+    let p = std::path::Path::new(trimmed);
     if !p.exists() {
         return Err(AppError::Validation(format!(
-            "repository path does not exist: {path}"
+            "repository path does not exist: {trimmed}"
         )));
     }
     if !p.is_dir() {
         return Err(AppError::Validation(format!(
-            "repository path is not a directory: {path}"
+            "repository path is not a directory: {trimmed}"
         )));
     }
-    git2::Repository::open(p)
-        .map_err(|_| AppError::Validation(format!("path is not a valid git repository: {path}")))?;
+    git2::Repository::open(p).map_err(|_| {
+        AppError::Validation(format!("path is not a valid git repository: {trimmed}"))
+    })?;
     Ok(())
 }
 
