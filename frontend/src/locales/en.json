@@ -21,7 +21,13 @@
     "noDescription": "No description",
     "unassigned": "Unassigned",
     "add": "Add",
-    "areYouSure": "Are you sure?"
+    "areYouSure": "Are you sure?",
+    "timeAgo": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}} min ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    }
   },
   "auth": {
     "signIn": "Sign in",
@@ -174,6 +180,12 @@
     "noOutput": "No output yet",
     "startFailed": "Failed to start agent session.",
     "stopFailed": "Failed to stop agent session.",
+    "pauseFailed": "Failed to pause agent session.",
+    "resumeFailed": "Failed to resume agent session.",
+    "prompt": "Prompt",
+    "pastSessions": "Past Sessions",
+    "pause": "Pause",
+    "resume": "Resume",
     "status": {
       "pending": "pending",
       "running": "running",
@@ -195,12 +207,31 @@
     "deleteConfirm": "Are you sure?",
     "invalid": "invalid"
   },
+  "comment": {
+    "loadingComments": "Loading comments...",
+    "noComments": "No comments yet.",
+    "addPlaceholder": "Add a comment...",
+    "postFailed": "Failed to post comment.",
+    "updateFailed": "Failed to update comment.",
+    "deleteFailed": "Failed to delete comment.",
+    "deleteConfirm": "Delete this comment?"
+  },
   "preview": {
+    "dockerPreviews": "Docker Previews",
     "start": "Start",
     "stop": "Stop",
     "restart": "Restart",
     "delete": "Delete",
     "worktreeName": "Worktree name",
+    "worktreeNameLabel": "Worktree Name",
+    "createFailed": "Failed to create preview",
+    "startFailed": "Failed to start preview",
+    "stopFailed": "Failed to stop preview",
+    "restartFailed": "Failed to restart preview",
+    "deleteFailed": "Failed to delete preview",
+    "loadingPreviews": "Loading previews...",
+    "loadFailed": "Failed to load previews",
+    "noPreviews": "No previews",
     "status": {
       "pending": "pending",
       "building": "building",

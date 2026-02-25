@@ -21,7 +21,13 @@
     "noDescription": "説明なし",
     "unassigned": "未割り当て",
     "add": "追加",
-    "areYouSure": "本当に削除しますか？"
+    "areYouSure": "本当に削除しますか？",
+    "timeAgo": {
+      "justNow": "たった今",
+      "minutesAgo": "{{count}}分前",
+      "hoursAgo": "{{count}}時間前",
+      "daysAgo": "{{count}}日前"
+    }
   },
   "auth": {
     "signIn": "ログイン",
@@ -174,6 +180,12 @@
     "noOutput": "まだ出力がありません",
     "startFailed": "エージェントセッションの開始に失敗しました。",
     "stopFailed": "エージェントセッションの停止に失敗しました。",
+    "pauseFailed": "エージェントセッションの一時停止に失敗しました。",
+    "resumeFailed": "エージェントセッションの再開に失敗しました。",
+    "prompt": "プロンプト",
+    "pastSessions": "過去のセッション",
+    "pause": "一時停止",
+    "resume": "再開",
     "status": {
       "pending": "待機中",
       "running": "実行中",
@@ -195,12 +207,31 @@
     "deleteConfirm": "本当に削除しますか？",
     "invalid": "無効"
   },
+  "comment": {
+    "loadingComments": "コメントを読み込み中...",
+    "noComments": "コメントはありません。",
+    "addPlaceholder": "コメントを追加...",
+    "postFailed": "コメントの投稿に失敗しました。",
+    "updateFailed": "コメントの更新に失敗しました。",
+    "deleteFailed": "コメントの削除に失敗しました。",
+    "deleteConfirm": "このコメントを削除しますか？"
+  },
   "preview": {
+    "dockerPreviews": "Docker プレビュー",
     "start": "開始",
     "stop": "停止",
     "restart": "再起動",
     "delete": "削除",
     "worktreeName": "ワークツリー名",
+    "worktreeNameLabel": "ワークツリー名",
+    "createFailed": "プレビューの作成に失敗しました",
+    "startFailed": "プレビューの開始に失敗しました",
+    "stopFailed": "プレビューの停止に失敗しました",
+    "restartFailed": "プレビューの再起動に失敗しました",
+    "deleteFailed": "プレビューの削除に失敗しました",
+    "loadingPreviews": "プレビューを読み込み中...",
+    "loadFailed": "プレビューの読み込みに失敗しました",
+    "noPreviews": "プレビューなし",
     "status": {
       "pending": "待機中",
       "building": "ビルド中",
