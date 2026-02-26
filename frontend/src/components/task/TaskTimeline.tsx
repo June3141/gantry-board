@@ -164,10 +164,10 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
     <div className="space-y-4">
       {/* Active session */}
       {activeSession && !TERMINAL_STATUSES.includes(activeSession.status) && (
-        <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3">
+        <div className="space-y-2 rounded-md border border-primary/20 bg-primary/10 p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 {AGENT_LABELS[activeSession.agent_type] ?? activeSession.agent_type}
               </span>
               <span
@@ -195,7 +195,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
           const viewingSession = sessions?.find((s) => s.id === viewingSessionId);
           if (!viewingSession) return null;
           return (
-            <div className="space-y-2 rounded-md border border-gray-200 p-3">
+            <div className="space-y-2 rounded-md border border-border p-3">
               <div className="flex items-center gap-2">
                 <Button
                   variant="link"
@@ -207,7 +207,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
                 >
                   {t('common.back')}
                 </Button>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {AGENT_LABELS[viewingSession.agent_type] ?? viewingSession.agent_type}
                 </span>
                 <span
@@ -223,15 +223,17 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
 
       {/* Agent start section */}
       {!activeSession && !viewingSessionId && (
-        <div className="space-y-2 rounded-md border border-gray-200 p-3">
+        <div className="space-y-2 rounded-md border border-border p-3">
           {agentError && (
-            <div className="rounded-md bg-red-50 p-2 text-sm text-red-700">{agentError}</div>
+            <div className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
+              {agentError}
+            </div>
           )}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label
                 htmlFor="timeline-agent-type"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-foreground"
               >
                 {t('agent.agentType')}
               </label>
@@ -239,7 +241,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
                 id="timeline-agent-type"
                 value={agentType}
                 onChange={(e) => setAgentType(e.target.value as AgentType)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
               >
                 <option value="claude_code">{t('agent.claudeCode')}</option>
                 <option value="gemini_cli">{t('agent.geminiCli')}</option>
@@ -292,9 +294,9 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
 
       {/* Timeline */}
       {isLoading ? (
-        <p className="text-sm text-gray-500">{t('activity.loadingActivity')}</p>
+        <p className="text-sm text-muted-foreground">{t('activity.loadingActivity')}</p>
       ) : timeline.length === 0 ? (
-        <p className="text-sm text-gray-500">{t('activity.noActivity')}</p>
+        <p className="text-sm text-muted-foreground">{t('activity.noActivity')}</p>
       ) : (
         <div className="divide-y">
           {timeline.map((item) =>

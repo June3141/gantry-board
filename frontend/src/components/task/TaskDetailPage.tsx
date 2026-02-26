@@ -111,7 +111,7 @@ export function TaskDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <p className="text-gray-500">{t('task.loadingTask')}</p>
+        <p className="text-muted-foreground">{t('task.loadingTask')}</p>
       </div>
     );
   }
@@ -121,11 +121,11 @@ export function TaskDetailPage() {
       <div className="mx-auto max-w-4xl px-4 py-8">
         <Link
           to={`/projects/${projectId}`}
-          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" /> {t('task.backToBoard')}
         </Link>
-        <p className="text-red-500">{t('task.loadFailed')}</p>
+        <p className="text-destructive">{t('task.loadFailed')}</p>
       </div>
     );
   }
@@ -134,12 +134,16 @@ export function TaskDetailPage() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
         to={`/projects/${projectId}`}
-        className="mb-6 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+        className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" /> {t('task.backToBoard')}
       </Link>
 
-      {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Main content */}
@@ -158,7 +162,7 @@ export function TaskDetailPage() {
             ) : (
               <button
                 type="button"
-                className="w-full cursor-pointer rounded px-2 py-1 text-left text-xl font-semibold text-gray-900 hover:bg-gray-100"
+                className="w-full cursor-pointer rounded px-2 py-1 text-left text-xl font-semibold text-foreground hover:bg-accent"
                 onClick={() => startEditing('title', task.title)}
               >
                 {task.title}
@@ -168,7 +172,7 @@ export function TaskDetailPage() {
 
           {/* Description */}
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-700">{t('task.description')}</h3>
+            <h3 className="mb-1 text-sm font-medium text-foreground">{t('task.description')}</h3>
             {editingField === 'description' ? (
               <Textarea
                 value={editValue}
@@ -180,7 +184,7 @@ export function TaskDetailPage() {
             ) : (
               <button
                 type="button"
-                className="w-full cursor-pointer rounded px-2 py-1 text-left text-sm text-gray-600 hover:bg-gray-100"
+                className="w-full cursor-pointer rounded px-2 py-1 text-left text-sm text-muted-foreground hover:bg-accent"
                 onClick={() => startEditing('description', task.description ?? '')}
               >
                 {task.description || t('common.noDescription')}
@@ -190,7 +194,7 @@ export function TaskDetailPage() {
 
           {/* Activity */}
           <div className="border-t pt-6">
-            <h3 className="mb-3 text-sm font-medium text-gray-700">{t('activity.title')}</h3>
+            <h3 className="mb-3 text-sm font-medium text-foreground">{t('activity.title')}</h3>
             <TaskTimeline taskId={task.id} />
           </div>
         </div>
@@ -198,14 +202,14 @@ export function TaskDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           <div>
-            <label htmlFor="task-status" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="task-status" className="block text-sm font-medium text-foreground">
               {t('task.status')}
             </label>
             <select
               id="task-status"
               value={task.status}
               onChange={(e) => handleSelectChange('status', e.target.value as TaskStatus)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
             >
               <option value="backlog">{t('board.status.backlog')}</option>
               <option value="todo">{t('board.status.todo')}</option>
@@ -216,14 +220,14 @@ export function TaskDetailPage() {
           </div>
 
           <div>
-            <label htmlFor="task-priority" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="task-priority" className="block text-sm font-medium text-foreground">
               {t('task.priority')}
             </label>
             <select
               id="task-priority"
               value={task.priority}
               onChange={(e) => handleSelectChange('priority', e.target.value as TaskPriority)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
             >
               <option value="low">{t('board.priorityLabel.low')}</option>
               <option value="medium">{t('board.priorityLabel.medium')}</option>
@@ -233,14 +237,14 @@ export function TaskDetailPage() {
           </div>
 
           <div>
-            <label htmlFor="task-assignee" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="task-assignee" className="block text-sm font-medium text-foreground">
               {t('board.assignee')}
             </label>
             <select
               id="task-assignee"
               value={task.assigned_to ?? ''}
               onChange={(e) => handleAssigneeChange(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
             >
               <option value="">{t('common.unassigned')}</option>
               {members?.map((m) => (
@@ -252,19 +256,19 @@ export function TaskDetailPage() {
           </div>
 
           <div className="border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-700">{t('worktree.worktrees')}</h3>
+            <h3 className="mb-2 text-sm font-medium text-foreground">{t('worktree.worktrees')}</h3>
             <WorktreePanel projectId={projectId ?? ''} />
           </div>
 
           <div className="border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-700">{t('task.pullRequests')}</h3>
+            <h3 className="mb-2 text-sm font-medium text-foreground">{t('task.pullRequests')}</h3>
             <PullRequestList taskId={task.id} />
           </div>
 
           <div className="border-t pt-4">
             {showDeleteConfirm ? (
-              <div className="rounded-md bg-red-50 p-3">
-                <p className="mb-2 text-sm text-red-700">{t('task.deleteConfirm')}</p>
+              <div className="rounded-md bg-destructive/10 p-3">
+                <p className="mb-2 text-sm text-destructive">{t('task.deleteConfirm')}</p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
                     {t('common.cancel')}
@@ -277,7 +281,7 @@ export function TaskDetailPage() {
             ) : (
               <Button
                 variant="outline"
-                className="w-full border-red-300 text-red-700 hover:bg-red-50"
+                className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
                 onClick={() => setShowDeleteConfirm(true)}
               >
                 {t('task.deleteTask')}

@@ -82,10 +82,12 @@ function TaskCreateForm({
         <DialogHeader>
           <DialogTitle>{t('task.createTask')}</DialogTitle>
         </DialogHeader>
-        {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        {error && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="task-title" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="task-title" className="block text-sm font-medium text-foreground">
               {t('task.title')}
             </label>
             <Input
@@ -97,7 +99,7 @@ function TaskCreateForm({
             />
           </div>
           <div>
-            <label htmlFor="task-description" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="task-description" className="block text-sm font-medium text-foreground">
               {t('task.description')}
             </label>
             <Textarea
@@ -110,14 +112,14 @@ function TaskCreateForm({
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label htmlFor="task-status" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="task-status" className="block text-sm font-medium text-foreground">
                 {t('task.status')}
               </label>
               <select
                 id="task-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
               >
                 <option value={TaskStatus.backlog}>{t('board.status.backlog')}</option>
                 <option value={TaskStatus.todo}>{t('board.status.todo')}</option>
@@ -127,14 +129,14 @@ function TaskCreateForm({
               </select>
             </div>
             <div>
-              <label htmlFor="task-priority" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="task-priority" className="block text-sm font-medium text-foreground">
                 {t('task.priority')}
               </label>
               <select
                 id="task-priority"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
               >
                 <option value={TaskPriority.low}>{t('board.priorityLabel.low')}</option>
                 <option value={TaskPriority.medium}>{t('board.priorityLabel.medium')}</option>
@@ -143,14 +145,14 @@ function TaskCreateForm({
               </select>
             </div>
             <div>
-              <label htmlFor="task-assignee" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="task-assignee" className="block text-sm font-medium text-foreground">
                 {t('board.assignee')}
               </label>
               <select
                 id="task-assignee"
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
               >
                 <option value="">{t('common.unassigned')}</option>
                 {members?.map((m) => (
