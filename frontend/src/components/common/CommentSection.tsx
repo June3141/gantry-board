@@ -8,6 +8,8 @@ import {
   useListComments,
   useUpdateComment,
 } from '@/api/generated/endpoints/task-comments/task-comments';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 
@@ -98,67 +100,52 @@ function CommentItem({
           <span className="text-xs text-gray-500">{timeAgo(comment.created_at, t)}</span>
           {isOwner && !editing && !showDeleteConfirm && (
             <div className="ml-auto flex gap-1">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="xs"
                 aria-label={t('common.edit')}
                 onClick={handleEdit}
-                className="text-xs text-gray-400 hover:text-gray-600"
+                className="text-muted-foreground"
               >
                 {t('common.edit')}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
                 aria-label={t('common.delete')}
                 onClick={() => setShowDeleteConfirm(true)}
-                className="text-xs text-gray-400 hover:text-red-600"
+                className="text-muted-foreground hover:text-destructive"
               >
                 {t('common.delete')}
-              </button>
+              </Button>
             </div>
           )}
         </div>
         {editing ? (
           <div className="mt-1 space-y-1">
-            <textarea
+            <Textarea
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               rows={2}
-              className="block w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={handleSave}
-                className="rounded bg-blue-600 px-2 py-0.5 text-xs text-white hover:bg-blue-700"
-              >
+              <Button size="xs" onClick={handleSave}>
                 {t('common.save')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
-              >
+              </Button>
+              <Button variant="outline" size="xs" onClick={() => setEditing(false)}>
                 {t('common.cancel')}
-              </button>
+              </Button>
             </div>
           </div>
         ) : showDeleteConfirm ? (
           <div className="mt-1 flex items-center gap-2 rounded bg-red-50 px-2 py-1">
             <span className="text-xs text-red-700">{t('comment.deleteConfirm')}</span>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
-            >
+            <Button variant="destructive" size="xs" onClick={handleDelete}>
               {t('common.confirm')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(false)}
-              className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
-            >
+            </Button>
+            <Button variant="outline" size="xs" onClick={() => setShowDeleteConfirm(false)}>
               {t('common.cancel')}
-            </button>
+            </Button>
           </div>
         ) : (
           <p className="mt-0.5 text-sm text-gray-700">{comment.content}</p>
@@ -208,21 +195,20 @@ export function CommentSection({ taskId }: { taskId: string }) {
         <p className="text-sm text-gray-500">{t('comment.noComments')}</p>
       )}
       <div className="mt-3 flex gap-2">
-        <textarea
+        <Textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={t('comment.addPlaceholder')}
           rows={2}
-          className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="flex-1"
         />
-        <button
-          type="button"
+        <Button
           onClick={handleSubmit}
           disabled={!newComment.trim() || createComment.isPending}
-          className="self-end rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+          className="self-end"
         >
           {t('common.post')}
-        </button>
+        </Button>
       </div>
     </div>
   );

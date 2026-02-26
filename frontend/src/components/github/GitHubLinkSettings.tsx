@@ -8,6 +8,8 @@ import {
   useGetGithubLink,
   useSyncGithubLink,
 } from '@/api/generated/endpoints/github-links/github-links';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToastStore } from '@/stores/toastStore';
 
 export function GitHubLinkSettings({ projectId }: { projectId: string }) {
@@ -77,37 +79,36 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
             <label htmlFor="github-owner" className="block text-xs font-medium text-gray-600">
               {t('github.owner')}
             </label>
-            <input
+            <Input
               id="github-owner"
               type="text"
               value={repoOwner}
               onChange={(e) => setRepoOwner(e.target.value)}
               placeholder={t('github.ownerPlaceholder')}
-              className="mt-0.5 block w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-0.5"
             />
           </div>
           <div className="flex-1">
             <label htmlFor="github-repo" className="block text-xs font-medium text-gray-600">
               {t('github.repository')}
             </label>
-            <input
+            <Input
               id="github-repo"
               type="text"
               value={repoName}
               onChange={(e) => setRepoName(e.target.value)}
               placeholder={t('github.repoPlaceholder')}
-              className="mt-0.5 block w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-0.5"
             />
           </div>
         </div>
-        <button
-          type="button"
+        <Button
+          size="sm"
           onClick={handleCreate}
           disabled={!repoOwner.trim() || !repoName.trim() || createLink.isPending}
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {t('github.link')}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -119,42 +120,43 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
           {link.repo_owner}/{link.repo_name}
         </span>
         <div className="flex gap-2">
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="xs"
             onClick={handleSync}
             disabled={syncLink.isPending}
-            className="rounded border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50 disabled:opacity-50"
           >
             {t('github.sync')}
-          </button>
+          </Button>
           {showUnlinkConfirm ? (
             <div className="flex items-center gap-2">
               <span className="text-xs text-red-600">{t('common.areYouSure')}</span>
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="xs"
                 onClick={() => setShowUnlinkConfirm(false)}
                 disabled={deleteLink.isPending}
-                className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 {t('common.cancel')}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="destructive"
+                size="xs"
                 onClick={handleUnlink}
                 disabled={deleteLink.isPending}
-                className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700 disabled:opacity-50"
               >
                 {t('common.confirm')}
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="xs"
               onClick={() => setShowUnlinkConfirm(true)}
-              className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+              className="border-red-300 text-red-700 hover:bg-red-50"
             >
               {t('github.unlink')}
-            </button>
+            </Button>
           )}
         </div>
       </div>
