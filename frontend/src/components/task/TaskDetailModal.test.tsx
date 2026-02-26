@@ -110,8 +110,8 @@ describe('TaskDetailModal', () => {
     useUiStore.setState({ selectedTaskId: 'task-1', isTaskDetailOpen: true });
     renderWithProviders(<TaskDetailModal />);
 
-    const backdrop = screen.getByRole('dialog');
-    await user.click(backdrop);
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+    await user.click(overlay);
 
     expect(useUiStore.getState().isTaskDetailOpen).toBe(false);
   });

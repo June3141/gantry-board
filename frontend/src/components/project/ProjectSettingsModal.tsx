@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
@@ -12,9 +11,9 @@ import {
 } from '@/api/generated/endpoints/projects/projects';
 import { MemberRole } from '@/api/generated/model';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -59,14 +58,15 @@ function ProjectSettingsContent({
   const canEdit = currentUserRole === MemberRole.owner || currentUserRole === MemberRole.admin;
   const isOwner = currentUserRole === MemberRole.owner;
 
-  const escapeGuard = useCallback(() => {
-    if (editingField) {
-      setEditingField(null);
-      return true;
-    }
-    return false;
-  }, [editingField]);
-  useEscapeKey(closeProjectSettings, escapeGuard);
+  const handleEscapeKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (editingField) {
+        e.preventDefault();
+        setEditingField(null);
+      }
+    },
+    [editingField],
+  );
 
   const startEditing = (field: 'name' | 'description' | 'repository_path', value: string) => {
     setEditingField(field);
@@ -125,29 +125,20 @@ function ProjectSettingsContent({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="project-settings-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeProjectSettings();
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) closeProjectSettings();
       }}
     >
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 id="project-settings-title" className="text-lg font-semibold text-gray-900">
-            {t('project.settings')}
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={closeProjectSettings}
-            aria-label={t('common.close')}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+      <DialogContent
+        className="max-w-md"
+        onEscapeKeyDown={handleEscapeKeyDown}
+        aria-describedby={undefined}
+      >
+        <DialogHeader>
+          <DialogTitle>{t('project.settings')}</DialogTitle>
+        </DialogHeader>
 
         {isLoading ? (
           <p className="text-sm text-gray-500">{t('common.loading')}</p>
@@ -270,7 +261,7 @@ function ProjectSettingsContent({
             )}
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

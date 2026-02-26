@@ -285,7 +285,8 @@ describe('ProjectSettingsModal', () => {
       <ProjectSettingsModal projectId="project-1" onProjectDeleted={mockOnProjectDeleted} />,
     );
 
-    await user.click(screen.getByRole('dialog'));
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+    await user.click(overlay);
     expect(useUiStore.getState().isProjectSettingsOpen).toBe(false);
   });
 });

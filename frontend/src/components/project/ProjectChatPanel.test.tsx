@@ -185,7 +185,8 @@ describe('ProjectChatPanel', () => {
     useUiStore.setState({ isProjectChatOpen: true });
     renderWithProviders(<ProjectChatPanel projectId="project-1" />);
 
-    await user.click(screen.getByRole('dialog'));
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+    await user.click(overlay);
     expect(useUiStore.getState().isProjectChatOpen).toBe(false);
   });
 });

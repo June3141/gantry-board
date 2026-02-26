@@ -156,7 +156,8 @@
     "loadingTask": "Loading task...",
     "loadFailed": "Failed to load task.",
     "assigneeFailed": "Failed to update assignee. Please try again.",
-    "editComment": "Edit comment"
+    "editComment": "Edit comment",
+    "detail": "Task Detail"
   },
   "activity": {
     "title": "Activity",
