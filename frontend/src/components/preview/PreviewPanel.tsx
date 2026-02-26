@@ -9,6 +9,9 @@ import {
   useStopPreview,
 } from '@/api/generated/endpoints/previews/previews';
 import type { DockerPreview } from '@/api/generated/model';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -37,39 +40,27 @@ function PreviewActions({
   return (
     <div className="flex gap-1">
       {(status === 'pending' || status === 'stopped' || status === 'failed') && (
-        <button
-          type="button"
-          onClick={() => onStart(id)}
-          className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
-        >
+        <Button size="xs" onClick={() => onStart(id)} className="bg-green-600 hover:bg-green-700">
           {t('preview.start')}
-        </button>
+        </Button>
       )}
       {status === 'running' && (
         <>
-          <button
-            type="button"
+          <Button
+            size="xs"
             onClick={() => onStop(id)}
-            className="rounded bg-yellow-600 px-2 py-1 text-xs text-white hover:bg-yellow-700"
+            className="bg-yellow-600 hover:bg-yellow-700"
           >
             {t('preview.stop')}
-          </button>
-          <button
-            type="button"
-            onClick={() => onRestart(id)}
-            className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
-          >
+          </Button>
+          <Button size="xs" onClick={() => onRestart(id)}>
             {t('preview.restart')}
-          </button>
+          </Button>
         </>
       )}
-      <button
-        type="button"
-        onClick={() => onDelete(id)}
-        className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
-      >
+      <Button variant="destructive" size="xs" onClick={() => onDelete(id)}>
         {t('preview.delete')}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -149,22 +140,21 @@ export function PreviewPanel() {
         <label className="sr-only" htmlFor="preview-worktree-name">
           {t('preview.worktreeNameLabel')}
         </label>
-        <input
+        <Input
           id="preview-worktree-name"
           type="text"
           value={worktreeName}
           onChange={(e) => setWorktreeName(e.target.value)}
           placeholder={t('preview.worktreeName')}
-          className="flex-1 rounded border px-3 py-1 text-sm"
+          className="flex-1"
         />
-        <button
-          type="button"
+        <Button
           onClick={handleCreate}
           disabled={!worktreeName.trim() || isCreating}
-          className="rounded bg-indigo-600 px-3 py-1 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="bg-indigo-600 hover:bg-indigo-700"
         >
           {t('common.create')}
-        </button>
+        </Button>
       </div>
 
       {error && <div className="text-sm text-red-500">{error}</div>}
@@ -179,11 +169,7 @@ export function PreviewPanel() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm">{preview.worktree_name}</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[preview.status] ?? ''}`}
-              >
-                {preview.status}
-              </span>
+              <Badge className={statusColors[preview.status] ?? ''}>{preview.status}</Badge>
             </div>
             {preview.status === 'running' && preview.preview_url && (
               <a

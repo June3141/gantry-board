@@ -7,6 +7,8 @@ import {
   useUpdateComment,
 } from '@/api/generated/endpoints/task-comments/task-comments';
 import type { TaskComment } from '@/api/generated/model';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { useToastStore } from '@/stores/toastStore';
 import { getInitials, timeAgo } from './timelineUtils';
 
@@ -69,71 +71,56 @@ export function TimelineCommentItem({
           <span className="text-xs text-gray-500">{timeAgo(comment.created_at)}</span>
           {isOwner && !editing && !showDeleteConfirm && (
             <div className="ml-auto flex gap-1">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="xs"
                 aria-label={t('common.edit')}
                 onClick={() => {
                   setEditing(true);
                   setEditValue(comment.content);
                 }}
-                className="text-xs text-gray-400 hover:text-gray-600"
+                className="text-muted-foreground"
               >
                 {t('common.edit')}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
                 aria-label={t('common.delete')}
                 onClick={() => setShowDeleteConfirm(true)}
-                className="text-xs text-gray-400 hover:text-red-600"
+                className="text-muted-foreground hover:text-destructive"
               >
                 {t('common.delete')}
-              </button>
+              </Button>
             </div>
           )}
         </div>
         {editing ? (
           <div className="mt-1 space-y-1">
-            <textarea
+            <Textarea
               aria-label={t('task.editComment')}
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               rows={2}
-              className="block w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={handleSave}
-                className="rounded bg-blue-600 px-2 py-0.5 text-xs text-white hover:bg-blue-700"
-              >
+              <Button size="xs" onClick={handleSave}>
                 {t('common.save')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
-              >
+              </Button>
+              <Button variant="outline" size="xs" onClick={() => setEditing(false)}>
                 {t('common.cancel')}
-              </button>
+              </Button>
             </div>
           </div>
         ) : showDeleteConfirm ? (
           <div className="mt-1 flex items-center gap-2 rounded bg-red-50 px-2 py-1">
             <span className="text-xs text-red-700">{t('activity.deleteCommentConfirm')}</span>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
-            >
+            <Button variant="destructive" size="xs" onClick={handleDelete}>
               {t('common.confirm')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(false)}
-              className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
-            >
+            </Button>
+            <Button variant="outline" size="xs" onClick={() => setShowDeleteConfirm(false)}>
               {t('common.cancel')}
-            </button>
+            </Button>
           </div>
         ) : (
           <p className="mt-0.5 text-sm text-gray-700">{comment.content}</p>

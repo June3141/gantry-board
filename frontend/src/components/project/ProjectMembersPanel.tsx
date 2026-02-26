@@ -18,6 +18,9 @@ import {
 import { useSearchUsers } from '@/api/generated/endpoints/users/users';
 import type { MemberRole as MemberRoleType } from '@/api/generated/model';
 import { MemberRole } from '@/api/generated/model';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
@@ -127,14 +130,14 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
           <h2 id="project-members-title" className="text-lg font-semibold text-gray-900">
             {t('members.members')}
           </h2>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={closeProjectMembers}
-            className="text-gray-400 hover:text-gray-600"
             aria-label={t('common.close')}
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         {isLoading ? (
@@ -154,25 +157,15 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                 </div>
 
                 {m.user_id === currentUser?.id || !canManageMember(m.role) ? (
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                    {t(`members.role.${m.role}`)}
-                  </span>
+                  <Badge variant="secondary">{t(`members.role.${m.role}`)}</Badge>
                 ) : removingUserId === m.user_id ? (
                   <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(m.user_id)}
-                      className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
-                    >
+                    <Button variant="destructive" size="xs" onClick={() => handleRemove(m.user_id)}>
                       {t('common.confirm')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRemovingUserId(null)}
-                      className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
-                    >
+                    </Button>
+                    <Button variant="outline" size="xs" onClick={() => setRemovingUserId(null)}>
                       {t('common.cancel')}
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -187,14 +180,15 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                       <option value="admin">{t('members.role.admin')}</option>
                       <option value="member">{t('members.role.member')}</option>
                     </select>
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={() => setRemovingUserId(m.user_id)}
-                      className="text-xs text-gray-400 hover:text-red-600"
                       aria-label={t('common.remove')}
+                      className="text-muted-foreground hover:text-destructive"
                     >
                       {t('common.remove')}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -210,7 +204,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
               {t('members.addExistingUser')}
             </h3>
             <div className="relative">
-              <input
+              <Input
                 type="text"
                 value={selectedUser ? selectedUser.name : searchQuery}
                 onChange={(e) => {
@@ -218,7 +212,6 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                   setSelectedUser(null);
                 }}
                 placeholder={t('members.searchPlaceholder')}
-                className="block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               {!selectedUser && filteredResults && filteredResults.length > 0 && (
                 <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
@@ -249,14 +242,13 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                 <option value="member">{t('members.role.member')}</option>
                 <option value="admin">{t('members.role.admin')}</option>
               </select>
-              <button
-                type="button"
+              <Button
+                size="sm"
                 onClick={handleInvite}
                 disabled={!selectedUser || addMember.isPending}
-                className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 {t('common.add')}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -316,15 +308,15 @@ function InvitationSection({ projectId }: { projectId: string }) {
     <div className="mt-4 border-t pt-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-700">{t('members.invitationLinks')}</h3>
-        <button
-          type="button"
+        <Button
+          size="xs"
           onClick={handleCreate}
           disabled={createInvitation.isPending}
-          className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700 disabled:opacity-50"
+          className="bg-green-600 hover:bg-green-700"
           data-testid="create-invitation-btn"
         >
           {t('members.createLink')}
-        </button>
+        </Button>
       </div>
 
       {pendingInvitations.length > 0 ? (
@@ -349,14 +341,15 @@ function InvitationSection({ projectId }: { projectId: string }) {
                         })}
                   </p>
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="xs"
                   onClick={() => handleDelete(inv.id)}
-                  className="text-xs text-gray-400 hover:text-red-600"
                   aria-label={t('members.revoke')}
+                  className="text-muted-foreground hover:text-destructive"
                 >
                   {t('members.revoke')}
-                </button>
+                </Button>
               </div>
             );
           })}

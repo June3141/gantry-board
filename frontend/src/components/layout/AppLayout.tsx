@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, Outlet } from 'react-router-dom';
 import { useLogout } from '@/api/generated/endpoints/auth/auth';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
+import { Button } from '@/components/ui/button';
 import { connectEventSource } from '@/hooks/useEventSource';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -41,14 +42,14 @@ export function AppLayout() {
           <div className="flex items-center gap-2 border-l pl-4">
             <LanguageSwitcher />
             <span className="text-sm text-gray-600">{user?.name ?? user?.email}</span>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleLogout}
               disabled={logout.isPending}
-              className="flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
             >
               <LogOut className="h-4 w-4" /> {t('auth.logout')}
-            </button>
+            </Button>
           </div>
         </div>
       </header>

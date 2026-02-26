@@ -7,6 +7,9 @@ import {
   useDeleteProjectWorktree,
   useListProjectWorktrees,
 } from '@/api/generated/endpoints/worktrees/worktrees';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export function WorktreePanel({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
@@ -70,40 +73,37 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
               <div className="flex items-center gap-2 text-sm">
                 <span className="font-medium text-gray-900">{wt.name}</span>
                 {wt.branch && <span className="text-gray-500">{wt.branch}</span>}
-                {!wt.is_valid && (
-                  <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                    {t('worktree.invalid')}
-                  </span>
-                )}
+                {!wt.is_valid && <Badge variant="destructive">{t('worktree.invalid')}</Badge>}
               </div>
               {deletingName === wt.name ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-red-600">{t('worktree.deleteConfirm')}</span>
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
+                    size="xs"
                     onClick={() => setDeletingName(null)}
                     disabled={deleteWorktree.isPending}
-                    className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
                     {t('common.cancel')}
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="xs"
                     onClick={() => handleDelete(wt.name)}
                     disabled={deleteWorktree.isPending}
-                    className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700 disabled:opacity-50"
                   >
                     {t('common.confirm')}
-                  </button>
+                  </Button>
                 </div>
               ) : (
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
+                  size="xs"
                   onClick={() => setDeletingName(wt.name)}
-                  className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+                  className="border-red-300 text-red-700 hover:bg-red-50"
                 >
                   {t('common.delete')}
-                </button>
+                </Button>
               )}
             </div>
           ))}
@@ -117,23 +117,17 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
           <label htmlFor="worktree-name-input" className="sr-only">
             {t('worktree.worktreeName')}
           </label>
-          <input
+          <Input
             id="worktree-name-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t('worktree.namePlaceholder')}
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
-        <button
-          type="button"
-          onClick={handleCreate}
-          disabled={!name.trim() || createWorktree.isPending}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-        >
+        <Button onClick={handleCreate} disabled={!name.trim() || createWorktree.isPending}>
           {t('common.create')}
-        </button>
+        </Button>
       </div>
     </div>
   );

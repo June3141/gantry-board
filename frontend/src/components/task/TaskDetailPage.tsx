@@ -11,6 +11,9 @@ import {
   useUpdateTask,
 } from '@/api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '@/api/generated/model';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { invalidateTasks } from '@/services/queryInvalidation';
 import { PullRequestList } from '../github/PullRequestList';
 import { WorktreePanel } from '../preview/WorktreePanel';
@@ -144,12 +147,12 @@ export function TaskDetailPage() {
           {/* Title */}
           <div>
             {editingField === 'title' ? (
-              <input
+              <Input
                 type="text"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onBlur={() => saveField('title')}
-                className="w-full rounded border border-blue-300 px-3 py-2 text-xl font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="text-xl font-semibold"
                 autoFocus
               />
             ) : (
@@ -167,12 +170,11 @@ export function TaskDetailPage() {
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-700">{t('task.description')}</h3>
             {editingField === 'description' ? (
-              <textarea
+              <Textarea
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onBlur={() => saveField('description')}
                 rows={4}
-                className="w-full rounded border border-blue-300 px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
               />
             ) : (
@@ -264,30 +266,22 @@ export function TaskDetailPage() {
               <div className="rounded-md bg-red-50 p-3">
                 <p className="mb-2 text-sm text-red-700">{t('task.deleteConfirm')}</p>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteConfirm(false)}
-                    className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
                     {t('common.cancel')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    className="rounded-md bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
-                  >
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={handleDelete}>
                     {t('common.confirm')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                className="w-full border-red-300 text-red-700 hover:bg-red-50"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="w-full rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50"
               >
                 {t('task.deleteTask')}
-              </button>
+              </Button>
             )}
           </div>
         </div>

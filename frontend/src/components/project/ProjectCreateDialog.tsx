@@ -2,6 +2,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCreateProject } from '@/api/generated/endpoints/projects/projects';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { invalidateProjects } from '@/services/queryInvalidation';
 import { useUiStore } from '@/stores/uiStore';
@@ -70,12 +73,12 @@ function ProjectCreateForm() {
             <label htmlFor="project-name" className="block text-sm font-medium text-gray-700">
               {t('project.name')}
             </label>
-            <input
+            <Input
               id="project-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
               autoFocus
             />
           </div>
@@ -86,12 +89,12 @@ function ProjectCreateForm() {
             >
               {t('project.description')}
             </label>
-            <textarea
+            <Textarea
               id="project-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
             />
           </div>
           <div>
@@ -101,30 +104,22 @@ function ProjectCreateForm() {
             >
               {t('project.repositoryPath')}
             </label>
-            <input
+            <Input
               id="project-repository-path"
               type="text"
               value={repositoryPath}
               onChange={(e) => setRepositoryPath(e.target.value)}
               placeholder={t('project.repositoryPathPlaceholder')}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={closeProjectModal}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
+            <Button type="button" variant="outline" onClick={closeProjectModal}>
               {t('common.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={createProject.isPending}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={createProject.isPending}>
               {t('common.create')}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

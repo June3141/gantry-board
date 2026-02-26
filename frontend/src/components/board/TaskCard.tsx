@@ -2,6 +2,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { useRef } from 'react';
 import type { ProjectMember, Task } from '@/api/generated/model';
 import { TaskPriority } from '@/api/generated/model';
+import { Badge } from '@/components/ui/badge';
 import { useUiStore } from '@/stores/uiStore';
 
 interface TaskCardProps {
@@ -81,11 +82,7 @@ export function TaskCard({ task, isDragging, members }: TaskCardProps) {
     >
       <div className="mb-2 flex items-start justify-between">
         <h3 className="text-sm font-medium text-gray-900">{task.title}</h3>
-        <span
-          className={`rounded px-2 py-0.5 text-xs font-medium ${priorityStyles[task.priority]}`}
-        >
-          {task.priority}
-        </span>
+        <Badge className={`rounded ${priorityStyles[task.priority]}`}>{task.priority}</Badge>
       </div>
       {task.description && (
         <p data-testid="task-description" className="text-xs text-gray-500">
