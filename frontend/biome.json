@@ -36,6 +36,9 @@
     "formatter": { "enabled": true },
     "linter": { "enabled": true }
   },
+  "files": {
+    "includes": ["src/**/*.ts", "src/**/*.tsx"]
+  },
   "overrides": [
     {
       "includes": ["src/api/generated/**"],
