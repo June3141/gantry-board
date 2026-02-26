@@ -14,7 +14,7 @@ export function ProjectListPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <p className="text-gray-500">{t('project.loadingProjects')}</p>
+        <p className="text-muted-foreground">{t('project.loadingProjects')}</p>
       </div>
     );
   }
@@ -22,7 +22,7 @@ export function ProjectListPage() {
   if (isError) {
     return (
       <div className="flex items-center justify-center p-12">
-        <p className="text-red-500">{t('project.loadFailed')}</p>
+        <p className="text-destructive">{t('project.loadFailed')}</p>
       </div>
     );
   }
@@ -30,15 +30,15 @@ export function ProjectListPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">{t('project.projects')}</h2>
+        <h2 className="text-xl font-semibold text-foreground">{t('project.projects')}</h2>
         <Button size="sm" onClick={openProjectModal}>
           <FolderPlus className="h-4 w-4" /> {t('project.newProject')}
         </Button>
       </div>
 
       {!projects || projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-16">
-          <p className="text-gray-500">{t('project.noProjects')}</p>
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border py-16">
+          <p className="text-muted-foreground">{t('project.noProjects')}</p>
           <Button className="mt-4" onClick={openProjectModal}>
             <FolderPlus className="h-4 w-4" /> {t('project.createFirst')}
           </Button>

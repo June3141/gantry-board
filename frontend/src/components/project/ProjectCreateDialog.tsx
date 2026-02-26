@@ -63,10 +63,12 @@ function ProjectCreateForm() {
         <DialogHeader>
           <DialogTitle>{t('project.createProject')}</DialogTitle>
         </DialogHeader>
-        {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        {error && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="project-name" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="project-name" className="block text-sm font-medium text-foreground">
               {t('project.name')}
             </label>
             <Input
@@ -80,7 +82,7 @@ function ProjectCreateForm() {
           <div>
             <label
               htmlFor="project-description"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-foreground"
             >
               {t('project.description')}
             </label>
@@ -95,7 +97,7 @@ function ProjectCreateForm() {
           <div>
             <label
               htmlFor="project-repository-path"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-foreground"
             >
               {t('project.repositoryPath')}
             </label>

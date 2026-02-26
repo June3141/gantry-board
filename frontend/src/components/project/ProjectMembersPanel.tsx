@@ -125,19 +125,19 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
         </DialogHeader>
 
         {isLoading ? (
-          <p className="text-sm text-gray-500">{t('common.loading')}</p>
+          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
         ) : isError ? (
-          <p className="text-sm text-red-500">{t('members.loadFailed')}</p>
+          <p className="text-sm text-destructive">{t('members.loadFailed')}</p>
         ) : (
           <div className="space-y-3">
             {members?.map((m) => (
               <div
                 key={m.user_id}
-                className="flex items-center gap-3 rounded-md border border-gray-200 px-3 py-2"
+                className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900">{m.user_name}</p>
-                  <p className="text-xs text-gray-500">{m.user_email}</p>
+                  <p className="text-sm font-medium text-foreground">{m.user_name}</p>
+                  <p className="text-xs text-muted-foreground">{m.user_email}</p>
                 </div>
 
                 {m.user_id === currentUser?.id || !canManageMember(m.role) ? (
@@ -158,7 +158,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                       onChange={(e) =>
                         handleRoleChange(m.user_id, e.target.value as MemberRoleType)
                       }
-                      className="rounded border border-gray-300 px-1 py-0.5 text-xs"
+                      className="rounded border border-input px-1 py-0.5 text-xs"
                     >
                       <option value="owner">{t('members.role.owner')}</option>
                       <option value="admin">{t('members.role.admin')}</option>
@@ -184,7 +184,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
 
         {canManage && (
           <div className="border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-700">
+            <h3 className="mb-2 text-sm font-medium text-foreground">
               {t('members.addExistingUser')}
             </h3>
             <div className="relative">
@@ -198,7 +198,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                 placeholder={t('members.searchPlaceholder')}
               />
               {!selectedUser && filteredResults && filteredResults.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
+                <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-background shadow-lg">
                   {filteredResults.map((u) => (
                     <button
                       key={u.id}
@@ -208,10 +208,10 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                         setSelectedUser({ id: u.id, name: u.name });
                         setSearchQuery('');
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
                     >
                       <span className="font-medium">{u.name}</span>
-                      <span className="text-xs text-gray-500">{u.email}</span>
+                      <span className="text-xs text-muted-foreground">{u.email}</span>
                     </button>
                   ))}
                 </div>
@@ -221,7 +221,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as MemberRoleType)}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm"
+                className="rounded border border-input px-2 py-1.5 text-sm"
               >
                 <option value="member">{t('members.role.member')}</option>
                 <option value="admin">{t('members.role.admin')}</option>
@@ -287,12 +287,12 @@ function InvitationSection({ projectId }: { projectId: string }) {
   return (
     <div className="border-t pt-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-700">{t('members.invitationLinks')}</h3>
+        <h3 className="text-sm font-medium text-foreground">{t('members.invitationLinks')}</h3>
         <Button
           size="xs"
           onClick={handleCreate}
           disabled={createInvitation.isPending}
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-success hover:bg-success/90"
           data-testid="create-invitation-btn"
         >
           {t('members.createLink')}
@@ -307,13 +307,15 @@ function InvitationSection({ projectId }: { projectId: string }) {
               <div
                 key={inv.id}
                 data-testid="invitation-item"
-                className="flex items-center gap-2 rounded border border-gray-200 px-2 py-1.5"
+                className="flex items-center gap-2 rounded border border-border px-2 py-1.5"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     {inv.role} &middot; by {inv.invited_by_name}
                   </p>
-                  <p className={`text-xs ${isExpired ? 'text-red-500' : 'text-gray-400'}`}>
+                  <p
+                    className={`text-xs ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}
+                  >
                     {isExpired
                       ? t('members.expired')
                       : t('members.expires', {
@@ -335,7 +337,7 @@ function InvitationSection({ projectId }: { projectId: string }) {
           })}
         </div>
       ) : (
-        <p className="text-xs text-gray-500">{t('members.noPendingInvitations')}</p>
+        <p className="text-xs text-muted-foreground">{t('members.noPendingInvitations')}</p>
       )}
     </div>
   );

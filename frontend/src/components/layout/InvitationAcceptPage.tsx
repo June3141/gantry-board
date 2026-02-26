@@ -23,8 +23,8 @@ export function InvitationAcceptPage() {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
-        <p className="text-gray-500">{t('invitation.invalidLink')}</p>
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <p className="text-muted-foreground">{t('invitation.invalidLink')}</p>
       </div>
     );
   }
@@ -39,34 +39,34 @@ export function InvitationAcceptPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900">{t('invitation.title')}</h1>
+    <div className="flex min-h-screen items-center justify-center bg-muted">
+      <div className="w-full max-w-md rounded-lg bg-background p-8 shadow-md">
+        <h1 className="mb-6 text-2xl font-bold text-foreground">{t('invitation.title')}</h1>
 
         {isLoading ? (
-          <p className="text-gray-500">{t('invitation.loadingInvitation')}</p>
+          <p className="text-muted-foreground">{t('invitation.loadingInvitation')}</p>
         ) : isError ? (
-          <p className="text-red-500">{t('invitation.expiredOrInvalid')}</p>
+          <p className="text-destructive">{t('invitation.expiredOrInvalid')}</p>
         ) : info ? (
           <div className="space-y-4">
-            <div className="rounded-md bg-blue-50 p-4">
-              <p className="text-sm text-gray-700">
+            <div className="rounded-md bg-primary/10 p-4">
+              <p className="text-sm text-foreground">
                 <span className="font-medium">{info.invited_by_name}</span>{' '}
                 {t('invitation.invitedYou')}
               </p>
-              <p className="mt-1 text-lg font-semibold text-gray-900">{info.project_name}</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-lg font-semibold text-foreground">{info.project_name}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
                 {t('invitation.role')} <span className="font-medium">{info.role}</span>
               </p>
             </div>
 
             {info.accepted ? (
-              <p className="text-sm text-green-600">{t('invitation.alreadyAccepted')}</p>
+              <p className="text-sm text-success">{t('invitation.alreadyAccepted')}</p>
             ) : info.expired ? (
-              <p className="text-sm text-red-600">{t('invitation.expired')}</p>
+              <p className="text-sm text-destructive">{t('invitation.expired')}</p>
             ) : !isAuthenticated ? (
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">{t('invitation.loginRequired')}</p>
+                <p className="text-sm text-muted-foreground">{t('invitation.loginRequired')}</p>
                 <Button
                   className="w-full"
                   onClick={() => navigate(`/login?redirect=/invite/${token}`)}
@@ -91,7 +91,7 @@ export function InvitationAcceptPage() {
                   {acceptMutation.isPending ? t('invitation.accepting') : t('invitation.accept')}
                 </Button>
                 {acceptMutation.isError && (
-                  <p className="text-sm text-red-600">{t('invitation.acceptFailed')}</p>
+                  <p className="text-sm text-destructive">{t('invitation.acceptFailed')}</p>
                 )}
               </div>
             )}

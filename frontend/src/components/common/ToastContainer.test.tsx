@@ -42,30 +42,30 @@ describe('ToastContainer', () => {
     expect(useToastStore.getState().toasts).toHaveLength(0);
   });
 
-  it('applies green styling for success toast', () => {
+  it('applies success styling for success toast', () => {
     useToastStore.setState({
       toasts: [{ id: '1', type: 'success', message: 'Success msg' }],
     });
     render(<ToastContainer />);
     const toast = screen.getByText('Success msg').closest('[data-testid="toast-item"]');
-    expect(toast).toHaveClass('bg-green-50');
+    expect(toast).toHaveClass('bg-success/10');
   });
 
-  it('applies red styling for error toast', () => {
+  it('applies destructive styling for error toast', () => {
     useToastStore.setState({
       toasts: [{ id: '1', type: 'error', message: 'Error msg' }],
     });
     render(<ToastContainer />);
     const toast = screen.getByText('Error msg').closest('[data-testid="toast-item"]');
-    expect(toast).toHaveClass('bg-red-50');
+    expect(toast).toHaveClass('bg-destructive/10');
   });
 
-  it('applies blue styling for info toast', () => {
+  it('applies primary styling for info toast', () => {
     useToastStore.setState({
       toasts: [{ id: '1', type: 'info', message: 'Info msg' }],
     });
     render(<ToastContainer />);
     const toast = screen.getByText('Info msg').closest('[data-testid="toast-item"]');
-    expect(toast).toHaveClass('bg-blue-50');
+    expect(toast).toHaveClass('bg-primary/10');
   });
 });

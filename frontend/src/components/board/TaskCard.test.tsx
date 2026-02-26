@@ -60,7 +60,7 @@ describe('TaskCard', () => {
     render(<TaskCard task={task} />);
 
     const badge = screen.getByText('urgent');
-    expect(badge).toHaveClass('bg-red-100');
+    expect(badge).toHaveClass('bg-destructive/15');
   });
 
   it('applies high priority styling', () => {
@@ -68,7 +68,7 @@ describe('TaskCard', () => {
     render(<TaskCard task={task} />);
 
     const badge = screen.getByText('high');
-    expect(badge).toHaveClass('bg-orange-100');
+    expect(badge).toHaveClass('bg-warning/25');
   });
 
   it('applies medium priority styling', () => {
@@ -76,7 +76,7 @@ describe('TaskCard', () => {
     render(<TaskCard task={task} />);
 
     const badge = screen.getByText('medium');
-    expect(badge).toHaveClass('bg-yellow-100');
+    expect(badge).toHaveClass('bg-warning/15');
   });
 
   it('applies low priority styling', () => {
@@ -84,7 +84,7 @@ describe('TaskCard', () => {
     render(<TaskCard task={task} />);
 
     const badge = screen.getByText('low');
-    expect(badge).toHaveClass('bg-gray-100');
+    expect(badge).toHaveClass('bg-muted');
   });
 
   it('opens task detail on click', async () => {

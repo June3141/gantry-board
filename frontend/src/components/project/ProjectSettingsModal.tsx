@@ -141,13 +141,13 @@ function ProjectSettingsContent({
         </DialogHeader>
 
         {isLoading ? (
-          <p className="text-sm text-gray-500">{t('common.loading')}</p>
+          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
         ) : isError || !project ? (
-          <p className="text-sm text-red-500">{t('project.loadFailed')}</p>
+          <p className="text-sm text-destructive">{t('project.loadFailed')}</p>
         ) : (
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-medium text-gray-700">{t('project.name')}</h3>
+              <h3 className="text-sm font-medium text-foreground">{t('project.name')}</h3>
               {editingField === 'name' ? (
                 <Input
                   type="text"
@@ -160,18 +160,18 @@ function ProjectSettingsContent({
               ) : canEdit ? (
                 <button
                   type="button"
-                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-900 hover:bg-gray-100"
+                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-foreground hover:bg-accent"
                   onClick={() => startEditing('name', project.name)}
                 >
                   {project.name}
                 </button>
               ) : (
-                <p className="mt-1 px-1 text-sm text-gray-900">{project.name}</p>
+                <p className="mt-1 px-1 text-sm text-foreground">{project.name}</p>
               )}
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-700">{t('project.description')}</h3>
+              <h3 className="text-sm font-medium text-foreground">{t('project.description')}</h3>
               {editingField === 'description' ? (
                 <Textarea
                   value={editValue}
@@ -184,20 +184,20 @@ function ProjectSettingsContent({
               ) : canEdit ? (
                 <button
                   type="button"
-                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-600 hover:bg-gray-100"
+                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-muted-foreground hover:bg-accent"
                   onClick={() => startEditing('description', project.description ?? '')}
                 >
                   {project.description || t('common.noDescription')}
                 </button>
               ) : (
-                <p className="mt-1 px-1 text-sm text-gray-600">
+                <p className="mt-1 px-1 text-sm text-muted-foreground">
                   {project.description || t('common.noDescription')}
                 </p>
               )}
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-700">{t('project.repositoryPath')}</h3>
+              <h3 className="text-sm font-medium text-foreground">{t('project.repositoryPath')}</h3>
               {editingField === 'repository_path' ? (
                 <Input
                   type="text"
@@ -211,13 +211,13 @@ function ProjectSettingsContent({
               ) : canEdit ? (
                 <button
                   type="button"
-                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-600 hover:bg-gray-100"
+                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-muted-foreground hover:bg-accent"
                   onClick={() => startEditing('repository_path', project.repository_path ?? '')}
                 >
                   {project.repository_path || t('project.notSetGlobal')}
                 </button>
               ) : (
-                <p className="mt-1 px-1 text-sm text-gray-600">
+                <p className="mt-1 px-1 text-sm text-muted-foreground">
                   {project.repository_path || t('project.notSetGlobal')}
                 </p>
               )}
@@ -225,7 +225,7 @@ function ProjectSettingsContent({
 
             {canEdit && (
               <div className="border-t pt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">{t('github.github')}</h3>
+                <h3 className="text-sm font-medium text-foreground mb-2">{t('github.github')}</h3>
                 <GitHubLinkSettings projectId={projectId} />
               </div>
             )}
@@ -233,8 +233,8 @@ function ProjectSettingsContent({
             {isOwner && (
               <div className="border-t pt-4">
                 {showDeleteConfirm ? (
-                  <div className="flex items-center justify-between rounded-md bg-red-50 p-3">
-                    <p className="text-sm text-red-700">{t('project.deleteConfirm')}</p>
+                  <div className="flex items-center justify-between rounded-md bg-destructive/10 p-3">
+                    <p className="text-sm text-destructive">{t('project.deleteConfirm')}</p>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
@@ -251,7 +251,7 @@ function ProjectSettingsContent({
                 ) : (
                   <Button
                     variant="outline"
-                    className="border-red-300 text-red-700 hover:bg-red-50"
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10"
                     onClick={() => setShowDeleteConfirm(true)}
                   >
                     {t('project.deleteProject')}

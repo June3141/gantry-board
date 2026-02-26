@@ -12,11 +12,11 @@ interface ProjectCardProps {
 export function ProjectCard({ project, onSettings }: ProjectCardProps) {
   const { t } = useTranslation();
   return (
-    <div className="group relative rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+    <div className="group relative rounded-lg border border-border bg-background p-5 shadow-sm transition-shadow hover:shadow-md">
       <Link to={`/projects/${project.id}`} className="block">
-        <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
+        <h3 className="text-lg font-semibold text-foreground">{project.name}</h3>
         {project.description && (
-          <p className="mt-1 line-clamp-2 text-sm text-gray-500">{project.description}</p>
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{project.description}</p>
         )}
       </Link>
       {onSettings && (

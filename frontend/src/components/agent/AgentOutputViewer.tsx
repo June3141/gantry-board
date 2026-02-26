@@ -21,7 +21,7 @@ export function AgentOutputViewer({ lines, isLoading = false }: AgentOutputViewe
 
   if (isLoading) {
     return (
-      <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">
+      <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
         {t('agent.loadingOutput')}
       </div>
     );
@@ -29,7 +29,9 @@ export function AgentOutputViewer({ lines, isLoading = false }: AgentOutputViewe
 
   if (lines.length === 0) {
     return (
-      <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">{t('agent.noOutput')}</div>
+      <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
+        {t('agent.noOutput')}
+      </div>
     );
   }
 

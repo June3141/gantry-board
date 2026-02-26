@@ -49,7 +49,7 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
   return (
     <div className="flex items-center gap-3">
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
           placeholder={t('board.searchPlaceholder')}
@@ -73,9 +73,9 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
         {assigneeOpen && (
           <div
             data-testid="assignee-dropdown"
-            className="absolute left-0 top-full z-10 mt-1 w-48 rounded-md border border-gray-200 bg-white p-2 shadow-lg"
+            className="absolute left-0 top-full z-10 mt-1 w-48 rounded-md border border-border bg-background p-2 shadow-lg"
           >
-            <label className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-50">
+            <label className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-accent">
               <input
                 type="checkbox"
                 checked={assigneeFilter.includes('unassigned')}
@@ -86,7 +86,7 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
             {members?.map((m) => (
               <label
                 key={m.user_id}
-                className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-50"
+                className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-accent"
               >
                 <input
                   type="checkbox"
@@ -114,12 +114,12 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
         {priorityOpen && (
           <div
             data-testid="priority-dropdown"
-            className="absolute left-0 top-full z-10 mt-1 w-48 rounded-md border border-gray-200 bg-white p-2 shadow-lg"
+            className="absolute left-0 top-full z-10 mt-1 w-48 rounded-md border border-border bg-background p-2 shadow-lg"
           >
             {Object.values(TaskPriority).map((p) => (
               <label
                 key={p}
-                className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-50"
+                className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-accent"
               >
                 <input
                   type="checkbox"

@@ -52,32 +52,34 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
   };
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500">{t('worktree.loadingWorktrees')}</p>;
+    return <p className="text-sm text-muted-foreground">{t('worktree.loadingWorktrees')}</p>;
   }
 
   if (isError) {
-    return <p className="text-sm text-red-500">{t('worktree.loadFailed')}</p>;
+    return <p className="text-sm text-destructive">{t('worktree.loadFailed')}</p>;
   }
 
   return (
     <div className="space-y-3">
-      {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      {error && (
+        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+      )}
 
       {worktrees && worktrees.length > 0 ? (
         <div className="space-y-1">
           {worktrees.map((wt) => (
             <div
               key={wt.name}
-              className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+              className="flex items-center justify-between rounded-md border border-border px-3 py-2"
             >
               <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium text-gray-900">{wt.name}</span>
-                {wt.branch && <span className="text-gray-500">{wt.branch}</span>}
+                <span className="font-medium text-foreground">{wt.name}</span>
+                {wt.branch && <span className="text-muted-foreground">{wt.branch}</span>}
                 {!wt.is_valid && <Badge variant="destructive">{t('worktree.invalid')}</Badge>}
               </div>
               {deletingName === wt.name ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-red-600">{t('worktree.deleteConfirm')}</span>
+                  <span className="text-xs text-destructive">{t('worktree.deleteConfirm')}</span>
                   <Button
                     variant="outline"
                     size="xs"
@@ -100,7 +102,7 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
                   variant="outline"
                   size="xs"
                   onClick={() => setDeletingName(wt.name)}
-                  className="border-red-300 text-red-700 hover:bg-red-50"
+                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
                 >
                   {t('common.delete')}
                 </Button>
@@ -109,7 +111,7 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-gray-500">{t('worktree.noWorktrees')}</p>
+        <p className="text-sm text-muted-foreground">{t('worktree.noWorktrees')}</p>
       )}
 
       <div className="flex gap-2">

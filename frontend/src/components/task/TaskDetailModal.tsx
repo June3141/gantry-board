@@ -121,12 +121,16 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
       >
         <DialogTitle className="sr-only">{t('task.detail')}</DialogTitle>
         {isLoading ? (
-          <p className="text-sm text-gray-500">{t('common.loading')}</p>
+          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
         ) : isError || !task ? (
-          <p className="text-sm text-red-500">{t('task.loadFailed')}</p>
+          <p className="text-sm text-destructive">{t('task.loadFailed')}</p>
         ) : (
           <div className="space-y-4">
-            {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+            {error && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
             <div className="flex items-start justify-between">
               {editingField === 'title' ? (
                 <input
@@ -135,14 +139,14 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={() => saveField('title')}
-                  className="flex-1 rounded border border-blue-300 px-2 py-1 text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded border border-primary/30 px-2 py-1 text-lg font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   autoFocus
                 />
               ) : (
                 <button
                   id="task-detail-modal-title"
                   type="button"
-                  className="cursor-pointer rounded px-1 text-left text-lg font-semibold text-gray-900 hover:bg-gray-100"
+                  className="cursor-pointer rounded px-1 text-left text-lg font-semibold text-foreground hover:bg-accent"
                   onClick={() => startEditing('title', task.title)}
                 >
                   {task.title}
@@ -151,20 +155,20 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-700">{t('task.description')}</h3>
+              <h3 className="text-sm font-medium text-foreground">{t('task.description')}</h3>
               {editingField === 'description' ? (
                 <textarea
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={() => saveField('description')}
                   rows={3}
-                  className="mt-1 block w-full rounded border border-blue-300 px-2 py-1 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded border border-primary/30 px-2 py-1 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   autoFocus
                 />
               ) : (
                 <button
                   type="button"
-                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-gray-600 hover:bg-gray-100"
+                  className="mt-1 cursor-pointer rounded px-1 text-left text-sm text-muted-foreground hover:bg-accent"
                   onClick={() => startEditing('description', task.description ?? '')}
                 >
                   {task.description || t('common.noDescription')}
@@ -176,7 +180,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
               <div>
                 <label
                   htmlFor="task-detail-status"
-                  className="block text-sm font-medium text-gray-700"
+                  className="block text-sm font-medium text-foreground"
                 >
                   {t('task.status')}
                 </label>
@@ -184,7 +188,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   id="task-detail-status"
                   value={task.status}
                   onChange={(e) => handleSelectChange('status', e.target.value as TaskStatus)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
                 >
                   <option value="backlog">{t('board.status.backlog')}</option>
                   <option value="todo">{t('board.status.todo')}</option>
@@ -196,7 +200,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
               <div>
                 <label
                   htmlFor="task-detail-priority"
-                  className="block text-sm font-medium text-gray-700"
+                  className="block text-sm font-medium text-foreground"
                 >
                   {t('task.priority')}
                 </label>
@@ -204,7 +208,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   id="task-detail-priority"
                   value={task.priority}
                   onChange={(e) => handleSelectChange('priority', e.target.value as TaskPriority)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
                 >
                   <option value="low">{t('board.priorityLabel.low')}</option>
                   <option value="medium">{t('board.priorityLabel.medium')}</option>
@@ -215,7 +219,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
               <div>
                 <label
                   htmlFor="task-detail-assignee"
-                  className="block text-sm font-medium text-gray-700"
+                  className="block text-sm font-medium text-foreground"
                 >
                   {t('board.assignee')}
                 </label>
@@ -223,7 +227,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   id="task-detail-assignee"
                   value={task.assigned_to ?? ''}
                   onChange={(e) => handleAssigneeChange(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="mt-1 block w-full rounded-md border border-input px-3 py-2 text-sm"
                 >
                   <option value="">{t('common.unassigned')}</option>
                   {members?.map((m) => (
@@ -236,36 +240,38 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">{t('worktree.worktrees')}</h3>
+              <h3 className="text-sm font-medium text-foreground mb-2">
+                {t('worktree.worktrees')}
+              </h3>
               <WorktreePanel projectId={task.project_id} />
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">{t('task.pullRequests')}</h3>
+              <h3 className="text-sm font-medium text-foreground mb-2">{t('task.pullRequests')}</h3>
               <PullRequestList taskId={taskId} />
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">{t('activity.title')}</h3>
+              <h3 className="text-sm font-medium text-foreground mb-2">{t('activity.title')}</h3>
               <TaskTimeline taskId={taskId} />
             </div>
 
             <div className="border-t pt-4">
               {showDeleteConfirm ? (
-                <div className="flex items-center justify-between rounded-md bg-red-50 p-3">
-                  <p className="text-sm text-red-700">{t('task.deleteConfirm')}</p>
+                <div className="flex items-center justify-between rounded-md bg-destructive/10 p-3">
+                  <p className="text-sm text-destructive">{t('task.deleteConfirm')}</p>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setShowDeleteConfirm(false)}
-                      className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                      className="rounded-md border border-input px-3 py-1 text-sm text-foreground hover:bg-accent"
                     >
                       {t('common.cancel')}
                     </button>
                     <button
                       type="button"
                       onClick={handleDelete}
-                      className="rounded-md bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
+                      className="rounded-md bg-destructive px-3 py-1 text-sm text-white hover:bg-destructive/80"
                     >
                       {t('common.confirm')}
                     </button>
@@ -275,7 +281,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+                  className="rounded-md border border-destructive/30 px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
                 >
                   {t('common.delete')}
                 </button>

@@ -12,8 +12,8 @@ export function GuestRoute({ children }: GuestRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
-        <div className="text-gray-500">{t('common.loading')}</div>
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="text-muted-foreground">{t('common.loading')}</div>
       </div>
     );
   }

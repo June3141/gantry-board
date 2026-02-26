@@ -12,14 +12,14 @@ export function TimelineAgentSessionItem({
     <button
       type="button"
       data-testid="timeline-session"
-      className="flex w-full items-center gap-3 rounded-md bg-gray-50 px-3 py-2 text-left hover:bg-gray-100"
+      className="flex w-full items-center gap-3 rounded-md bg-muted px-3 py-2 text-left hover:bg-accent"
       onClick={() => onView(session)}
     >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-800">
         AI
       </div>
       <div className="flex flex-1 items-center gap-2">
-        <span className="text-sm font-medium text-gray-900">
+        <span className="text-sm font-medium text-foreground">
           {AGENT_LABELS[session.agent_type] ?? session.agent_type}
         </span>
         <span
@@ -27,7 +27,7 @@ export function TimelineAgentSessionItem({
         >
           {session.status}
         </span>
-        <span className="text-xs text-gray-500">{timeAgo(session.created_at)}</span>
+        <span className="text-xs text-muted-foreground">{timeAgo(session.created_at)}</span>
       </div>
     </button>
   );

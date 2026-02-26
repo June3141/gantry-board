@@ -74,13 +74,13 @@ function MessageItem({
 
   return (
     <div data-testid="message-item" className="flex gap-3 py-2">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-700">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-medium text-primary">
         {initials}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-900">{message.user_name}</span>
-          <span className="text-xs text-gray-500">{timeAgo(message.created_at, t)}</span>
+          <span className="text-sm font-medium text-foreground">{message.user_name}</span>
+          <span className="text-xs text-muted-foreground">{timeAgo(message.created_at, t)}</span>
           {isOwner && !showDeleteConfirm && (
             <Button
               variant="ghost"
@@ -94,8 +94,8 @@ function MessageItem({
           )}
         </div>
         {showDeleteConfirm ? (
-          <div className="mt-1 flex items-center gap-2 rounded bg-red-50 px-2 py-1">
-            <span className="text-xs text-red-700">{t('chat.deleteMessageConfirm')}</span>
+          <div className="mt-1 flex items-center gap-2 rounded bg-destructive/10 px-2 py-1">
+            <span className="text-xs text-destructive">{t('chat.deleteMessageConfirm')}</span>
             <Button variant="destructive" size="xs" onClick={handleDelete}>
               {t('common.confirm')}
             </Button>
@@ -104,7 +104,7 @@ function MessageItem({
             </Button>
           </div>
         ) : (
-          <p className="mt-0.5 text-sm text-gray-700">{message.content}</p>
+          <p className="mt-0.5 text-sm text-foreground">{message.content}</p>
         )}
       </div>
     </div>
@@ -169,7 +169,7 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
 
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {isLoading ? (
-            <p className="text-sm text-gray-500">{t('chat.loadingMessages')}</p>
+            <p className="text-sm text-muted-foreground">{t('chat.loadingMessages')}</p>
           ) : displayMessages.length > 0 ? (
             <div className="divide-y">
               {displayMessages.map((m) => (
@@ -182,7 +182,7 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
               ))}
             </div>
           ) : (
-            <p className="py-8 text-center text-sm text-gray-500">{t('chat.noMessages')}</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">{t('chat.noMessages')}</p>
           )}
         </div>
 

@@ -24,10 +24,10 @@ function getInitials(name: string): string {
 const CLICK_THRESHOLD = 5;
 
 const priorityStyles: Record<TaskPriority, string> = {
-  [TaskPriority.urgent]: 'bg-red-100 text-red-800',
-  [TaskPriority.high]: 'bg-orange-100 text-orange-800',
-  [TaskPriority.medium]: 'bg-yellow-100 text-yellow-800',
-  [TaskPriority.low]: 'bg-gray-100 text-gray-800',
+  [TaskPriority.urgent]: 'bg-destructive/15 text-destructive',
+  [TaskPriority.high]: 'bg-warning/25 text-warning',
+  [TaskPriority.medium]: 'bg-warning/15 text-warning',
+  [TaskPriority.low]: 'bg-muted text-muted-foreground',
 };
 
 export function TaskCard({ task, isDragging, members }: TaskCardProps) {
@@ -76,16 +76,16 @@ export function TaskCard({ task, isDragging, members }: TaskCardProps) {
         }
       }}
       data-testid="task-card"
-      className={`cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm ${
+      className={`cursor-pointer rounded-lg border border-border bg-background p-3 shadow-sm ${
         isDragging ? 'opacity-50' : ''
       }`}
     >
       <div className="mb-2 flex items-start justify-between">
-        <h3 className="text-sm font-medium text-gray-900">{task.title}</h3>
+        <h3 className="text-sm font-medium text-foreground">{task.title}</h3>
         <Badge className={`rounded ${priorityStyles[task.priority]}`}>{task.priority}</Badge>
       </div>
       {task.description && (
-        <p data-testid="task-description" className="text-xs text-gray-500">
+        <p data-testid="task-description" className="text-xs text-muted-foreground">
           {task.description}
         </p>
       )}
@@ -97,7 +97,7 @@ export function TaskCard({ task, isDragging, members }: TaskCardProps) {
             <div className="mt-2 flex justify-end">
               <div
                 data-testid="assignee-avatar"
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-800"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs font-medium text-primary"
                 title={member?.user_name}
               >
                 {initials}

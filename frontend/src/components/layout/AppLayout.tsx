@@ -33,15 +33,15 @@ export function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
+    <div className="min-h-screen bg-muted">
+      <header className="bg-background shadow">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-gray-700">
+          <Link to="/" className="text-2xl font-bold text-foreground hover:text-foreground/80">
             {t('app.title')}
           </Link>
           <div className="flex items-center gap-2 border-l pl-4">
             <LanguageSwitcher />
-            <span className="text-sm text-gray-600">{user?.name ?? user?.email}</span>
+            <span className="text-sm text-muted-foreground">{user?.name ?? user?.email}</span>
             <Button
               variant="secondary"
               size="sm"

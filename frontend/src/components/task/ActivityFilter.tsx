@@ -11,7 +11,7 @@ export function ActivityFilter({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="inline-flex rounded-md border border-gray-200">
+    <div className="inline-flex rounded-md border border-border">
       <button
         type="button"
         aria-pressed={value === 'all'}
@@ -19,7 +19,9 @@ export function ActivityFilter({
           if (value !== 'all') onChange('all');
         }}
         className={`rounded-l-md px-3 py-1 text-xs font-medium ${
-          value === 'all' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-500 hover:bg-gray-50'
+          value === 'all'
+            ? 'bg-muted text-foreground'
+            : 'bg-background text-muted-foreground hover:bg-accent'
         }`}
       >
         {t('activity.filterAll')}
@@ -32,8 +34,8 @@ export function ActivityFilter({
         }}
         className={`rounded-r-md px-3 py-1 text-xs font-medium ${
           value === 'comments'
-            ? 'bg-gray-100 text-gray-900'
-            : 'bg-white text-gray-500 hover:bg-gray-50'
+            ? 'bg-muted text-foreground'
+            : 'bg-background text-muted-foreground hover:bg-accent'
         }`}
       >
         {t('activity.filterComments')}

@@ -7,15 +7,15 @@ export function PullRequestList({ taskId }: { taskId: string }) {
   const { data: pullRequests, isLoading, isError } = useListPullRequests(taskId);
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500">{t('github.loadingPullRequests')}</p>;
+    return <p className="text-sm text-muted-foreground">{t('github.loadingPullRequests')}</p>;
   }
 
   if (isError) {
-    return <p className="text-sm text-red-500">{t('github.loadPullRequestsFailed')}</p>;
+    return <p className="text-sm text-destructive">{t('github.loadPullRequestsFailed')}</p>;
   }
 
   if (!pullRequests || pullRequests.length === 0) {
-    return <p className="text-sm text-gray-500">{t('github.noPullRequests')}</p>;
+    return <p className="text-sm text-muted-foreground">{t('github.noPullRequests')}</p>;
   }
 
   return (
@@ -32,18 +32,18 @@ function PullRequestItem({ pr }: { pr: GitHubPullRequest }) {
   const badge = getBadge(pr, t);
 
   return (
-    <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
+    <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
       <div className="flex items-center gap-2 text-sm min-w-0">
-        <span className="text-gray-500 shrink-0">#{pr.pr_number}</span>
+        <span className="text-muted-foreground shrink-0">#{pr.pr_number}</span>
         <a
           href={pr.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="truncate font-medium text-blue-600 hover:underline"
+          className="truncate font-medium text-primary hover:underline"
         >
           {pr.title}
         </a>
-        {pr.author && <span className="text-gray-400 shrink-0">{pr.author}</span>}
+        {pr.author && <span className="text-muted-foreground shrink-0">{pr.author}</span>}
       </div>
       <span
         className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.classes}`}
@@ -59,10 +59,10 @@ function getBadge(
   t: (key: string) => string,
 ): { label: string; classes: string } {
   if (pr.state === 'open') {
-    return { label: t('github.prOpen'), classes: 'bg-green-100 text-green-800' };
+    return { label: t('github.prOpen'), classes: 'bg-success/15 text-success' };
   }
   if (pr.is_merged) {
     return { label: t('github.prMerged'), classes: 'bg-purple-100 text-purple-800' };
   }
-  return { label: t('github.prClosed'), classes: 'bg-red-100 text-red-800' };
+  return { label: t('github.prClosed'), classes: 'bg-destructive/15 text-destructive' };
 }

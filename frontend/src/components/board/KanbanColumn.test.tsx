@@ -92,19 +92,19 @@ describe('KanbanColumn', () => {
   it('applies status-specific background color', () => {
     const { container, rerender } = render(<KanbanColumn status={TaskStatus.backlog} tasks={[]} />);
     const column = container.firstChild as HTMLElement;
-    expect(column.className).toContain('bg-slate-50');
+    expect(column.className).toContain('bg-muted');
 
     rerender(<KanbanColumn status={TaskStatus.todo} tasks={[]} />);
-    expect((container.firstChild as HTMLElement).className).toContain('bg-blue-50');
+    expect((container.firstChild as HTMLElement).className).toContain('bg-primary/10');
 
     rerender(<KanbanColumn status={TaskStatus.in_progress} tasks={[]} />);
-    expect((container.firstChild as HTMLElement).className).toContain('bg-amber-50');
+    expect((container.firstChild as HTMLElement).className).toContain('bg-warning/10');
 
     rerender(<KanbanColumn status={TaskStatus.in_review} tasks={[]} />);
     expect((container.firstChild as HTMLElement).className).toContain('bg-purple-50');
 
     rerender(<KanbanColumn status={TaskStatus.done} tasks={[]} />);
-    expect((container.firstChild as HTMLElement).className).toContain('bg-green-50');
+    expect((container.firstChild as HTMLElement).className).toContain('bg-success/10');
   });
 
   it('applies status-specific badge color', () => {
@@ -112,18 +112,18 @@ describe('KanbanColumn', () => {
 
     const getBadge = () => screen.getByText('0');
 
-    expect(getBadge().className).toContain('bg-slate-200');
+    expect(getBadge().className).toContain('bg-muted');
 
     rerender(<KanbanColumn status={TaskStatus.todo} tasks={[]} />);
-    expect(getBadge().className).toContain('bg-blue-200');
+    expect(getBadge().className).toContain('bg-primary/20');
 
     rerender(<KanbanColumn status={TaskStatus.in_progress} tasks={[]} />);
-    expect(getBadge().className).toContain('bg-amber-200');
+    expect(getBadge().className).toContain('bg-warning/20');
 
     rerender(<KanbanColumn status={TaskStatus.in_review} tasks={[]} />);
     expect(getBadge().className).toContain('bg-purple-200');
 
     rerender(<KanbanColumn status={TaskStatus.done} tasks={[]} />);
-    expect(getBadge().className).toContain('bg-green-200');
+    expect(getBadge().className).toContain('bg-success/20');
   });
 });

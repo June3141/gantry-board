@@ -62,13 +62,13 @@ export function TimelineCommentItem({
 
   return (
     <div data-testid="timeline-comment" className="flex gap-3 py-2">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
         {getInitials(comment.user_name)}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-900">{comment.user_name}</span>
-          <span className="text-xs text-gray-500">{timeAgo(comment.created_at)}</span>
+          <span className="text-sm font-medium text-foreground">{comment.user_name}</span>
+          <span className="text-xs text-muted-foreground">{timeAgo(comment.created_at)}</span>
           {isOwner && !editing && !showDeleteConfirm && (
             <div className="ml-auto flex gap-1">
               <Button
@@ -113,8 +113,8 @@ export function TimelineCommentItem({
             </div>
           </div>
         ) : showDeleteConfirm ? (
-          <div className="mt-1 flex items-center gap-2 rounded bg-red-50 px-2 py-1">
-            <span className="text-xs text-red-700">{t('activity.deleteCommentConfirm')}</span>
+          <div className="mt-1 flex items-center gap-2 rounded bg-destructive/10 px-2 py-1">
+            <span className="text-xs text-destructive">{t('activity.deleteCommentConfirm')}</span>
             <Button variant="destructive" size="xs" onClick={handleDelete}>
               {t('common.confirm')}
             </Button>
@@ -123,7 +123,7 @@ export function TimelineCommentItem({
             </Button>
           </div>
         ) : (
-          <p className="mt-0.5 text-sm text-gray-700">{comment.content}</p>
+          <p className="mt-0.5 text-sm text-foreground">{comment.content}</p>
         )}
       </div>
     </div>
