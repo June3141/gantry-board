@@ -3,6 +3,8 @@ import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ProjectMember, Task } from '@/api/generated/model';
 import { TaskStatus } from '@/api/generated/model';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useUiStore } from '@/stores/uiStore';
 import { TaskCard } from './TaskCard';
 
@@ -44,11 +46,7 @@ export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanCol
     >
       <div className="flex items-center justify-between p-3">
         <h2 className="text-sm font-semibold text-gray-700">{t(statusLabelKeys[status])}</h2>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[status].badge}`}
-        >
-          {tasks.length}
-        </span>
+        <Badge className={statusColors[status].badge}>{tasks.length}</Badge>
       </div>
       <div ref={setNodeRef} className="flex-1 space-y-2 overflow-y-auto p-2">
         {tasks.length === 0 ? (
@@ -70,13 +68,14 @@ export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanCol
         )}
       </div>
       <div className="p-2">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => openTaskModal(status)}
-          className="flex w-full items-center justify-center gap-1 rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+          className="w-full text-muted-foreground"
         >
           <Plus className="h-4 w-4" /> {t('board.addTask')}
-        </button>
+        </Button>
       </div>
     </div>
   );

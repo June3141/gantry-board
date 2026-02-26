@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ProjectMember } from '@/api/generated/model';
 import { TaskPriority } from '@/api/generated/model';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useBoardStore } from '@/stores/boardStore';
 
 interface TaskFilterBarProps {
@@ -48,26 +50,26 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
     <div className="flex items-center gap-3">
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
+        <Input
           type="text"
           placeholder={t('board.searchPlaceholder')}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          className="rounded-md border border-gray-300 py-1.5 pl-8 pr-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="pl-8 pr-3"
         />
       </div>
 
       <div className="relative">
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => {
             setAssigneeOpen(!assigneeOpen);
             setPriorityOpen(false);
           }}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
         >
           {t('board.assignee')}
-        </button>
+        </Button>
         {assigneeOpen && (
           <div
             data-testid="assignee-dropdown"
@@ -99,16 +101,16 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
       </div>
 
       <div className="relative">
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => {
             setPriorityOpen(!priorityOpen);
             setAssigneeOpen(false);
           }}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
         >
           {t('board.priority')}
-        </button>
+        </Button>
         {priorityOpen && (
           <div
             data-testid="priority-dropdown"
@@ -132,13 +134,9 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
       </div>
 
       {hasActive() && (
-        <button
-          type="button"
-          onClick={clearFilters}
-          className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-        >
+        <Button variant="ghost" size="sm" onClick={clearFilters}>
           {t('common.clearAll')}
-        </button>
+        </Button>
       )}
     </div>
   );

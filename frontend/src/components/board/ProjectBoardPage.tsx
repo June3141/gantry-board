@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ProjectChatPanel, ProjectMembersPanel, ProjectSettingsModal } from '@/components/project';
 import { TaskCreateDialog } from '@/components/task';
+import { Button } from '@/components/ui/button';
 import { useUiStore } from '@/stores/uiStore';
 import { KanbanBoard } from './KanbanBoard';
 
@@ -19,27 +20,15 @@ export function ProjectBoardPage() {
   return (
     <>
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 pt-4">
-        <button
-          type="button"
-          onClick={openProjectSettings}
-          className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-        >
+        <Button variant="outline" size="sm" onClick={openProjectSettings}>
           <Settings className="h-4 w-4" /> {t('project.settings')}
-        </button>
-        <button
-          type="button"
-          onClick={openProjectMembers}
-          className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-        >
+        </Button>
+        <Button variant="outline" size="sm" onClick={openProjectMembers}>
           <Users className="h-4 w-4" /> {t('members.members')}
-        </button>
-        <button
-          type="button"
-          onClick={openProjectChat}
-          className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-        >
+        </Button>
+        <Button variant="outline" size="sm" onClick={openProjectChat}>
           <MessageSquare className="h-4 w-4" /> {t('chat.projectChat')}
-        </button>
+        </Button>
       </div>
       <KanbanBoard projectId={projectId} />
       <TaskCreateDialog projectId={projectId} />

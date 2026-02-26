@@ -14,6 +14,8 @@ import {
   useListComments,
 } from '@/api/generated/endpoints/task-comments/task-comments';
 import type { AgentSession, AgentType } from '@/api/generated/model';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { useAgentEvents } from '@/hooks/useAgentEvents';
 import { useAgentStore } from '@/stores/agentStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -174,14 +176,14 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
                 {activeSession.status}
               </span>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={handleStopAgent}
               disabled={stopSession.isPending}
-              className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
             >
               {t('common.stop')}
-            </button>
+            </Button>
           </div>
           <AgentOutputViewer lines={outputLines} isLoading={false} />
         </div>
@@ -195,16 +197,16 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
           return (
             <div className="space-y-2 rounded-md border border-gray-200 p-3">
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => {
                     setViewingSessionId(null);
                     reset();
                   }}
-                  className="text-sm text-blue-600 hover:text-blue-800"
                 >
                   {t('common.back')}
-                </button>
+                </Button>
                 <span className="text-sm text-gray-600">
                   {AGENT_LABELS[viewingSession.agent_type] ?? viewingSession.agent_type}
                 </span>
@@ -244,29 +246,26 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
               </select>
             </div>
             <div className="flex items-end">
-              <button
-                type="button"
+              <Button
                 onClick={handleStartAgent}
                 disabled={!prompt.trim() || startSession.isPending}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 {t('common.start')}
-              </button>
+              </Button>
             </div>
           </div>
-          <textarea
+          <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={t('agent.promptPlaceholder')}
             rows={2}
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
       )}
 
       {/* Comment input */}
       <div className="flex gap-2">
-        <textarea
+        <Textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           onKeyDown={(e) => {
@@ -277,16 +276,15 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
           }}
           placeholder={t('activity.commentPlaceholder')}
           rows={2}
-          className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="flex-1"
         />
-        <button
-          type="button"
+        <Button
           onClick={handleSubmitComment}
           disabled={!newComment.trim() || createComment.isPending}
-          className="self-end rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+          className="self-end"
         >
           {t('common.post')}
-        </button>
+        </Button>
       </div>
 
       {/* Activity filter */}
