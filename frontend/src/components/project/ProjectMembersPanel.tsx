@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,8 +19,8 @@ import type { MemberRole as MemberRoleType } from '@/api/generated/model';
 import { MemberRole } from '@/api/generated/model';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -66,8 +65,6 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
       queryKey: getListMembersQueryKey(projectId),
     });
   };
-
-  useEscapeKey(closeProjectMembers);
 
   const handleInvite = async () => {
     if (!selectedUser) return;
@@ -116,29 +113,16 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="project-members-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeProjectMembers();
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) closeProjectMembers();
       }}
     >
-      <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 id="project-members-title" className="text-lg font-semibold text-gray-900">
-            {t('members.members')}
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={closeProjectMembers}
-            aria-label={t('common.close')}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+      <DialogContent className="max-w-lg" aria-describedby={undefined}>
+        <DialogHeader>
+          <DialogTitle>{t('members.members')}</DialogTitle>
+        </DialogHeader>
 
         {isLoading ? (
           <p className="text-sm text-gray-500">{t('common.loading')}</p>
@@ -199,7 +183,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
         {canManage && <InvitationSection projectId={projectId} />}
 
         {canManage && (
-          <div className="mt-4 border-t pt-4">
+          <div className="border-t pt-4">
             <h3 className="mb-2 text-sm font-medium text-gray-700">
               {t('members.addExistingUser')}
             </h3>
@@ -252,8 +236,8 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -298,14 +282,10 @@ function InvitationSection({ projectId }: { projectId: string }) {
     }
   };
 
-  // Token is only available at creation time — it's copied to clipboard
-  // automatically when the invitation is created. Re-retrieval is not
-  // possible since only the SHA-256 hash is stored in the database.
-
   const pendingInvitations = invitations?.filter((i) => !i.accepted_at) ?? [];
 
   return (
-    <div className="mt-4 border-t pt-4">
+    <div className="border-t pt-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-700">{t('members.invitationLinks')}</h3>
         <Button

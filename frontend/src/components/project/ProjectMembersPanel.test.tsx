@@ -298,7 +298,8 @@ describe('ProjectMembersPanel', () => {
     useUiStore.setState({ isProjectMembersOpen: true });
     renderWithProviders(<ProjectMembersPanel projectId="project-1" />);
 
-    await user.click(screen.getByRole('dialog'));
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+    await user.click(overlay);
     expect(useUiStore.getState().isProjectMembersOpen).toBe(false);
   });
 });

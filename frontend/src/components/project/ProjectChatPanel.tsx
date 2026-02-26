@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,8 +8,8 @@ import {
   useListMessages,
 } from '@/api/generated/endpoints/project-messages/project-messages';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -128,8 +127,6 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
   const currentUser = useAuthStore((s) => s.user);
   const addToast = useToastStore((s) => s.addToast);
 
-  useEscapeKey(closeProjectChat);
-
   const handleSubmit = async () => {
     const trimmed = newMessage.trim();
     if (!trimmed) return;
@@ -156,29 +153,19 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
   const displayMessages = messages ? [...messages].reverse() : [];
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="project-chat-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeProjectChat();
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) closeProjectChat();
       }}
     >
-      <div className="flex h-[600px] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 id="project-chat-title" className="text-lg font-semibold text-gray-900">
-            {t('chat.projectChat')}
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={closeProjectChat}
-            aria-label={t('common.close')}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+      <DialogContent
+        className="flex h-[600px] max-w-lg flex-col gap-0 p-0"
+        aria-describedby={undefined}
+      >
+        <DialogHeader className="border-b px-4 py-3">
+          <DialogTitle>{t('chat.projectChat')}</DialogTitle>
+        </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {isLoading ? (
@@ -219,7 +206,7 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

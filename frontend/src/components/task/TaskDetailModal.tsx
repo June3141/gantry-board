@@ -1,11 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import { useDeleteTask, useGetTask, useUpdateTask } from '@/api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '@/api/generated/model';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { invalidateTasks } from '@/services/queryInvalidation';
 import { useUiStore } from '@/stores/uiStore';
 import { PullRequestList } from '../github/PullRequestList';
@@ -35,14 +34,15 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const escapeGuard = useCallback(() => {
-    if (editingField) {
-      setEditingField(null);
-      return true;
-    }
-    return false;
-  }, [editingField]);
-  useEscapeKey(closeTaskDetail, escapeGuard);
+  const handleEscapeKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (editingField) {
+        e.preventDefault();
+        setEditingField(null);
+      }
+    },
+    [editingField],
+  );
 
   const startEditing = (field: 'title' | 'description', value: string) => {
     setEditingField(field);
@@ -107,19 +107,19 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="task-detail-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeTaskDetail();
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) closeTaskDetail();
       }}
     >
-      <div
+      <DialogContent
+        className="max-w-2xl"
         data-testid="task-detail-modal"
-        className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
+        onEscapeKeyDown={handleEscapeKeyDown}
+        aria-describedby={undefined}
       >
+        <DialogTitle className="sr-only">{t('task.detail')}</DialogTitle>
         {isLoading ? (
           <p className="text-sm text-gray-500">{t('common.loading')}</p>
         ) : isError || !task ? (
@@ -148,14 +148,6 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                   {task.title}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={closeTaskDetail}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label={t('common.close')}
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
 
             <div>
@@ -291,7 +283,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

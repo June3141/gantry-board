@@ -5,9 +5,9 @@ import { useListMembers } from '@/api/generated/endpoints/project-members/projec
 import { useCreateTask } from '@/api/generated/endpoints/tasks/tasks';
 import { TaskPriority, TaskStatus } from '@/api/generated/model';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { invalidateTasks } from '@/services/queryInvalidation';
 import { useUiStore } from '@/stores/uiStore';
 
@@ -44,8 +44,6 @@ function TaskCreateForm({
   const [assignedTo, setAssignedTo] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  useEscapeKey(closeTaskModal);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -70,23 +68,21 @@ function TaskCreateForm({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="task-create-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeTaskModal();
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) closeTaskModal();
       }}
     >
-      <div
+      <DialogContent
+        className="max-w-md"
         data-testid="task-create-dialog"
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        aria-describedby={undefined}
       >
-        <h2 id="task-create-title" className="mb-4 text-lg font-semibold">
-          {t('task.createTask')}
-        </h2>
-        {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        <DialogHeader>
+          <DialogTitle>{t('task.createTask')}</DialogTitle>
+        </DialogHeader>
+        {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="task-title" className="block text-sm font-medium text-gray-700">
@@ -98,7 +94,6 @@ function TaskCreateForm({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="mt-1"
-              autoFocus
             />
           </div>
           <div>
@@ -175,7 +170,7 @@ function TaskCreateForm({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
