@@ -56,7 +56,7 @@ test.describe('Task CRUD', () => {
     await page.goto(`/projects/${project.id}/tasks/${task.id}`);
 
     // Change status to "in_progress"
-    await page.locator('#task-detail-status').selectOption('in_progress');
+    await page.locator('#task-status').selectOption('in_progress');
 
     // Navigate back to the board
     await page.getByRole('link', { name: /back/i }).click();
@@ -78,8 +78,8 @@ test.describe('Task CRUD', () => {
     await page.goto(`/projects/${project.id}/tasks/${task.id}`);
 
     // Delete the task
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
-    await page.getByRole('button', { name: 'Confirm' }).click();
+    await page.getByRole('button', { name: /delete task/i }).click();
+    await page.getByRole('button', { name: /confirm/i }).click();
 
     // Should navigate back to board and task should be gone
     await expect(page.getByText('Task To Delete')).not.toBeVisible();
