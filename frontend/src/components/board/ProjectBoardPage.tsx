@@ -1,9 +1,9 @@
 import { MessageSquare, Settings, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { KanbanBoard } from './KanbanBoard';
 import { ProjectChatPanel, ProjectMembersPanel, ProjectSettingsModal } from '@/components/project';
 import { TaskCreateDialog } from '@/components/task';
 import { useUiStore } from '@/stores/uiStore';
+import { KanbanBoard } from './KanbanBoard';
 
 export function ProjectBoardPage() {
   const { projectId } = useParams<{ projectId: string }>();
