@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import {
@@ -128,7 +129,7 @@ function ProjectSettingsContent({
             className="text-gray-400 hover:text-gray-600"
             aria-label="Close"
           >
-            &times;
+            <X className="h-5 w-5" />
           </button>
         </div>
 

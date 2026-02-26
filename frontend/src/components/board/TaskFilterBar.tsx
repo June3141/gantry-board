@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react';
 import { useState } from 'react';
 import type { ProjectMember } from '@/api/generated/model';
 import { TaskPriority } from '@/api/generated/model';
@@ -43,13 +44,16 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
 
   return (
     <div className="flex items-center gap-3">
-      <input
-        type="text"
-        placeholder="Search tasks..."
-        value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
-        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-      />
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search tasks..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          className="rounded-md border border-gray-300 py-1.5 pl-8 pr-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        />
+      </div>
 
       <div className="relative">
         <button

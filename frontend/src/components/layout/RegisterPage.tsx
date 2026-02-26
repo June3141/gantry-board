@@ -29,7 +29,7 @@ export function RegisterPage() {
         data: { name, email, password },
       });
       setUser(response.user);
-      navigate(redirectTo ?? '/');
+      navigate(redirectTo ?? '/', { replace: true });
     } catch {
       setError('Registration failed. The email may already be in use.');
     }

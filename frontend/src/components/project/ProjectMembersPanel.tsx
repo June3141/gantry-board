@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 import { useState } from 'react';
 import {
   getListInvitationsQueryKey,
@@ -130,7 +131,7 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
             className="text-gray-400 hover:text-gray-600"
             aria-label="Close"
           >
-            &times;
+            <X className="h-5 w-5" />
           </button>
         </div>
 

@@ -1,11 +1,18 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { FolderPlus, LogOut, MessageSquare, Settings, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useLogout, useMe } from '@/api/generated/endpoints/auth/auth';
 import { useListProjects } from '@/api/generated/endpoints/projects/projects';
 import { KanbanBoard } from '@/components/board';
 import { ErrorBoundary, ToastContainer } from '@/components/common';
-import { InvitationAcceptPage, LoginPage, ProtectedRoute, RegisterPage } from '@/components/layout';
+import {
+  GuestRoute,
+  InvitationAcceptPage,
+  LoginPage,
+  ProtectedRoute,
+  RegisterPage,
+} from '@/components/layout';
 import {
   ProjectChatPanel,
   ProjectCreateDialog,
@@ -72,32 +79,32 @@ function KanbanApp() {
             <button
               type="button"
               onClick={openProjectModal}
-              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
+              className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
             >
-              New Project
+              <FolderPlus className="h-4 w-4" /> New Project
             </button>
             {selectedProjectId && (
               <>
                 <button
                   type="button"
                   onClick={openProjectSettings}
-                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                 >
-                  Settings
+                  <Settings className="h-4 w-4" /> Settings
                 </button>
                 <button
                   type="button"
                   onClick={openProjectMembers}
-                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                 >
-                  Members
+                  <Users className="h-4 w-4" /> Members
                 </button>
                 <button
                   type="button"
                   onClick={openProjectChat}
-                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                 >
-                  Chat
+                  <MessageSquare className="h-4 w-4" /> Project Chat
                 </button>
               </>
             )}
@@ -108,9 +115,9 @@ function KanbanApp() {
                 type="button"
                 onClick={handleLogout}
                 disabled={logout.isPending}
-                className="rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
+                className="flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
               >
-                Logout
+                <LogOut className="h-4 w-4" /> Logout
               </button>
             </div>
           </div>
@@ -182,8 +189,22 @@ export function AppRoutes() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <LoginPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <RegisterPage />
+            </GuestRoute>
+          }
+        />
         <Route path="/invite/:token" element={<InvitationAcceptPage />} />
         <Route
           path="/"

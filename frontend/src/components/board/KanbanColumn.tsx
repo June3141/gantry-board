@@ -1,4 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
+import { Plus } from 'lucide-react';
 import type { ProjectMember, Task } from '@/api/generated/model';
 import { TaskStatus } from '@/api/generated/model';
 import { useUiStore } from '@/stores/uiStore';
@@ -19,6 +20,14 @@ const statusLabels: Record<TaskStatus, string> = {
   [TaskStatus.done]: 'Done',
 };
 
+const statusColors: Record<TaskStatus, { bg: string; badge: string }> = {
+  [TaskStatus.backlog]: { bg: 'bg-slate-50', badge: 'bg-slate-200 text-slate-700' },
+  [TaskStatus.todo]: { bg: 'bg-blue-50', badge: 'bg-blue-200 text-blue-700' },
+  [TaskStatus.in_progress]: { bg: 'bg-amber-50', badge: 'bg-amber-200 text-amber-700' },
+  [TaskStatus.in_review]: { bg: 'bg-purple-50', badge: 'bg-purple-200 text-purple-700' },
+  [TaskStatus.done]: { bg: 'bg-green-50', badge: 'bg-green-200 text-green-700' },
+};
+
 export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanColumnProps) {
   const openTaskModal = useUiStore((s) => s.openTaskModal);
   const { setNodeRef, isOver } = useDroppable({
@@ -28,12 +37,14 @@ export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanCol
   return (
     <div
       className={`flex min-h-[500px] w-72 flex-shrink-0 flex-col rounded-lg ${
-        isOver ? 'bg-blue-50 ring-2 ring-blue-400' : 'bg-gray-100'
+        isOver ? 'bg-blue-50 ring-2 ring-blue-400' : statusColors[status].bg
       }`}
     >
       <div className="flex items-center justify-between p-3">
         <h2 className="text-sm font-semibold text-gray-700">{statusLabels[status]}</h2>
-        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[status].badge}`}
+        >
           {tasks.length}
         </span>
       </div>
@@ -60,9 +71,9 @@ export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanCol
         <button
           type="button"
           onClick={() => openTaskModal(status)}
-          className="w-full rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+          className="flex w-full items-center justify-center gap-1 rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700"
         >
-          + Add Task
+          <Plus className="h-4 w-4" /> Add Task
         </button>
       </div>
     </div>

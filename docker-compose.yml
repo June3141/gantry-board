@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - .:/workspace
       - cargo-cache:/usr/local/cargo/registry
@@ -14,7 +14,7 @@ services:
       - RUST_LOG=info
       - GANTRY_BIND_ADDR=0.0.0.0:3000
       - GANTRY_DATABASE_URL=sqlite:/workspace/backend/data/gantry_board.db?mode=rwc
-      - GANTRY_CORS_ORIGIN=http://localhost:5173
+      - GANTRY_CORS_ORIGIN=http://localhost:3000
       - GANTRY_COOKIE_SECURE=false
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
@@ -28,12 +28,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:5173"
+      - "3000:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:3000
+      - VITE_API_URL=http://localhost:3001
     depends_on:
       backend:
         condition: service_healthy

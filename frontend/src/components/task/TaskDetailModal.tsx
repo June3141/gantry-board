@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import { useDeleteTask, useGetTask, useUpdateTask } from '@/api/generated/endpoints/tasks/tasks';
@@ -151,7 +152,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
                 className="text-gray-400 hover:text-gray-600"
                 aria-label="Close"
               >
-                &times;
+                <X className="h-5 w-5" />
               </button>
             </div>
 

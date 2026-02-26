@@ -12,7 +12,7 @@ test.describe('Task CRUD', () => {
     await page.locator('#project-select').selectOption(project.id);
 
     // Click "Add Task" in the Backlog column
-    await page.getByRole('button', { name: '+ Add Task' }).first().click();
+    await page.getByRole('button', { name: /add task/i }).first().click();
 
     // Fill in the create task dialog
     const dialog = page.getByRole('dialog');

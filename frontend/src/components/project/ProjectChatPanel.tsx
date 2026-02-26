@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 import { useState } from 'react';
 import {
   getListMessagesQueryKey,
@@ -166,7 +167,7 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
       <div className="flex h-[600px] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 id="project-chat-title" className="text-lg font-semibold text-gray-900">
-            Chat
+            Project Chat
           </h2>
           <button
             type="button"
@@ -174,7 +175,7 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
             className="text-gray-400 hover:text-gray-600"
             aria-label="Close"
           >
-            &times;
+            <X className="h-5 w-5" />
           </button>
         </div>
 
