@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { useToastStore } from '@/stores/toastStore';
 
 const typeStyles = {
-  success: 'bg-green-50 border-green-400 text-green-800',
-  error: 'bg-red-50 border-red-400 text-red-800',
-  info: 'bg-blue-50 border-blue-400 text-blue-800',
+  success: 'bg-success/10 border-success text-success',
+  error: 'bg-destructive/10 border-destructive text-destructive',
+  info: 'bg-primary/10 border-primary text-primary',
 };
 
 export function ToastContainer() {

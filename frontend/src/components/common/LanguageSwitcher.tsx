@@ -13,7 +13,7 @@ export function LanguageSwitcher() {
       value={i18n.resolvedLanguage ?? i18n.language}
       onChange={(e) => i18n.changeLanguage(e.target.value)}
       aria-label={t('language.switchLanguage')}
-      className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+      className="rounded border border-input bg-background px-2 py-1 text-xs text-foreground"
     >
       {LANGUAGES.map((lang) => (
         <option key={lang.code} value={lang.code}>

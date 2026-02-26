@@ -14,11 +14,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  building: 'bg-blue-100 text-blue-800',
-  running: 'bg-green-100 text-green-800',
-  stopped: 'bg-gray-100 text-gray-800',
-  failed: 'bg-red-100 text-red-800',
+  pending: 'bg-warning/15 text-warning',
+  building: 'bg-primary/15 text-primary',
+  running: 'bg-success/15 text-success',
+  stopped: 'bg-muted text-muted-foreground',
+  failed: 'bg-destructive/15 text-destructive',
 };
 
 function PreviewActions({
@@ -40,17 +40,13 @@ function PreviewActions({
   return (
     <div className="flex gap-1">
       {(status === 'pending' || status === 'stopped' || status === 'failed') && (
-        <Button size="xs" onClick={() => onStart(id)} className="bg-green-600 hover:bg-green-700">
+        <Button size="xs" onClick={() => onStart(id)} className="bg-success hover:bg-success/80">
           {t('preview.start')}
         </Button>
       )}
       {status === 'running' && (
         <>
-          <Button
-            size="xs"
-            onClick={() => onStop(id)}
-            className="bg-yellow-600 hover:bg-yellow-700"
-          >
+          <Button size="xs" onClick={() => onStop(id)} className="bg-warning hover:bg-warning/80">
             {t('preview.stop')}
           </Button>
           <Button size="xs" onClick={() => onRestart(id)}>
@@ -124,11 +120,11 @@ export function PreviewPanel() {
   };
 
   if (isLoading) {
-    return <div className="p-4 text-gray-500">{t('preview.loadingPreviews')}</div>;
+    return <div className="p-4 text-muted-foreground">{t('preview.loadingPreviews')}</div>;
   }
 
   if (isError) {
-    return <div className="p-4 text-red-500">{t('preview.loadFailed')}</div>;
+    return <div className="p-4 text-destructive">{t('preview.loadFailed')}</div>;
   }
 
   return (
@@ -151,17 +147,17 @@ export function PreviewPanel() {
         <Button
           onClick={handleCreate}
           disabled={!worktreeName.trim() || isCreating}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-primary hover:bg-primary/80"
         >
           {t('common.create')}
         </Button>
       </div>
 
-      {error && <div className="text-sm text-red-500">{error}</div>}
+      {error && <div className="text-sm text-destructive">{error}</div>}
 
       {/* Preview list */}
       {previews && previews.length === 0 && (
-        <p className="text-sm text-gray-500">{t('preview.noPreviews')}</p>
+        <p className="text-sm text-muted-foreground">{t('preview.noPreviews')}</p>
       )}
 
       {previews?.map((preview) => (
@@ -176,13 +172,13 @@ export function PreviewPanel() {
                 href={preview.preview_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-primary hover:underline"
               >
                 {preview.preview_url}
               </a>
             )}
             {preview.status === 'failed' && preview.error_message && (
-              <p className="text-xs text-red-500">{preview.error_message}</p>
+              <p className="text-xs text-destructive">{preview.error_message}</p>
             )}
           </div>
           <PreviewActions

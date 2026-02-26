@@ -68,7 +68,7 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
   };
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500">{t('common.loading')}</p>;
+    return <p className="text-sm text-muted-foreground">{t('common.loading')}</p>;
   }
 
   if (isError || !link) {
@@ -76,7 +76,10 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
       <div className="space-y-2">
         <div className="flex gap-2">
           <div className="flex-1">
-            <label htmlFor="github-owner" className="block text-xs font-medium text-gray-600">
+            <label
+              htmlFor="github-owner"
+              className="block text-xs font-medium text-muted-foreground"
+            >
               {t('github.owner')}
             </label>
             <Input
@@ -89,7 +92,10 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
             />
           </div>
           <div className="flex-1">
-            <label htmlFor="github-repo" className="block text-xs font-medium text-gray-600">
+            <label
+              htmlFor="github-repo"
+              className="block text-xs font-medium text-muted-foreground"
+            >
               {t('github.repository')}
             </label>
             <Input
@@ -115,8 +121,8 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
-        <span className="text-sm font-medium text-gray-900">
+      <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+        <span className="text-sm font-medium text-foreground">
           {link.repo_owner}/{link.repo_name}
         </span>
         <div className="flex gap-2">
@@ -125,7 +131,7 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
           </Button>
           {showUnlinkConfirm ? (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-red-600">{t('common.areYouSure')}</span>
+              <span className="text-xs text-destructive">{t('common.areYouSure')}</span>
               <Button
                 variant="outline"
                 size="xs"
@@ -148,7 +154,7 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
               variant="outline"
               size="xs"
               onClick={() => setShowUnlinkConfirm(true)}
-              className="border-red-300 text-red-700 hover:bg-red-50"
+              className="border-destructive/30 text-destructive hover:bg-destructive/10"
             >
               {t('github.unlink')}
             </Button>
