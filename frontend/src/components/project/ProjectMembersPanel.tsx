@@ -160,18 +160,10 @@ function ProjectMembersContent({ projectId }: { projectId: string }) {
                   <Badge variant="secondary">{t(`members.role.${m.role}`)}</Badge>
                 ) : removingUserId === m.user_id ? (
                   <div className="flex items-center gap-1">
-                    <Button
-                      variant="destructive"
-                      size="xs"
-                      onClick={() => handleRemove(m.user_id)}
-                    >
+                    <Button variant="destructive" size="xs" onClick={() => handleRemove(m.user_id)}>
                       {t('common.confirm')}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      onClick={() => setRemovingUserId(null)}
-                    >
+                    <Button variant="outline" size="xs" onClick={() => setRemovingUserId(null)}>
                       {t('common.cancel')}
                     </Button>
                   </div>

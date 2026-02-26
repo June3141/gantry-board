@@ -73,9 +73,7 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
               <div className="flex items-center gap-2 text-sm">
                 <span className="font-medium text-gray-900">{wt.name}</span>
                 {wt.branch && <span className="text-gray-500">{wt.branch}</span>}
-                {!wt.is_valid && (
-                  <Badge variant="destructive">{t('worktree.invalid')}</Badge>
-                )}
+                {!wt.is_valid && <Badge variant="destructive">{t('worktree.invalid')}</Badge>}
               </div>
               {deletingName === wt.name ? (
                 <div className="flex items-center gap-2">
@@ -127,10 +125,7 @@ export function WorktreePanel({ projectId }: { projectId: string }) {
             placeholder={t('worktree.namePlaceholder')}
           />
         </div>
-        <Button
-          onClick={handleCreate}
-          disabled={!name.trim() || createWorktree.isPending}
-        >
+        <Button onClick={handleCreate} disabled={!name.trim() || createWorktree.isPending}>
           {t('common.create')}
         </Button>
       </div>

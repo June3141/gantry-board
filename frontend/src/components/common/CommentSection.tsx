@@ -123,11 +123,7 @@ function CommentItem({
         </div>
         {editing ? (
           <div className="mt-1 space-y-1">
-            <Textarea
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              rows={2}
-            />
+            <Textarea value={editValue} onChange={(e) => setEditValue(e.target.value)} rows={2} />
             <div className="flex gap-1">
               <Button size="xs" onClick={handleSave}>
                 {t('common.save')}

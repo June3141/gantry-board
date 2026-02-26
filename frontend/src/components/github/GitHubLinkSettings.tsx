@@ -120,12 +120,7 @@ export function GitHubLinkSettings({ projectId }: { projectId: string }) {
           {link.repo_owner}/{link.repo_name}
         </span>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={handleSync}
-            disabled={syncLink.isPending}
-          >
+          <Button variant="outline" size="xs" onClick={handleSync} disabled={syncLink.isPending}>
             {t('github.sync')}
           </Button>
           {showUnlinkConfirm ? (

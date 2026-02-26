@@ -40,11 +40,7 @@ function PreviewActions({
   return (
     <div className="flex gap-1">
       {(status === 'pending' || status === 'stopped' || status === 'failed') && (
-        <Button
-          size="xs"
-          onClick={() => onStart(id)}
-          className="bg-green-600 hover:bg-green-700"
-        >
+        <Button size="xs" onClick={() => onStart(id)} className="bg-green-600 hover:bg-green-700">
           {t('preview.start')}
         </Button>
       )}

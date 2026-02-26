@@ -266,11 +266,7 @@ export function TaskDetailPage() {
               <div className="rounded-md bg-red-50 p-3">
                 <p className="mb-2 text-sm text-red-700">{t('task.deleteConfirm')}</p>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(false)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
                     {t('common.cancel')}
                   </Button>
                   <Button variant="destructive" size="sm" onClick={handleDelete}>
