@@ -1,4 +1,5 @@
 import { MessageSquare, Settings, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ProjectChatPanel, ProjectMembersPanel, ProjectSettingsModal } from '@/components/project';
 import { TaskCreateDialog } from '@/components/task';
@@ -6,6 +7,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { KanbanBoard } from './KanbanBoard';
 
 export function ProjectBoardPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const openProjectSettings = useUiStore((s) => s.openProjectSettings);
@@ -22,21 +24,21 @@ export function ProjectBoardPage() {
           onClick={openProjectSettings}
           className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
         >
-          <Settings className="h-4 w-4" /> Settings
+          <Settings className="h-4 w-4" /> {t('project.settings')}
         </button>
         <button
           type="button"
           onClick={openProjectMembers}
           className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
         >
-          <Users className="h-4 w-4" /> Members
+          <Users className="h-4 w-4" /> {t('members.members')}
         </button>
         <button
           type="button"
           onClick={openProjectChat}
           className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
         >
-          <MessageSquare className="h-4 w-4" /> Project Chat
+          <MessageSquare className="h-4 w-4" /> {t('chat.projectChat')}
         </button>
       </div>
       <KanbanBoard projectId={projectId} />

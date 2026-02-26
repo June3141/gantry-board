@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface AgentOutputViewerProps {
   lines: string[];
@@ -6,6 +7,7 @@ interface AgentOutputViewerProps {
 }
 
 export function AgentOutputViewer({ lines, isLoading = false }: AgentOutputViewerProps) {
+  const { t } = useTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const lineCount = lines.length;
@@ -18,11 +20,17 @@ export function AgentOutputViewer({ lines, isLoading = false }: AgentOutputViewe
   }, [lineCount]);
 
   if (isLoading) {
-    return <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">Loading output...</div>;
+    return (
+      <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">
+        {t('agent.loadingOutput')}
+      </div>
+    );
   }
 
   if (lines.length === 0) {
-    return <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">No output yet</div>;
+    return (
+      <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">{t('agent.noOutput')}</div>
+    );
   }
 
   return (

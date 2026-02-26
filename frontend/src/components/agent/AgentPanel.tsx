@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getListAgentSessionsQueryKey,
   useGetAgentSessionOutputs,
@@ -30,6 +31,7 @@ const STATUS_COLORS: Record<AgentSessionStatus, string> = {
 const TERMINAL_STATUSES: AgentSessionStatus[] = ['completed', 'failed', 'cancelled'];
 
 export function AgentPanel({ taskId }: AgentPanelProps) {
+  const { t } = useTranslation();
   const [agentType, setAgentType] = useState<AgentType>('claude_code');
   const [prompt, setPrompt] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +110,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
       setActiveSession(result.session.id);
       setPrompt('');
     } catch {
-      setError('Failed to start agent session. Please try again.');
+      setError(t('agent.startFailed'));
     }
   };
 
@@ -122,7 +124,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
       });
       reset();
     } catch {
-      setError('Failed to stop agent session. Please try again.');
+      setError(t('agent.stopFailed'));
     }
   };
 
@@ -136,7 +138,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
       });
       queryClient.invalidateQueries({ queryKey: getListAgentSessionsQueryKey(taskId) });
     } catch {
-      setError('Failed to pause agent session. Please try again.');
+      setError(t('agent.pauseFailed'));
     }
   };
 
@@ -150,7 +152,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
       });
       queryClient.invalidateQueries({ queryKey: getListAgentSessionsQueryKey(taskId) });
     } catch {
-      setError('Failed to resume agent session. Please try again.');
+      setError(t('agent.resumeFailed'));
     }
   };
 
@@ -177,12 +179,14 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">
-                {activeSession.agent_type === 'claude_code' ? 'Claude Code' : 'Gemini CLI'}
+                {activeSession.agent_type === 'claude_code'
+                  ? t('agent.claudeCode')
+                  : t('agent.geminiCli')}
               </span>
               <span
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[activeSession.status]}`}
               >
-                {activeSession.status}
+                {t(`agent.status.${activeSession.status}`)}
               </span>
             </div>
             {!TERMINAL_STATUSES.includes(activeSession.status) && (
@@ -194,7 +198,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
                     disabled={pauseSession.isPending}
                     className="rounded-md bg-yellow-600 px-3 py-1.5 text-sm text-white hover:bg-yellow-700 disabled:opacity-50"
                   >
-                    Pause
+                    {t('agent.pause')}
                   </button>
                 )}
                 {activeSession.status === 'paused' && (
@@ -204,7 +208,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
                     disabled={resumeSession.isPending}
                     className="rounded-md bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
                   >
-                    Resume
+                    {t('agent.resume')}
                   </button>
                 )}
                 <button
@@ -213,7 +217,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
                   disabled={stopSession.isPending}
                   className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
                 >
-                  Stop
+                  {t('common.stop')}
                 </button>
               </div>
             )}
@@ -229,15 +233,17 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
                 onClick={handleBackToInput}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Back
+                {t('common.back')}
               </button>
               <span className="text-sm text-gray-600">
-                {viewingSession.agent_type === 'claude_code' ? 'Claude Code' : 'Gemini CLI'}
+                {viewingSession.agent_type === 'claude_code'
+                  ? t('agent.claudeCode')
+                  : t('agent.geminiCli')}
               </span>
               <span
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[viewingSession.status]}`}
               >
-                {viewingSession.status}
+                {t(`agent.status.${viewingSession.status}`)}
               </span>
             </div>
           </div>
@@ -247,7 +253,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
         <div className="space-y-3">
           <div>
             <label htmlFor="agent-type-select" className="block text-sm font-medium text-gray-700">
-              Agent Type
+              {t('agent.agentType')}
             </label>
             <select
               id="agent-type-select"
@@ -255,8 +261,8 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
               onChange={(e) => setAgentType(e.target.value as AgentType)}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="claude_code">Claude Code</option>
-              <option value="gemini_cli">Gemini CLI</option>
+              <option value="claude_code">{t('agent.claudeCode')}</option>
+              <option value="gemini_cli">{t('agent.geminiCli')}</option>
             </select>
           </div>
           <div>
@@ -264,13 +270,13 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
               htmlFor="agent-prompt-textarea"
               className="block text-sm font-medium text-gray-700"
             >
-              Prompt
+              {t('agent.prompt')}
             </label>
             <textarea
               id="agent-prompt-textarea"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Enter prompt for the agent..."
+              placeholder={t('agent.promptPlaceholder')}
               rows={3}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
@@ -281,11 +287,11 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
             disabled={!prompt.trim() || startSession.isPending}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            Start
+            {t('common.start')}
           </button>
           {pastSessions.length > 0 && (
             <div>
-              <h4 className="text-sm font-medium text-gray-700">Past Sessions</h4>
+              <h4 className="text-sm font-medium text-gray-700">{t('agent.pastSessions')}</h4>
               <div className="mt-1 space-y-1">
                 {pastSessions.map((session) => (
                   <button
@@ -298,7 +304,7 @@ export function AgentPanel({ taskId }: AgentPanelProps) {
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[session.status]}`}
                     >
-                      {session.status}
+                      {t(`agent.status.${session.status}`)}
                     </span>
                   </button>
                 ))}

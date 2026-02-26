@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   useCreatePreview,
   useDeletePreview,
@@ -30,6 +31,7 @@ function PreviewActions({
   onRestart: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const { status, id } = preview;
 
   return (
@@ -40,7 +42,7 @@ function PreviewActions({
           onClick={() => onStart(id)}
           className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
         >
-          Start
+          {t('preview.start')}
         </button>
       )}
       {status === 'running' && (
@@ -50,14 +52,14 @@ function PreviewActions({
             onClick={() => onStop(id)}
             className="rounded bg-yellow-600 px-2 py-1 text-xs text-white hover:bg-yellow-700"
           >
-            Stop
+            {t('preview.stop')}
           </button>
           <button
             type="button"
             onClick={() => onRestart(id)}
             className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
           >
-            Restart
+            {t('preview.restart')}
           </button>
         </>
       )}
@@ -66,13 +68,14 @@ function PreviewActions({
         onClick={() => onDelete(id)}
         className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
       >
-        Delete
+        {t('preview.delete')}
       </button>
     </div>
   );
 }
 
 export function PreviewPanel() {
+  const { t } = useTranslation();
   const [worktreeName, setWorktreeName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -89,7 +92,7 @@ export function PreviewPanel() {
       await createPreview({ data: { worktree_name: worktreeName } });
       setWorktreeName('');
     } catch {
-      setError('Failed to create preview');
+      setError(t('preview.createFailed'));
     }
   };
 
@@ -98,7 +101,7 @@ export function PreviewPanel() {
     try {
       await startPreview({ id });
     } catch {
-      setError('Failed to start preview');
+      setError(t('preview.startFailed'));
     }
   };
 
@@ -107,7 +110,7 @@ export function PreviewPanel() {
     try {
       await stopPreview({ id });
     } catch {
-      setError('Failed to stop preview');
+      setError(t('preview.stopFailed'));
     }
   };
 
@@ -116,7 +119,7 @@ export function PreviewPanel() {
     try {
       await restartPreview({ id });
     } catch {
-      setError('Failed to restart preview');
+      setError(t('preview.restartFailed'));
     }
   };
 
@@ -125,33 +128,33 @@ export function PreviewPanel() {
     try {
       await deletePreview({ id });
     } catch {
-      setError('Failed to delete preview');
+      setError(t('preview.deleteFailed'));
     }
   };
 
   if (isLoading) {
-    return <div className="p-4 text-gray-500">Loading previews...</div>;
+    return <div className="p-4 text-gray-500">{t('preview.loadingPreviews')}</div>;
   }
 
   if (isError) {
-    return <div className="p-4 text-red-500">Failed to load previews</div>;
+    return <div className="p-4 text-red-500">{t('preview.loadFailed')}</div>;
   }
 
   return (
     <div className="space-y-4 p-4">
-      <h2 className="text-lg font-semibold">Docker Previews</h2>
+      <h2 className="text-lg font-semibold">{t('preview.dockerPreviews')}</h2>
 
       {/* Create form */}
       <div className="flex gap-2">
         <label className="sr-only" htmlFor="preview-worktree-name">
-          Worktree Name
+          {t('preview.worktreeNameLabel')}
         </label>
         <input
           id="preview-worktree-name"
           type="text"
           value={worktreeName}
           onChange={(e) => setWorktreeName(e.target.value)}
-          placeholder="Worktree name"
+          placeholder={t('preview.worktreeName')}
           className="flex-1 rounded border px-3 py-1 text-sm"
         />
         <button
@@ -160,14 +163,16 @@ export function PreviewPanel() {
           disabled={!worktreeName.trim() || isCreating}
           className="rounded bg-indigo-600 px-3 py-1 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
         >
-          Create
+          {t('common.create')}
         </button>
       </div>
 
       {error && <div className="text-sm text-red-500">{error}</div>}
 
       {/* Preview list */}
-      {previews && previews.length === 0 && <p className="text-sm text-gray-500">No previews</p>}
+      {previews && previews.length === 0 && (
+        <p className="text-sm text-gray-500">{t('preview.noPreviews')}</p>
+      )}
 
       {previews?.map((preview) => (
         <div key={preview.id} className="flex items-center justify-between rounded border p-3">

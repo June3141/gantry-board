@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 export type ActivityFilterValue = 'all' | 'comments';
 
 export function ActivityFilter({
@@ -7,6 +9,7 @@ export function ActivityFilter({
   value: ActivityFilterValue;
   onChange: (value: ActivityFilterValue) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="inline-flex rounded-md border border-gray-200">
       <button
@@ -19,7 +22,7 @@ export function ActivityFilter({
           value === 'all' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-500 hover:bg-gray-50'
         }`}
       >
-        All Activity
+        {t('activity.filterAll')}
       </button>
       <button
         type="button"
@@ -33,7 +36,7 @@ export function ActivityFilter({
             : 'bg-white text-gray-500 hover:bg-gray-50'
         }`}
       >
-        Comments Only
+        {t('activity.filterComments')}
       </button>
     </div>
   );

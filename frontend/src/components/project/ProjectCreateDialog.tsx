@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCreateProject } from '@/api/generated/endpoints/projects/projects';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { invalidateProjects } from '@/services/queryInvalidation';
@@ -14,6 +15,7 @@ export function ProjectCreateDialog() {
 }
 
 function ProjectCreateForm() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const closeProjectModal = useUiStore((s) => s.closeProjectModal);
   const createProject = useCreateProject();
@@ -41,7 +43,7 @@ function ProjectCreateForm() {
       invalidateProjects(queryClient);
       closeProjectModal();
     } catch {
-      setError('Failed to create project. Please try again.');
+      setError(t('project.createFailed'));
     }
   };
 
@@ -60,13 +62,13 @@ function ProjectCreateForm() {
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
       >
         <h2 id="project-create-title" className="mb-4 text-lg font-semibold">
-          Create Project
+          {t('project.createProject')}
         </h2>
         {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="project-name" className="block text-sm font-medium text-gray-700">
-              Name
+              {t('project.name')}
             </label>
             <input
               id="project-name"
@@ -82,7 +84,7 @@ function ProjectCreateForm() {
               htmlFor="project-description"
               className="block text-sm font-medium text-gray-700"
             >
-              Description
+              {t('project.description')}
             </label>
             <textarea
               id="project-description"
@@ -97,14 +99,14 @@ function ProjectCreateForm() {
               htmlFor="project-repository-path"
               className="block text-sm font-medium text-gray-700"
             >
-              Repository Path
+              {t('project.repositoryPath')}
             </label>
             <input
               id="project-repository-path"
               type="text"
               value={repositoryPath}
               onChange={(e) => setRepositoryPath(e.target.value)}
-              placeholder="/path/to/git/repo (optional)"
+              placeholder={t('project.repositoryPathPlaceholder')}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -114,14 +116,14 @@ function ProjectCreateForm() {
               onClick={closeProjectModal}
               className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={createProject.isPending}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              Create
+              {t('common.create')}
             </button>
           </div>
         </form>

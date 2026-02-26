@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ProjectMember } from '@/api/generated/model';
 import { TaskPriority } from '@/api/generated/model';
 import { useBoardStore } from '@/stores/boardStore';
@@ -8,14 +9,15 @@ interface TaskFilterBarProps {
   members?: ProjectMember[];
 }
 
-const priorityLabels: Record<TaskPriority, string> = {
-  [TaskPriority.low]: 'Low',
-  [TaskPriority.medium]: 'Medium',
-  [TaskPriority.high]: 'High',
-  [TaskPriority.urgent]: 'Urgent',
+const priorityLabelKeys: Record<TaskPriority, string> = {
+  [TaskPriority.low]: 'board.priorityLabel.low',
+  [TaskPriority.medium]: 'board.priorityLabel.medium',
+  [TaskPriority.high]: 'board.priorityLabel.high',
+  [TaskPriority.urgent]: 'board.priorityLabel.urgent',
 };
 
 export function TaskFilterBar({ members }: TaskFilterBarProps) {
+  const { t } = useTranslation();
   const searchText = useBoardStore((s) => s.searchText);
   const setSearchText = useBoardStore((s) => s.setSearchText);
   const assigneeFilter = useBoardStore((s) => s.assigneeFilter);
@@ -48,7 +50,7 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
         <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
-          placeholder="Search tasks..."
+          placeholder={t('board.searchPlaceholder')}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           className="rounded-md border border-gray-300 py-1.5 pl-8 pr-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -64,7 +66,7 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
           }}
           className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
         >
-          Assignee
+          {t('board.assignee')}
         </button>
         {assigneeOpen && (
           <div
@@ -77,7 +79,7 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
                 checked={assigneeFilter.includes('unassigned')}
                 onChange={() => toggleAssignee('unassigned')}
               />
-              Unassigned
+              {t('common.unassigned')}
             </label>
             {members?.map((m) => (
               <label
@@ -105,7 +107,7 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
           }}
           className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
         >
-          Priority
+          {t('board.priority')}
         </button>
         {priorityOpen && (
           <div
@@ -122,7 +124,7 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
                   checked={priorityFilter.includes(p)}
                   onChange={() => togglePriority(p)}
                 />
-                {priorityLabels[p]}
+                {t(priorityLabelKeys[p])}
               </label>
             ))}
           </div>
@@ -135,7 +137,7 @@ export function TaskFilterBar({ members }: TaskFilterBarProps) {
           onClick={clearFilters}
           className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
         >
-          Clear all
+          {t('common.clearAll')}
         </button>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core';
 import { Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ProjectMember, Task } from '@/api/generated/model';
 import { TaskStatus } from '@/api/generated/model';
 import { useUiStore } from '@/stores/uiStore';
@@ -12,12 +13,12 @@ interface KanbanColumnProps {
   members?: ProjectMember[];
 }
 
-const statusLabels: Record<TaskStatus, string> = {
-  [TaskStatus.backlog]: 'Backlog',
-  [TaskStatus.todo]: 'To Do',
-  [TaskStatus.in_progress]: 'In Progress',
-  [TaskStatus.in_review]: 'In Review',
-  [TaskStatus.done]: 'Done',
+const statusLabelKeys: Record<TaskStatus, string> = {
+  [TaskStatus.backlog]: 'board.status.backlog',
+  [TaskStatus.todo]: 'board.status.todo',
+  [TaskStatus.in_progress]: 'board.status.in_progress',
+  [TaskStatus.in_review]: 'board.status.in_review',
+  [TaskStatus.done]: 'board.status.done',
 };
 
 const statusColors: Record<TaskStatus, { bg: string; badge: string }> = {
@@ -29,6 +30,7 @@ const statusColors: Record<TaskStatus, { bg: string; badge: string }> = {
 };
 
 export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanColumnProps) {
+  const { t } = useTranslation();
   const openTaskModal = useUiStore((s) => s.openTaskModal);
   const { setNodeRef, isOver } = useDroppable({
     id: status,
@@ -41,7 +43,7 @@ export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanCol
       }`}
     >
       <div className="flex items-center justify-between p-3">
-        <h2 className="text-sm font-semibold text-gray-700">{statusLabels[status]}</h2>
+        <h2 className="text-sm font-semibold text-gray-700">{t(statusLabelKeys[status])}</h2>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[status].badge}`}
         >
@@ -54,7 +56,7 @@ export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanCol
             data-testid="column-empty"
             className="flex h-24 items-center justify-center rounded border-2 border-dashed border-gray-300 text-sm text-gray-400"
           >
-            No tasks
+            {t('board.noTasks')}
           </div>
         ) : (
           tasks.map((task) => (
@@ -73,7 +75,7 @@ export function KanbanColumn({ status, tasks, activeTaskId, members }: KanbanCol
           onClick={() => openTaskModal(status)}
           className="flex w-full items-center justify-center gap-1 rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700"
         >
-          <Plus className="h-4 w-4" /> Add Task
+          <Plus className="h-4 w-4" /> {t('board.addTask')}
         </button>
       </div>
     </div>

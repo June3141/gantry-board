@@ -130,8 +130,8 @@ describe('ProjectMembersPanel', () => {
     renderWithProviders(<ProjectMembersPanel projectId="project-1" />);
     // Alice (self/owner) shows a static badge, Bob has a role select
     // Check that role text exists somewhere in the document
-    expect(screen.getAllByText('owner').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('member').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Owner').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Member').length).toBeGreaterThanOrEqual(1);
   });
 
   describe('owner permissions', () => {
