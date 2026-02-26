@@ -35,7 +35,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const handleEscapeKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent) => {
       if (editingField) {
         e.preventDefault();
         setEditingField(null);
@@ -116,7 +116,6 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
       <DialogContent
         className="max-w-2xl"
         data-testid="task-detail-modal"
-        showCloseButton={false}
         onEscapeKeyDown={handleEscapeKeyDown}
         aria-describedby={undefined}
       >

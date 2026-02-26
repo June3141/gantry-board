@@ -161,7 +161,6 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
     >
       <DialogContent
         className="flex h-[600px] max-w-lg flex-col gap-0 p-0"
-        showCloseButton={false}
         aria-describedby={undefined}
       >
         <DialogHeader className="border-b px-4 py-3">

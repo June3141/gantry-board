@@ -59,7 +59,7 @@ function ProjectSettingsContent({
   const isOwner = currentUserRole === MemberRole.owner;
 
   const handleEscapeKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent) => {
       if (editingField) {
         e.preventDefault();
         setEditingField(null);
