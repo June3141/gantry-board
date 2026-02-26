@@ -16,9 +16,7 @@ export function ActivityFilter({
           if (value !== 'all') onChange('all');
         }}
         className={`rounded-l-md px-3 py-1 text-xs font-medium ${
-          value === 'all'
-            ? 'bg-gray-100 text-gray-900'
-            : 'bg-white text-gray-500 hover:bg-gray-50'
+          value === 'all' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-500 hover:bg-gray-50'
         }`}
       >
         All Activity

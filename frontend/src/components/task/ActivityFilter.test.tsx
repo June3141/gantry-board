@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { ActivityFilter, type ActivityFilterValue } from './ActivityFilter';
+import { ActivityFilter } from './ActivityFilter';
 
 describe('ActivityFilter', () => {
   it('renders two toggle buttons', () => {
