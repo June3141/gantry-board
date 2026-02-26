@@ -243,7 +243,7 @@ function TaskDetailContent({ taskId }: { taskId: string }) {
 
             <div className="border-t pt-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Worktrees</h3>
-              <WorktreePanel />
+              <WorktreePanel projectId={task.project_id} />
             </div>
 
             <div className="border-t pt-4">

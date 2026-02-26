@@ -249,7 +249,7 @@ export function TaskDetailPage() {
 
           <div className="border-t pt-4">
             <h3 className="mb-2 text-sm font-medium text-gray-700">Worktrees</h3>
-            <WorktreePanel />
+            <WorktreePanel projectId={projectId ?? ''} />
           </div>
 
           <div className="border-t pt-4">

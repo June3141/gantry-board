@@ -8,6 +8,7 @@ async fn create_test_project(pool: &SqlitePool) -> Uuid {
     let req = CreateProjectRequest {
         name: "Test Project".to_string(),
         description: None,
+        repository_path: None,
     };
     let project = project_service::create_project(pool, &req)
         .await

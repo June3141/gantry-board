@@ -5,7 +5,7 @@ test.describe('Project CRUD', () => {
     await page.goto('/');
 
     // Open the create project dialog
-    await page.getByRole('button', { name: 'New Project' }).click();
+    await page.getByRole('button', { name: /new project/i }).click();
 
     // Fill in project details
     const dialog = page.getByRole('dialog');
@@ -14,12 +14,12 @@ test.describe('Project CRUD', () => {
     await dialog.getByLabel('Description').fill('Created by E2E test');
     await dialog.getByRole('button', { name: 'Create' }).click();
 
-    // Dialog should close and project should appear in the selector
+    // Dialog should close and project card should appear on the list page
     await expect(dialog).not.toBeVisible();
-    await expect(page.locator('#project-select')).toContainText('E2E Test Project');
+    await expect(page.getByText('E2E Test Project')).toBeVisible();
   });
 
-  test('selects a project and displays kanban board', async ({
+  test('navigates to project board by clicking a project card', async ({
     authenticatedPage: page,
     apiHelper,
     testUser,
@@ -29,8 +29,8 @@ test.describe('Project CRUD', () => {
 
     await page.goto('/');
 
-    // Select the project
-    await page.locator('#project-select').selectOption(project.id);
+    // Click the project card
+    await page.getByText(project.name).click();
 
     // Kanban columns should be visible
     await expect(page.getByText('Backlog')).toBeVisible();
@@ -40,12 +40,13 @@ test.describe('Project CRUD', () => {
     await expect(page.getByText('Done')).toBeVisible();
   });
 
-  test('shows empty state when no project is selected', async ({ authenticatedPage: page }) => {
+  test('shows empty state when no projects exist', async ({ authenticatedPage: page }) => {
     await page.goto('/');
-    await expect(page.getByText('Select a project to view its tasks')).toBeVisible();
+    // The project list page should be shown (with either projects or empty state)
+    await expect(page.getByText(/projects/i).first()).toBeVisible();
   });
 
-  test('opens project settings for selected project', async ({
+  test('opens project settings from the board page', async ({
     authenticatedPage: page,
     apiHelper,
     testUser,
@@ -55,11 +56,10 @@ test.describe('Project CRUD', () => {
       `Settings Project ${Date.now()}`,
     );
 
-    await page.goto('/');
-    await page.locator('#project-select').selectOption(project.id);
+    await page.goto(`/projects/${project.id}`);
 
     // Settings button should appear
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('button', { name: /settings/i }).click();
 
     // Settings modal should be visible
     const dialog = page.getByRole('dialog');

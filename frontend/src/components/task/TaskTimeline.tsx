@@ -18,6 +18,7 @@ import { useAgentStore } from '@/stores/agentStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import { AgentOutputViewer } from '../agent/AgentOutputViewer';
+import { ActivityFilter, type ActivityFilterValue } from './ActivityFilter';
 import { TimelineAgentSessionItem } from './TimelineAgentSessionItem';
 import { TimelineCommentItem } from './TimelineCommentItem';
 import { AGENT_LABELS, mergeTimeline, STATUS_COLORS, TERMINAL_STATUSES } from './timelineUtils';
@@ -35,6 +36,7 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
   const addToast = useToastStore((s) => s.addToast);
 
   const [newComment, setNewComment] = useState('');
+  const [activityFilter, setActivityFilter] = useState<ActivityFilterValue>('all');
 
   // Agent start section state
   const [agentType, setAgentType] = useState<AgentType>('claude_code');
@@ -148,7 +150,11 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
 
   const isLoading = commentsLoading || sessionsLoading;
   const terminalSessions = sessions?.filter((s) => TERMINAL_STATUSES.includes(s.status)) ?? [];
-  const timeline = mergeTimeline(comments ?? [], terminalSessions);
+  const allTimeline = mergeTimeline(comments ?? [], terminalSessions);
+  const timeline =
+    activityFilter === 'comments'
+      ? allTimeline.filter((item) => item.type === 'comment')
+      : allTimeline;
 
   return (
     <div className="space-y-4">
@@ -261,6 +267,12 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
         <textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              handleSubmitComment();
+            }
+          }}
           placeholder="Add a comment..."
           rows={2}
           className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -274,6 +286,9 @@ export function TaskTimeline({ taskId }: { taskId: string }) {
           Post
         </button>
       </div>
+
+      {/* Activity filter */}
+      <ActivityFilter value={activityFilter} onChange={setActivityFilter} />
 
       {/* Timeline */}
       {isLoading ? (

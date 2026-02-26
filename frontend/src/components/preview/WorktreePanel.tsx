@@ -1,29 +1,33 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
-  getListWorktreesQueryKey,
-  useCreateWorktree,
-  useDeleteWorktree,
-  useListWorktrees,
+  getListProjectWorktreesQueryKey,
+  useCreateProjectWorktree,
+  useDeleteProjectWorktree,
+  useListProjectWorktrees,
 } from '@/api/generated/endpoints/worktrees/worktrees';
 
-export function WorktreePanel() {
+export function WorktreePanel({ projectId }: { projectId: string }) {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [deletingName, setDeletingName] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
-  const { data: worktrees, isLoading, isError } = useListWorktrees();
-  const createWorktree = useCreateWorktree();
-  const deleteWorktree = useDeleteWorktree();
+  const {
+    data: worktrees,
+    isLoading,
+    isError,
+  } = useListProjectWorktrees(projectId, { query: { enabled: !!projectId } });
+  const createWorktree = useCreateProjectWorktree();
+  const deleteWorktree = useDeleteProjectWorktree();
 
   const invalidateList = () =>
-    queryClient.invalidateQueries({ queryKey: getListWorktreesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListProjectWorktreesQueryKey(projectId) });
 
   const handleCreate = async () => {
     setError(null);
     try {
-      await createWorktree.mutateAsync({ data: { name: name.trim() } });
+      await createWorktree.mutateAsync({ projectId, data: { name: name.trim() } });
       setName('');
       await invalidateList();
     } catch {
@@ -34,7 +38,7 @@ export function WorktreePanel() {
   const handleDelete = async (worktreeName: string) => {
     setError(null);
     try {
-      await deleteWorktree.mutateAsync({ name: worktreeName });
+      await deleteWorktree.mutateAsync({ projectId, name: worktreeName });
       setDeletingName(null);
       await invalidateList();
     } catch {

@@ -20,9 +20,10 @@ vi.mock('@/api/generated/endpoints/agent-sessions/agent-sessions', () => ({
 }));
 
 vi.mock('@/api/generated/endpoints/worktrees/worktrees', () => ({
-  useListWorktrees: vi.fn(),
-  useCreateWorktree: vi.fn(),
-  useDeleteWorktree: vi.fn(),
+  useListProjectWorktrees: vi.fn(),
+  useCreateProjectWorktree: vi.fn(),
+  useDeleteProjectWorktree: vi.fn(),
+  getListProjectWorktreesQueryKey: vi.fn(() => ['worktrees']),
 }));
 
 vi.mock('@/api/generated/endpoints/project-members/project-members', () => ({
