@@ -34,14 +34,16 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h1 className="mb-6 text-center text-2xl font-bold text-gray-900">{t('auth.signInTo')}</h1>
+    <div className="flex min-h-screen items-center justify-center bg-muted">
+      <div className="w-full max-w-md rounded-lg bg-background p-8 shadow-md">
+        <h1 className="mb-6 text-center text-2xl font-bold text-foreground">
+          {t('auth.signInTo')}
+        </h1>
 
         {error && (
           <div
             data-testid="login-error"
-            className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700"
+            className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
           >
             {error}
           </div>
@@ -49,7 +51,7 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit} data-testid="login-form" className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-foreground">
               {t('auth.email')}
             </label>
             <Input
@@ -64,7 +66,7 @@ export function LoginPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-foreground">
               {t('auth.password')}
             </label>
             <Input
@@ -83,7 +85,7 @@ export function LoginPage() {
           </Button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-4 text-center text-sm text-muted-foreground">
           {t('auth.noAccount')}{' '}
           <Link
             to={redirectTo ? `/register?redirect=${encodeURIComponent(redirectTo)}` : '/register'}
