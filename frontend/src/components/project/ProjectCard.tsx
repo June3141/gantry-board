@@ -2,6 +2,7 @@ import { Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { Project } from '@/api/generated/model';
+import { Button } from '@/components/ui/button';
 
 interface ProjectCardProps {
   project: Project;
@@ -19,17 +20,18 @@ export function ProjectCard({ project, onSettings }: ProjectCardProps) {
         )}
       </Link>
       {onSettings && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-xs"
           onClick={(e) => {
             e.stopPropagation();
             onSettings(project.id);
           }}
-          className="absolute right-3 top-3 rounded p-1 text-gray-400 opacity-0 hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
+          className="absolute right-3 top-3 opacity-0 group-hover:opacity-100"
           aria-label={t('project.projectSettings')}
         >
           <Settings className="h-4 w-4" />
-        </button>
+        </Button>
       )}
     </div>
   );

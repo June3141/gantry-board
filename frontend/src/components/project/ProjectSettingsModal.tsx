@@ -11,6 +11,9 @@ import {
   useUpdateProject,
 } from '@/api/generated/endpoints/projects/projects';
 import { MemberRole } from '@/api/generated/model';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
@@ -136,14 +139,14 @@ function ProjectSettingsContent({
           <h2 id="project-settings-title" className="text-lg font-semibold text-gray-900">
             {t('project.settings')}
           </h2>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={closeProjectSettings}
-            className="text-gray-400 hover:text-gray-600"
             aria-label={t('common.close')}
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         {isLoading ? (
@@ -155,12 +158,12 @@ function ProjectSettingsContent({
             <div>
               <h3 className="text-sm font-medium text-gray-700">{t('project.name')}</h3>
               {editingField === 'name' ? (
-                <input
+                <Input
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={() => saveField('name')}
-                  className="mt-1 block w-full rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1"
                   autoFocus
                 />
               ) : canEdit ? (
@@ -179,12 +182,12 @@ function ProjectSettingsContent({
             <div>
               <h3 className="text-sm font-medium text-gray-700">{t('project.description')}</h3>
               {editingField === 'description' ? (
-                <textarea
+                <Textarea
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={() => saveField('description')}
                   rows={3}
-                  className="mt-1 block w-full rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1"
                   autoFocus
                 />
               ) : canEdit ? (
@@ -205,13 +208,13 @@ function ProjectSettingsContent({
             <div>
               <h3 className="text-sm font-medium text-gray-700">{t('project.repositoryPath')}</h3>
               {editingField === 'repository_path' ? (
-                <input
+                <Input
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={() => saveField('repository_path')}
                   placeholder="/path/to/git/repo"
-                  className="mt-1 block w-full rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1"
                   autoFocus
                 />
               ) : canEdit ? (
@@ -242,30 +245,26 @@ function ProjectSettingsContent({
                   <div className="flex items-center justify-between rounded-md bg-red-50 p-3">
                     <p className="text-sm text-red-700">{t('project.deleteConfirm')}</p>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setShowDeleteConfirm(false)}
-                        className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
                       >
                         {t('common.cancel')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDelete}
-                        className="rounded-md bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
-                      >
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={handleDelete}>
                         {t('common.confirm')}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
+                    className="border-red-300 text-red-700 hover:bg-red-50"
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50"
                   >
                     {t('project.deleteProject')}
-                  </button>
+                  </Button>
                 )}
               </div>
             )}

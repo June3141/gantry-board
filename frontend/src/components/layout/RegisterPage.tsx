@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useRegister } from '@/api/generated/endpoints/auth/auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/authStore';
 
 export function RegisterPage() {
@@ -58,13 +60,13 @@ export function RegisterPage() {
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
               {t('auth.name')}
             </label>
-            <input
+            <Input
               id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
               placeholder={t('auth.namePlaceholder')}
             />
           </div>
@@ -73,13 +75,13 @@ export function RegisterPage() {
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               {t('auth.email')}
             </label>
-            <input
+            <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
               placeholder={t('auth.emailPlaceholder')}
             />
           </div>
@@ -88,32 +90,28 @@ export function RegisterPage() {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               {t('auth.password')}
             </label>
-            <input
+            <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
               placeholder={t('auth.passwordMinLength')}
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={register.isPending}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button type="submit" disabled={register.isPending} className="w-full">
             {register.isPending ? t('auth.creatingAccount') : t('auth.createAccountBtn')}
-          </button>
+          </Button>
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-600">
           {t('auth.hasAccount')}{' '}
           <Link
             to={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login'}
-            className="text-blue-600 hover:text-blue-500"
+            className="text-primary hover:text-primary/80"
           >
             {t('auth.signIn')}
           </Link>

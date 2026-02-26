@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLogin } from '@/api/generated/endpoints/auth/auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/authStore';
 
 export function LoginPage() {
@@ -50,13 +52,13 @@ export function LoginPage() {
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               {t('auth.email')}
             </label>
-            <input
+            <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
               placeholder={t('auth.emailPlaceholder')}
             />
           </div>
@@ -65,31 +67,27 @@ export function LoginPage() {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               {t('auth.password')}
             </label>
-            <input
+            <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
               placeholder={t('auth.passwordPlaceholder')}
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={login.isPending}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button type="submit" disabled={login.isPending} className="w-full">
             {login.isPending ? t('auth.signingIn') : t('auth.signIn')}
-          </button>
+          </Button>
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-600">
           {t('auth.noAccount')}{' '}
           <Link
             to={redirectTo ? `/register?redirect=${encodeURIComponent(redirectTo)}` : '/register'}
-            className="text-blue-600 hover:text-blue-500"
+            className="text-primary hover:text-primary/80"
           >
             {t('auth.signUp')}
           </Link>

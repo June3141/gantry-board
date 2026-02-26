@@ -4,6 +4,7 @@ import {
   useAcceptInvitation,
   useGetInvitationByToken,
 } from '@/api/generated/endpoints/invitations/invitations';
+import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 
 export function InvitationAcceptPage() {
@@ -66,31 +67,29 @@ export function InvitationAcceptPage() {
             ) : !isAuthenticated ? (
               <div className="space-y-2">
                 <p className="text-sm text-gray-600">{t('invitation.loginRequired')}</p>
-                <button
-                  type="button"
+                <Button
+                  className="w-full"
                   onClick={() => navigate(`/login?redirect=/invite/${token}`)}
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
                 >
                   {t('invitation.logIn')}
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
                   onClick={() => navigate(`/register?redirect=/invite/${token}`)}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
                 >
                   {t('auth.createAccountBtn')}
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="space-y-2">
-                <button
-                  type="button"
+                <Button
+                  className="w-full"
                   onClick={handleAccept}
                   disabled={acceptMutation.isPending}
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
                 >
                   {acceptMutation.isPending ? t('invitation.accepting') : t('invitation.accept')}
-                </button>
+                </Button>
                 {acceptMutation.isError && (
                   <p className="text-sm text-red-600">{t('invitation.acceptFailed')}</p>
                 )}

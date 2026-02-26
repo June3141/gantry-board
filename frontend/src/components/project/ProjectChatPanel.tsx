@@ -8,6 +8,8 @@ import {
   useDeleteMessage,
   useListMessages,
 } from '@/api/generated/endpoints/project-messages/project-messages';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
@@ -81,33 +83,26 @@ function MessageItem({
           <span className="text-sm font-medium text-gray-900">{message.user_name}</span>
           <span className="text-xs text-gray-500">{timeAgo(message.created_at, t)}</span>
           {isOwner && !showDeleteConfirm && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="xs"
               aria-label={t('common.delete')}
               onClick={() => setShowDeleteConfirm(true)}
-              className="ml-auto text-xs text-gray-400 hover:text-red-600"
+              className="ml-auto text-muted-foreground hover:text-destructive"
             >
               {t('common.delete')}
-            </button>
+            </Button>
           )}
         </div>
         {showDeleteConfirm ? (
           <div className="mt-1 flex items-center gap-2 rounded bg-red-50 px-2 py-1">
             <span className="text-xs text-red-700">{t('chat.deleteMessageConfirm')}</span>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
-            >
+            <Button variant="destructive" size="xs" onClick={handleDelete}>
               {t('common.confirm')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(false)}
-              className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
-            >
+            </Button>
+            <Button variant="outline" size="xs" onClick={() => setShowDeleteConfirm(false)}>
               {t('common.cancel')}
-            </button>
+            </Button>
           </div>
         ) : (
           <p className="mt-0.5 text-sm text-gray-700">{message.content}</p>
@@ -175,14 +170,14 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
           <h2 id="project-chat-title" className="text-lg font-semibold text-gray-900">
             {t('chat.projectChat')}
           </h2>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={closeProjectChat}
-            className="text-gray-400 hover:text-gray-600"
             aria-label={t('common.close')}
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-2">
@@ -206,23 +201,22 @@ function ProjectChatContent({ projectId }: { projectId: string }) {
 
         <div className="border-t px-4 py-3">
           <div className="flex gap-2">
-            <textarea
+            <Textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('chat.placeholder')}
               rows={2}
-              className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="flex-1"
             />
-            <button
-              type="button"
+            <Button
               aria-label={t('common.send')}
               onClick={handleSubmit}
               disabled={!newMessage.trim() || createMessage.isPending}
-              className="self-end rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+              className="self-end"
             >
               {t('common.send')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
