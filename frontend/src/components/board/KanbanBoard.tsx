@@ -164,7 +164,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   if (isLoading) {
     return (
       <div data-testid="kanban-loading" className="flex items-center justify-center p-8">
-        <div className="text-gray-500">{t('board.loadingTasks')}</div>
+        <div className="text-muted-foreground">{t('board.loadingTasks')}</div>
       </div>
     );
   }
@@ -172,7 +172,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   if (error) {
     return (
       <div data-testid="kanban-error" className="flex items-center justify-center p-8">
-        <div className="text-red-500">{t('board.loadFailed')}</div>
+        <div className="text-destructive">{t('board.loadFailed')}</div>
       </div>
     );
   }

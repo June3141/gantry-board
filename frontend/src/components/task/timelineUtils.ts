@@ -21,12 +21,12 @@ export function mergeTimeline(comments: TaskComment[], sessions: AgentSession[])
 }
 
 export const STATUS_COLORS: Record<AgentSessionStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  running: 'bg-blue-100 text-blue-800',
+  pending: 'bg-warning/15 text-warning',
+  running: 'bg-primary/15 text-primary',
   paused: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  failed: 'bg-red-100 text-red-800',
-  cancelled: 'bg-gray-100 text-gray-800',
+  completed: 'bg-success/15 text-success',
+  failed: 'bg-destructive/15 text-destructive',
+  cancelled: 'bg-muted text-muted-foreground',
 };
 
 export const AGENT_LABELS: Record<AgentType, string> = {
