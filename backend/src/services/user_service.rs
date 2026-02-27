@@ -43,14 +43,17 @@ fn escape_like(input: &str) -> String {
 
 /// Create a new user with hashed password.
 /// The first registered user is automatically promoted to admin.
+/// Uses a transaction to prevent race conditions in admin auto-promotion.
 pub async fn create_user(pool: &SqlitePool, req: &RegisterRequest) -> AppResult<User> {
     let id = Uuid::new_v4();
     let now = Utc::now();
     let password_hash = hash_password(&req.password)?;
 
-    // First user becomes admin automatically
+    let mut tx = pool.begin().await?;
+
+    // First user becomes admin automatically (inside tx to prevent race)
     let (user_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await?;
     let is_admin = user_count == 0;
 
@@ -67,8 +70,10 @@ pub async fn create_user(pool: &SqlitePool, req: &RegisterRequest) -> AppResult<
     .bind(is_admin)
     .bind(now)
     .bind(now)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+
+    tx.commit().await?;
 
     Ok(User {
         id,
@@ -192,6 +197,27 @@ mod tests {
         assert_eq!(user.email, "test@example.com");
         assert_eq!(user.name, "Test User");
         assert!(!user.id.is_nil());
+    }
+
+    #[tokio::test]
+    async fn test_first_user_is_admin() {
+        let pool = setup_test_db().await;
+        let first = create_user(&pool, &test_register_request())
+            .await
+            .expect("Failed to create first user");
+        assert!(first.is_admin, "First user should be admin");
+
+        let second = create_user(
+            &pool,
+            &RegisterRequest {
+                email: "second@example.com".to_string(),
+                name: "Second User".to_string(),
+                password: "password123".to_string(),
+            },
+        )
+        .await
+        .expect("Failed to create second user");
+        assert!(!second.is_admin, "Second user should not be admin");
     }
 
     #[tokio::test]
