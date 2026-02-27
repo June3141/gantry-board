@@ -22,11 +22,11 @@ use uuid::Uuid;
 use crate::config::Config;
 use crate::error::{AppError, AppResult};
 use crate::models::docker_preview::{DockerPreview, PreviewStatus};
+use crate::realtime::event::SseEvent;
+use crate::realtime::hub::SseHub;
 use crate::services::preview_repository::{
     allocate_port_tx, get_preview, update_container_id_tx, update_status_tx,
 };
-use crate::sse::event::SseEvent;
-use crate::sse::hub::SseHub;
 
 /// Circuit breaker for Docker operations.
 /// Opens after `FAILURE_THRESHOLD` consecutive failures and stays open
@@ -55,11 +55,11 @@ impl DockerCircuitBreaker {
     }
 
     fn state(&self) -> CircuitState {
-        let failures = self.consecutive_failures.load(Ordering::Relaxed);
+        let failures = self.consecutive_failures.load(Ordering::Acquire);
         if failures < FAILURE_THRESHOLD {
             return CircuitState::Closed;
         }
-        let last = self.last_failure_epoch.load(Ordering::Relaxed);
+        let last = self.last_failure_epoch.load(Ordering::Acquire);
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -81,16 +81,18 @@ impl DockerCircuitBreaker {
     }
 
     fn record_success(&self) {
-        self.consecutive_failures.store(0, Ordering::Relaxed);
+        self.consecutive_failures.store(0, Ordering::Release);
     }
 
     fn record_failure(&self) {
-        self.consecutive_failures.fetch_add(1, Ordering::Relaxed);
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        self.last_failure_epoch.store(now, Ordering::Relaxed);
+        // Store timestamp before incrementing failures so that a reader who
+        // observes the incremented count via Acquire also sees the timestamp.
+        self.last_failure_epoch.store(now, Ordering::Release);
+        self.consecutive_failures.fetch_add(1, Ordering::AcqRel);
     }
 }
 

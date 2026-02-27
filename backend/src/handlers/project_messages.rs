@@ -9,8 +9,8 @@ use uuid::Uuid;
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::project_message::{CreateMessageRequest, ProjectMessage};
+use crate::realtime::event::SseEvent;
 use crate::services::{authorization_service, project_message_service};
-use crate::sse::event::SseEvent;
 use crate::AppState;
 
 const DEFAULT_PAGE_SIZE: i64 = 50;

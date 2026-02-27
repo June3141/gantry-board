@@ -150,7 +150,7 @@ pub async fn sync_github_link(
         Ok(result) => {
             state
                 .sse_hub
-                .broadcast(crate::sse::event::SseEvent::github_sync_completed(
+                .broadcast(crate::realtime::event::SseEvent::github_sync_completed(
                     result.clone(),
                 ));
             Ok(Json(result))
@@ -158,7 +158,7 @@ pub async fn sync_github_link(
         Err(e) => {
             state
                 .sse_hub
-                .broadcast(crate::sse::event::SseEvent::github_sync_failed(
+                .broadcast(crate::realtime::event::SseEvent::github_sync_failed(
                     project_id,
                     e.to_string(),
                 ));

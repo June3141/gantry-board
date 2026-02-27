@@ -9,8 +9,8 @@ use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::pagination::{self, PaginatedResponse};
 use crate::models::task::{CreateTaskRequest, Task, UpdateTaskRequest};
+use crate::realtime::event::SseEvent;
 use crate::services::{authorization_service, task_service};
-use crate::sse::event::SseEvent;
 use crate::AppState;
 
 /// Fire-and-forget auto-push of a task to GitHub when a link exists.

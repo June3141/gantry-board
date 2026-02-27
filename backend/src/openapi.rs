@@ -3,7 +3,7 @@ use utoipa::OpenApi;
 use crate::error;
 use crate::handlers;
 use crate::models;
-use crate::sse;
+use crate::realtime;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -101,7 +101,7 @@ use crate::sse;
         models::agent_session::StartAgentSessionRequest,
         models::agent_session::StartAgentSessionResponse,
         models::agent_session_output::AgentSessionOutput,
-        sse::event::SseEvent,
+        realtime::event::SseEvent,
         handlers::worktrees::WorktreeResponse,
         handlers::worktrees::CreateWorktreeRequest,
         models::pagination::PaginatedResponse<models::task::Task>,

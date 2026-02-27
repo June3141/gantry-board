@@ -10,12 +10,12 @@ use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::db;
 use gantry_board::models::agent_session::AgentType;
+use gantry_board::realtime::hub::SseHub;
 use gantry_board::services::preview_service::PreviewManager;
 use gantry_board::services::{
     agent_session_output_service, agent_session_service, audit_service, backup_service,
     session_service,
 };
-use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
@@ -287,7 +287,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 );
                             }
                             sync_hub.broadcast(
-                                gantry_board::sse::event::SseEvent::github_sync_completed(r),
+                                gantry_board::realtime::event::SseEvent::github_sync_completed(r),
                             );
                         }
                     }
