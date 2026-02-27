@@ -14,10 +14,10 @@ use crate::error::{AppError, AppResult};
 use crate::models::agent_session::{
     AgentSessionStatus, AgentType, CreateAgentSessionRequest, UpdateAgentSessionRequest,
 };
+use crate::realtime::event::SseEvent;
+use crate::realtime::hub::SseHub;
 use crate::services::agent_session_output_service::OutputBuffer;
 use crate::services::{agent_session_service, worktree_service};
-use crate::sse::event::SseEvent;
-use crate::sse::hub::SseHub;
 
 struct RunningSession {
     cancel: tokio_util::sync::CancellationToken,

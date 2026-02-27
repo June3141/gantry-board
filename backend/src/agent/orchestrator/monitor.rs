@@ -8,8 +8,8 @@ use uuid::Uuid;
 use super::AgentOrchestrator;
 use crate::agent::executor::AgentOutputEvent;
 use crate::models::agent_session::{AgentSessionStatus, AgentType, UpdateAgentSessionRequest};
+use crate::realtime::event::SseEvent;
 use crate::services::agent_session_service;
-use crate::sse::event::SseEvent;
 
 impl AgentOrchestrator {
     #[allow(clippy::too_many_arguments)]

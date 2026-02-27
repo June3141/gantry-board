@@ -7,8 +7,8 @@ use uuid::Uuid;
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::task_comment::{CreateCommentRequest, TaskComment, UpdateCommentRequest};
+use crate::realtime::event::SseEvent;
 use crate::services::{authorization_service, task_comment_service, task_service};
-use crate::sse::event::SseEvent;
 use crate::AppState;
 
 #[utoipa::path(

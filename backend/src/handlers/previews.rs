@@ -6,8 +6,8 @@ use uuid::Uuid;
 use crate::auth::middleware::AuthUser;
 use crate::error::{AppError, AppResult};
 use crate::models::docker_preview::{CreatePreviewRequest, DockerPreview};
+use crate::realtime::event::SseEvent;
 use crate::services::{authorization_service, preview_repository, worktree_service};
-use crate::sse::event::SseEvent;
 use crate::AppState;
 
 #[utoipa::path(
