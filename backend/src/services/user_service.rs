@@ -12,6 +12,7 @@ struct UserRow {
     id: String,
     name: String,
     email: String,
+    is_admin: bool,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
 }
@@ -24,37 +25,61 @@ impl TryFrom<UserRow> for User {
             id: row.id.parse()?,
             name: row.name,
             email: row.email,
+            is_admin: row.is_admin,
             created_at: row.created_at,
             updated_at: row.updated_at,
         })
     }
 }
 
-/// Create a new user with hashed password
+/// Escape LIKE meta-characters so that `%` and `_` in user input are treated
+/// as literal characters, not wildcards.
+fn escape_like(input: &str) -> String {
+    input
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
+
+/// Create a new user with hashed password.
+/// The first registered user is automatically promoted to admin.
+/// Uses a transaction to prevent race conditions in admin auto-promotion.
 pub async fn create_user(pool: &SqlitePool, req: &RegisterRequest) -> AppResult<User> {
     let id = Uuid::new_v4();
     let now = Utc::now();
     let password_hash = hash_password(&req.password)?;
 
+    let mut tx = pool.begin().await?;
+
+    // First user becomes admin automatically (inside tx to prevent race)
+    let (user_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
+        .fetch_one(&mut *tx)
+        .await?;
+    let is_admin = user_count == 0;
+
     sqlx::query(
         r#"
-        INSERT INTO users (id, email, name, password_hash, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO users (id, email, name, password_hash, is_admin, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
     )
     .bind(id.to_string())
     .bind(&req.email)
     .bind(&req.name)
     .bind(&password_hash)
+    .bind(is_admin)
     .bind(now)
     .bind(now)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+
+    tx.commit().await?;
 
     Ok(User {
         id,
         name: req.name.clone(),
         email: req.email.clone(),
+        is_admin,
         created_at: now,
         updated_at: now,
     })
@@ -64,7 +89,7 @@ pub async fn create_user(pool: &SqlitePool, req: &RegisterRequest) -> AppResult<
 pub async fn get_user(pool: &SqlitePool, id: Uuid) -> AppResult<User> {
     let row = sqlx::query_as::<_, UserWithPassword>(
         r#"
-        SELECT id, email, name, password_hash, created_at, updated_at
+        SELECT id, email, name, password_hash, is_admin, created_at, updated_at
         FROM users
         WHERE id = $1
         "#,
@@ -83,7 +108,7 @@ pub async fn get_user(pool: &SqlitePool, id: Uuid) -> AppResult<User> {
 pub async fn get_user_by_email(pool: &SqlitePool, email: &str) -> AppResult<User> {
     let row = sqlx::query_as::<_, UserWithPassword>(
         r#"
-        SELECT id, email, name, password_hash, created_at, updated_at
+        SELECT id, email, name, password_hash, is_admin, created_at, updated_at
         FROM users
         WHERE email = $1
         "#,
@@ -100,12 +125,13 @@ pub async fn get_user_by_email(pool: &SqlitePool, email: &str) -> AppResult<User
 
 /// Search users by name or email (LIKE match)
 pub async fn search_users(pool: &SqlitePool, query: &str, limit: i64) -> AppResult<Vec<User>> {
-    let pattern = format!("%{query}%");
+    let escaped = escape_like(query);
+    let pattern = format!("%{escaped}%");
     let rows = sqlx::query_as::<_, UserRow>(
         r#"
-        SELECT id, name, email, created_at, updated_at
+        SELECT id, name, email, is_admin, created_at, updated_at
         FROM users
-        WHERE name LIKE $1 OR email LIKE $1
+        WHERE name LIKE $1 ESCAPE '\' OR email LIKE $1 ESCAPE '\'
         ORDER BY name ASC
         LIMIT $2
         "#,
@@ -126,7 +152,7 @@ pub async fn search_users(pool: &SqlitePool, query: &str, limit: i64) -> AppResu
 pub async fn authenticate_user(pool: &SqlitePool, email: &str, password: &str) -> AppResult<User> {
     let row = sqlx::query_as::<_, UserWithPassword>(
         r#"
-        SELECT id, email, name, password_hash, created_at, updated_at
+        SELECT id, email, name, password_hash, is_admin, created_at, updated_at
         FROM users
         WHERE email = $1
         "#,
@@ -171,6 +197,27 @@ mod tests {
         assert_eq!(user.email, "test@example.com");
         assert_eq!(user.name, "Test User");
         assert!(!user.id.is_nil());
+    }
+
+    #[tokio::test]
+    async fn test_first_user_is_admin() {
+        let pool = setup_test_db().await;
+        let first = create_user(&pool, &test_register_request())
+            .await
+            .expect("Failed to create first user");
+        assert!(first.is_admin, "First user should be admin");
+
+        let second = create_user(
+            &pool,
+            &RegisterRequest {
+                email: "second@example.com".to_string(),
+                name: "Second User".to_string(),
+                password: "password123".to_string(),
+            },
+        )
+        .await
+        .expect("Failed to create second user");
+        assert!(!second.is_admin, "Second user should not be admin");
     }
 
     #[tokio::test]

@@ -1,5 +1,5 @@
 use axum::extract::State;
-use axum::http::{header, StatusCode};
+use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::Json;
 use garde::Validate;
@@ -9,6 +9,31 @@ use crate::error::{AppError, AppResult};
 use crate::models::user::{AuthResponse, LoginRequest, RegisterRequest, User};
 use crate::services::{audit_service, session_service, user_service};
 use crate::AppState;
+
+/// Extract client IP from X-Forwarded-For or X-Real-IP headers.
+fn extract_client_ip(headers: &HeaderMap) -> Option<String> {
+    // X-Forwarded-For: client, proxy1, proxy2 — take the first (leftmost) entry
+    if let Some(xff) = headers.get("x-forwarded-for") {
+        if let Ok(val) = xff.to_str() {
+            if let Some(first) = val.split(',').next() {
+                let ip = first.trim();
+                if !ip.is_empty() {
+                    return Some(ip.to_string());
+                }
+            }
+        }
+    }
+    // Fallback to X-Real-IP
+    if let Some(xri) = headers.get("x-real-ip") {
+        if let Ok(val) = xri.to_str() {
+            let ip = val.trim();
+            if !ip.is_empty() {
+                return Some(ip.to_string());
+            }
+        }
+    }
+    None
+}
 
 #[utoipa::path(
     post,
@@ -23,6 +48,7 @@ use crate::AppState;
 )]
 pub async fn register(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(body): Json<RegisterRequest>,
 ) -> AppResult<impl IntoResponse> {
     let ctx = body.password_context();
@@ -57,6 +83,7 @@ pub async fn register(
 
     let response = AuthResponse { user };
 
+    let client_ip = extract_client_ip(&headers);
     audit_service::log_event(
         state.pool.clone(),
         "auth.register",
@@ -64,7 +91,7 @@ pub async fn register(
         Some("user"),
         Some(&response.user.id.to_string()),
         None,
-        None,
+        client_ip.as_deref(),
     );
 
     Ok((
@@ -86,6 +113,7 @@ pub async fn register(
 )]
 pub async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(body): Json<LoginRequest>,
 ) -> AppResult<impl IntoResponse> {
     body.validate()
@@ -111,6 +139,7 @@ pub async fn login(
 
     let response = AuthResponse { user };
 
+    let client_ip = extract_client_ip(&headers);
     audit_service::log_event(
         state.pool.clone(),
         "auth.login",
@@ -118,7 +147,7 @@ pub async fn login(
         Some("user"),
         Some(&response.user.id.to_string()),
         None,
-        None,
+        client_ip.as_deref(),
     );
 
     Ok((

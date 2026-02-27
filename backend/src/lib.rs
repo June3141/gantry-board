@@ -333,26 +333,34 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
     // (must happen after recorder setup is fully complete)
     observability::init_metrics();
 
-    Ok(Router::new()
-        .route("/health", get(handlers::health::health_check))
-        .route("/health/live", get(handlers::health::liveness))
-        .route("/health/ready", get(handlers::health::readiness))
-        .route(
-            "/metrics",
-            get(move || async move { metric_handle.render() }),
-        )
-        .nest("/api", api_routes)
-        // Webhook route: no auth/CSRF, body limit 25MB
-        .route(
-            "/api/webhooks/github",
-            post(handlers::webhooks::github_webhook)
-                .layer(axum::extract::DefaultBodyLimit::max(25 * 1024 * 1024)),
-        )
-        // Default body size limit: 2 MB (webhook keeps its own 25 MB limit above)
-        .layer(axum::extract::DefaultBodyLimit::max(2 * 1024 * 1024))
-        .merge(
-            SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
-        )
+    let router =
+        Router::new()
+            .route("/health", get(handlers::health::health_check))
+            .route("/health/live", get(handlers::health::liveness))
+            .route("/health/ready", get(handlers::health::readiness))
+            .route(
+                "/metrics",
+                get(move |_user: crate::auth::middleware::AuthUser| async move {
+                    metric_handle.render()
+                }),
+            )
+            .nest("/api", api_routes)
+            // Webhook route: no auth/CSRF, body limit 25MB
+            .route(
+                "/api/webhooks/github",
+                post(handlers::webhooks::github_webhook)
+                    .layer(axum::extract::DefaultBodyLimit::max(25 * 1024 * 1024)),
+            )
+            // Default body size limit: 2 MB (webhook keeps its own 25 MB limit above)
+            .layer(axum::extract::DefaultBodyLimit::max(2 * 1024 * 1024));
+
+    // Swagger UI is only available in debug builds (development)
+    #[cfg(debug_assertions)]
+    let router = router.merge(
+        SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
+    );
+
+    Ok(router
         .layer(axum::middleware::from_fn(
             error::inject_request_id_into_errors,
         ))

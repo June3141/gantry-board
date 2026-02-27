@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
 
 use sqlx::SqlitePool;
@@ -42,6 +42,9 @@ pub async fn create_backup(pool: &SqlitePool, backup_dir: &Path) -> AppResult<Pa
         })?
         .to_string();
 
+    // Validate the resolved path contains no traversal or unexpected characters
+    validate_backup_path(&path_str)?;
+
     sqlx::query(&format!("VACUUM INTO '{}'", path_str.replace('\'', "''")))
         .execute(pool)
         .await?;
@@ -59,6 +62,33 @@ pub async fn create_backup(pool: &SqlitePool, backup_dir: &Path) -> AppResult<Pa
     );
 
     Ok(backup_path)
+}
+
+/// Validate that a backup path contains only safe characters and no traversal components.
+fn validate_backup_path(path_str: &str) -> AppResult<()> {
+    let path = Path::new(path_str);
+
+    // Reject any parent-dir components (e.g. ".." in any form)
+    for component in path.components() {
+        if matches!(component, Component::ParentDir) {
+            return Err(crate::error::AppError::Validation(
+                "backup path must not contain '..' traversal".to_string(),
+            ));
+        }
+    }
+
+    // Allow only alphanumeric, slashes, hyphens, underscores, dots, and colons
+    // (colon for Windows drive letters, dot for file extensions)
+    if !path_str
+        .chars()
+        .all(|c| c.is_alphanumeric() || matches!(c, '/' | '-' | '_' | '.' | ':' | '\\'))
+    {
+        return Err(crate::error::AppError::Validation(
+            "backup path contains invalid characters".to_string(),
+        ));
+    }
+
+    Ok(())
 }
 
 /// Rotate backup files, keeping only `retention_count` most recent.

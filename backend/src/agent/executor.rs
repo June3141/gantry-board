@@ -77,6 +77,19 @@ pub fn validate_config(config: &AgentConfig) -> AppResult<()> {
     Ok(())
 }
 
+/// Strip dangerous control characters from a prompt string.
+///
+/// Allows `\t` (0x09), `\n` (0x0a), and `\r` (0x0d) which are normal
+/// whitespace, but removes all other C0 control characters (0x00–0x08,
+/// 0x0b, 0x0c, 0x0e–0x1f) that could interfere with terminal handling
+/// or subprocess I/O.
+pub fn sanitize_prompt(input: &str) -> String {
+    input
+        .chars()
+        .filter(|c| !c.is_control() || matches!(*c, '\t' | '\n' | '\r'))
+        .collect()
+}
+
 /// Trait for agent execution backends.
 #[async_trait::async_trait]
 pub trait AgentExecutor: Send + Sync {
@@ -131,9 +144,10 @@ where
         .spawn()
         .map_err(|e| AppError::Internal(format!("failed to spawn {agent_name} CLI: {e}")))?;
 
-    // Write prompt to stdin and close it so the CLI starts processing.
+    // Sanitize and write prompt to stdin, then close it so the CLI starts processing.
+    let sanitized_prompt = sanitize_prompt(prompt);
     if let Some(mut stdin) = child.stdin.take() {
-        if let Err(e) = stdin.write_all(prompt.as_bytes()).await {
+        if let Err(e) = stdin.write_all(sanitized_prompt.as_bytes()).await {
             let _ = child.kill().await;
             let _ = child.wait().await; // reap to avoid zombie
             return Err(AppError::Internal(format!(
@@ -301,5 +315,27 @@ mod tests {
     fn test_validate_accepts_existing_directory() {
         let config = make_config(std::env::temp_dir(), vec![]);
         assert!(validate_config(&config).is_ok());
+    }
+
+    #[test]
+    fn test_sanitize_prompt_preserves_normal_text() {
+        assert_eq!(sanitize_prompt("Hello, world!"), "Hello, world!");
+    }
+
+    #[test]
+    fn test_sanitize_prompt_preserves_tabs_newlines() {
+        let input = "line1\n\tindented\r\nline3";
+        assert_eq!(sanitize_prompt(input), input);
+    }
+
+    #[test]
+    fn test_sanitize_prompt_removes_null_bytes() {
+        assert_eq!(sanitize_prompt("hello\x00world"), "helloworld");
+    }
+
+    #[test]
+    fn test_sanitize_prompt_removes_control_chars() {
+        // \x01 (SOH), \x08 (BS), \x0b (VT), \x1f (US) should be removed
+        assert_eq!(sanitize_prompt("a\x01b\x08c\x0bd\x1fe"), "abcde");
     }
 }

@@ -4,7 +4,7 @@ use axum_extra::extract::CookieJar;
 use uuid::Uuid;
 
 use crate::error::AppError;
-use crate::services::session_service;
+use crate::services::{session_service, user_service};
 use crate::AppState;
 
 pub const SESSION_COOKIE_NAME: &str = "gantry_session";
@@ -68,6 +68,34 @@ impl FromRequestParts<AppState> for AuthUser {
         Ok(AuthUser {
             user_id,
             session_id,
+        })
+    }
+}
+
+/// Authenticated admin user — rejects non-admin users with 403 Forbidden.
+#[derive(Debug, Clone)]
+pub struct AdminUser {
+    pub user_id: Uuid,
+    pub session_id: Uuid,
+}
+
+impl FromRequestParts<AppState> for AdminUser {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let auth_user = AuthUser::from_request_parts(parts, state).await?;
+
+        let user = user_service::get_user(&state.pool, auth_user.user_id).await?;
+        if !user.is_admin {
+            return Err(AppError::Forbidden("admin access required".to_string()));
+        }
+
+        Ok(AdminUser {
+            user_id: auth_user.user_id,
+            session_id: auth_user.session_id,
         })
     }
 }

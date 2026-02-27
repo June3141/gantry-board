@@ -61,6 +61,7 @@ describe('ProjectSettingsModal', () => {
         id: 'user-1',
         email: 'alice@test.com',
         name: 'Alice',
+        is_admin: false,
         created_at: '',
         updated_at: '',
       },

@@ -41,8 +41,9 @@ pub async fn create_invitation(
 
     let base_url = state
         .config
-        .cors_origin
+        .invite_base_url
         .as_deref()
+        .or(state.config.cors_origin.as_deref())
         .unwrap_or("http://localhost:5173");
     let invite_url = format!("{}/invite/{}", base_url, token);
 
