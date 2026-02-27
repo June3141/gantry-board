@@ -85,12 +85,14 @@ impl DockerCircuitBreaker {
     }
 
     fn record_failure(&self) {
-        self.consecutive_failures.fetch_add(1, Ordering::AcqRel);
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
+        // Store timestamp before incrementing failures so that a reader who
+        // observes the incremented count via Acquire also sees the timestamp.
         self.last_failure_epoch.store(now, Ordering::Release);
+        self.consecutive_failures.fetch_add(1, Ordering::AcqRel);
     }
 }
 
