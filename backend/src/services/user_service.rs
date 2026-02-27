@@ -4,57 +4,36 @@ use uuid::Uuid;
 
 use crate::auth::password::{hash_password, verify_password};
 use crate::error::{AppError, AppResult};
-use crate::models::user::{RegisterRequest, User, UserWithPassword};
+use crate::models::user::{RegisterRequest, User};
+use crate::repositories::user_repository;
 
-/// Row type for queries that don't include password_hash.
-#[derive(sqlx::FromRow)]
-struct UserRow {
-    id: String,
-    name: String,
-    email: String,
-    created_at: chrono::DateTime<chrono::Utc>,
-    updated_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl TryFrom<UserRow> for User {
-    type Error = uuid::Error;
-
-    fn try_from(row: UserRow) -> Result<Self, Self::Error> {
-        Ok(User {
-            id: row.id.parse()?,
-            name: row.name,
-            email: row.email,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        })
-    }
-}
-
-/// Create a new user with hashed password
+/// Create a new user with hashed password.
+/// The first registered user is automatically promoted to admin.
 pub async fn create_user(pool: &SqlitePool, req: &RegisterRequest) -> AppResult<User> {
     let id = Uuid::new_v4();
     let now = Utc::now();
     let password_hash = hash_password(&req.password)?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO users (id, email, name, password_hash, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        "#,
+    // First user becomes admin automatically
+    let user_count = user_repository::count(pool).await?;
+    let is_admin = user_count == 0;
+
+    user_repository::insert(
+        pool,
+        id,
+        &req.email,
+        &req.name,
+        &password_hash,
+        is_admin,
+        now,
     )
-    .bind(id.to_string())
-    .bind(&req.email)
-    .bind(&req.name)
-    .bind(&password_hash)
-    .bind(now)
-    .bind(now)
-    .execute(pool)
     .await?;
 
     Ok(User {
         id,
         name: req.name.clone(),
         email: req.email.clone(),
+        is_admin,
         created_at: now,
         updated_at: now,
     })
@@ -62,16 +41,7 @@ pub async fn create_user(pool: &SqlitePool, req: &RegisterRequest) -> AppResult<
 
 /// Get user by ID
 pub async fn get_user(pool: &SqlitePool, id: Uuid) -> AppResult<User> {
-    let row = sqlx::query_as::<_, UserWithPassword>(
-        r#"
-        SELECT id, email, name, password_hash, created_at, updated_at
-        FROM users
-        WHERE id = $1
-        "#,
-    )
-    .bind(id.to_string())
-    .fetch_optional(pool)
-    .await?;
+    let row = user_repository::find_by_id(pool, id).await?;
 
     row.map(|r| r.try_into())
         .transpose()
@@ -81,16 +51,7 @@ pub async fn get_user(pool: &SqlitePool, id: Uuid) -> AppResult<User> {
 
 /// Get user by email
 pub async fn get_user_by_email(pool: &SqlitePool, email: &str) -> AppResult<User> {
-    let row = sqlx::query_as::<_, UserWithPassword>(
-        r#"
-        SELECT id, email, name, password_hash, created_at, updated_at
-        FROM users
-        WHERE email = $1
-        "#,
-    )
-    .bind(email)
-    .fetch_optional(pool)
-    .await?;
+    let row = user_repository::find_by_email(pool, email).await?;
 
     row.map(|r| r.try_into())
         .transpose()
@@ -100,42 +61,15 @@ pub async fn get_user_by_email(pool: &SqlitePool, email: &str) -> AppResult<User
 
 /// Search users by name or email (LIKE match)
 pub async fn search_users(pool: &SqlitePool, query: &str, limit: i64) -> AppResult<Vec<User>> {
-    let pattern = format!("%{query}%");
-    let rows = sqlx::query_as::<_, UserRow>(
-        r#"
-        SELECT id, name, email, created_at, updated_at
-        FROM users
-        WHERE name LIKE $1 OR email LIKE $1
-        ORDER BY name ASC
-        LIMIT $2
-        "#,
-    )
-    .bind(&pattern)
-    .bind(limit)
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<User>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    user_repository::search(pool, query, limit).await
 }
 
 /// Authenticate user by email and password
 /// Returns user if credentials are valid, InvalidCredentials error otherwise
 pub async fn authenticate_user(pool: &SqlitePool, email: &str, password: &str) -> AppResult<User> {
-    let row = sqlx::query_as::<_, UserWithPassword>(
-        r#"
-        SELECT id, email, name, password_hash, created_at, updated_at
-        FROM users
-        WHERE email = $1
-        "#,
-    )
-    .bind(email)
-    .fetch_optional(pool)
-    .await?;
-
-    let user_with_password = row.ok_or(AppError::InvalidCredentials)?;
+    let user_with_password = user_repository::find_by_email(pool, email)
+        .await?
+        .ok_or(AppError::InvalidCredentials)?;
 
     if !verify_password(password, &user_with_password.password_hash)? {
         return Err(AppError::InvalidCredentials);
