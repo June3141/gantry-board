@@ -1,3 +1,6 @@
+# Backend-only production image (used by docker-compose.prod.yml).
+# For the all-in-one image (backend + frontend + nginx), see the root Dockerfile.prod.
+
 # Stage 1: Build
 FROM rust:1.85-slim-bookworm AS builder
 
