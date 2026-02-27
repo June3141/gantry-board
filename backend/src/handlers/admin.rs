@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use serde::{Deserialize, Serialize};
 
-use crate::auth::middleware::AuthUser;
+use crate::auth::middleware::AdminUser;
 use crate::error::AppError;
 use crate::services::audit_service;
 use crate::AppState;
@@ -28,7 +28,7 @@ pub struct AdminStatusResponse {
 }
 
 pub async fn admin_status(
-    _user: AuthUser,
+    _admin: AdminUser,
     State(state): State<AppState>,
 ) -> Result<Json<AdminStatusResponse>, AppError> {
     let pool_size = state.pool.size();
@@ -82,7 +82,7 @@ pub struct AuditLogQuery {
 }
 
 pub async fn audit_log(
-    _user: AuthUser,
+    _admin: AdminUser,
     State(state): State<AppState>,
     Query(params): Query<AuditLogQuery>,
 ) -> Result<(StatusCode, Json<audit_service::AuditLogResponse>), AppError> {
