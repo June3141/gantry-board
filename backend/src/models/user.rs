@@ -9,6 +9,7 @@ pub struct User {
     pub id: Uuid,
     pub name: String,
     pub email: String,
+    pub is_admin: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -20,6 +21,7 @@ pub struct UserWithPassword {
     pub name: String,
     pub email: String,
     pub password_hash: String,
+    pub is_admin: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -32,6 +34,7 @@ impl TryFrom<UserWithPassword> for User {
             id: row.id.parse()?,
             name: row.name,
             email: row.email,
+            is_admin: row.is_admin,
             created_at: row.created_at,
             updated_at: row.updated_at,
         })
