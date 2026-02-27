@@ -148,6 +148,11 @@ pub struct Config {
     /// Audit log retention period in days (default: 90)
     #[serde(default = "default_audit_retention_days")]
     pub audit_retention_days: u64,
+
+    /// Base URL for invitation links (e.g. "https://gantry.example.com").
+    /// Falls back to `cors_origin` if not set.
+    #[serde(default)]
+    pub invite_base_url: Option<String>,
 }
 
 fn default_bind_addr() -> String {
@@ -340,7 +345,10 @@ impl Config {
                     "backup_retention_count must be >= 1 to avoid deleting all backups".to_string(),
                 ));
             }
-            if self.backup_dir.contains("..") {
+            if std::path::Path::new(&self.backup_dir)
+                .components()
+                .any(|c| matches!(c, std::path::Component::ParentDir))
+            {
                 return Err(ConfigError::RateLimiter(
                     "backup_dir must not contain '..' path traversal sequences".to_string(),
                 ));
@@ -407,6 +415,7 @@ impl Default for Config {
             general_rate_limit_per_second: default_general_rate_limit_per_second(),
             general_rate_limit_burst: default_general_rate_limit_burst(),
             audit_retention_days: default_audit_retention_days(),
+            invite_base_url: None,
         }
     }
 }
