@@ -15,7 +15,7 @@ services:
       - GANTRY_BIND_ADDR=0.0.0.0:3000
       - GANTRY_DATABASE_URL=sqlite:/workspace/backend/data/gantry_board.db?mode=rwc
       - GANTRY_CORS_ORIGIN=http://localhost:3000
-      - GANTRY_COOKIE_SECURE=false
+      - GANTRY_COOKIE_SECURE=false  # DEV ONLY — set to true in production
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -33,7 +33,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:3001
+      - VITE_API_BASE_URL=http://localhost:3001
     depends_on:
       backend:
         condition: service_healthy
