@@ -112,6 +112,7 @@ describe('App', () => {
           id: 'user-1',
           name: 'Test User',
           email: 'test@example.com',
+          is_admin: false,
           created_at: '',
           updated_at: '',
         },

@@ -24,7 +24,7 @@ describe('GuestRoute', () => {
     useAuthStore.setState({
       isAuthenticated: true,
       isLoading: false,
-      user: { id: 'user-1', name: 'Test', email: 'test@test.com', created_at: '', updated_at: '' },
+      user: { id: 'user-1', name: 'Test', email: 'test@test.com', is_admin: false, created_at: '', updated_at: '' },
     });
 
     const { container } = renderWithRouter(

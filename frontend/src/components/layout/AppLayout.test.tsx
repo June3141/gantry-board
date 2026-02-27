@@ -52,7 +52,7 @@ const renderWithProviders = (route = '/') => {
 describe('AppLayout', () => {
   it('renders header with logo', () => {
     useAuthStore.setState({
-      user: { id: 'u1', name: 'Alice', email: 'a@b.com', created_at: '', updated_at: '' },
+      user: { id: 'u1', name: 'Alice', email: 'a@b.com', is_admin: false, created_at: '', updated_at: '' },
       isAuthenticated: true,
       isLoading: false,
     });
@@ -64,7 +64,7 @@ describe('AppLayout', () => {
 
   it('renders user name', () => {
     useAuthStore.setState({
-      user: { id: 'u1', name: 'Alice', email: 'a@b.com', created_at: '', updated_at: '' },
+      user: { id: 'u1', name: 'Alice', email: 'a@b.com', is_admin: false, created_at: '', updated_at: '' },
       isAuthenticated: true,
       isLoading: false,
     });
@@ -76,7 +76,7 @@ describe('AppLayout', () => {
 
   it('renders outlet content', () => {
     useAuthStore.setState({
-      user: { id: 'u1', name: 'Alice', email: 'a@b.com', created_at: '', updated_at: '' },
+      user: { id: 'u1', name: 'Alice', email: 'a@b.com', is_admin: false, created_at: '', updated_at: '' },
       isAuthenticated: true,
       isLoading: false,
     });
@@ -88,7 +88,7 @@ describe('AppLayout', () => {
 
   it('renders logout button', () => {
     useAuthStore.setState({
-      user: { id: 'u1', name: 'Alice', email: 'a@b.com', created_at: '', updated_at: '' },
+      user: { id: 'u1', name: 'Alice', email: 'a@b.com', is_admin: false, created_at: '', updated_at: '' },
       isAuthenticated: true,
       isLoading: false,
     });
