@@ -13,6 +13,7 @@ export interface User {
   created_at: string;
   email: string;
   id: string;
+  is_admin: boolean;
   name: string;
   updated_at: string;
 }
