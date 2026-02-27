@@ -8,9 +8,9 @@ pub mod handlers;
 pub mod models;
 pub mod observability;
 pub mod openapi;
-pub mod realtime;
 pub mod repositories;
 pub mod services;
+pub mod sse;
 #[cfg(test)]
 pub mod test_helpers;
 
@@ -35,9 +35,9 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::agent::orchestrator::AgentOrchestrator;
 use crate::github::api::GitHubApi;
-use crate::realtime::hub::SseHub;
 use crate::services::agent_session_output_service::OutputBuffer;
 use crate::services::preview_service::PreviewManager;
+use crate::sse::hub::SseHub;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -317,12 +317,12 @@ pub fn app(state: AppState) -> Result<Router, config::ConfigError> {
         // SSE route: no timeout (long-lived streaming), own rate limit only
         .merge(Router::new().route(
             "/events",
-            get(realtime::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
+            get(sse::handler::sse_handler).layer(GovernorLayer::new(sse_governor)),
         ))
         // WebSocket route: no timeout (long-lived), own rate limit only
         .merge(Router::new().route(
             "/ws",
-            get(realtime::ws_handler::ws_handler).layer(GovernorLayer::new(ws_governor)),
+            get(sse::ws_handler::ws_handler).layer(GovernorLayer::new(ws_governor)),
         ));
 
     let metric_handle = init_metrics();
