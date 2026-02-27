@@ -3,7 +3,7 @@ use utoipa::OpenApi;
 use crate::error;
 use crate::handlers;
 use crate::models;
-use crate::sse;
+use crate::realtime as sse;
 
 #[derive(OpenApi)]
 #[openapi(

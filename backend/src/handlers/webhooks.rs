@@ -143,7 +143,9 @@ async fn handle_sync_event(state: &AppState, body: &[u8]) -> AppResult<()> {
             }
             state
                 .sse_hub
-                .broadcast(crate::sse::event::SseEvent::github_sync_completed(result));
+                .broadcast(crate::realtime::event::SseEvent::github_sync_completed(
+                    result,
+                ));
         }
         Err(e) => {
             tracing::warn!(error = %e, "webhook-triggered sync failed");

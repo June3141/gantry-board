@@ -104,9 +104,9 @@ mod tests {
     use crate::agent::orchestrator::AgentOrchestrator;
     use crate::auth::middleware::AuthUser;
     use crate::config::Config;
+    use crate::realtime::event::SseEvent;
+    use crate::realtime::hub::SseHub;
     use crate::services::agent_session_output_service::OutputBuffer;
-    use crate::sse::event::SseEvent;
-    use crate::sse::hub::SseHub;
     use sqlx::sqlite::SqlitePoolOptions;
     use std::path::PathBuf;
     use std::sync::atomic::AtomicUsize;

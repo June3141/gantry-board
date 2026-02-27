@@ -11,8 +11,8 @@ use gantry_board::agent::executor::{AgentExecutor, NoopExecutor};
 use gantry_board::agent::orchestrator::AgentOrchestrator;
 use gantry_board::config::Config;
 use gantry_board::models::agent_session::AgentType;
+use gantry_board::realtime::hub::SseHub;
 use gantry_board::services::agent_session_output_service::OutputBuffer;
-use gantry_board::sse::hub::SseHub;
 use gantry_board::AppState;
 use sqlx::sqlite::SqlitePoolOptions;
 
