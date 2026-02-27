@@ -119,15 +119,6 @@ impl AppError {
     }
 }
 
-/// Extract request_id from the current task-local context set by tower-http.
-fn extract_request_id() -> Option<String> {
-    // request_id is injected by SetRequestIdLayer and available via
-    // the response extension at the handler level. In the IntoResponse impl
-    // we cannot access request extensions, so we leave it None here and
-    // inject it via a middleware wrapper.
-    None
-}
-
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         // Handle special conversions first
@@ -197,7 +188,9 @@ impl IntoResponse for AppError {
                 message,
                 details: None,
             },
-            request_id: extract_request_id(),
+            // request_id is injected by the `inject_request_id_into_errors` middleware
+            // after this IntoResponse impl runs. Left as None here.
+            request_id: None,
             timestamp: chrono::Utc::now().to_rfc3339(),
         };
 
