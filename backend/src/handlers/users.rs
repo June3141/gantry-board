@@ -35,6 +35,11 @@ pub async fn search_users(
     Query(params): Query<SearchUsersQuery>,
 ) -> AppResult<Json<Vec<User>>> {
     let query = params.q.as_deref().unwrap_or("");
+    if query.len() > 200 {
+        return Err(crate::error::AppError::Validation(
+            "search query must not exceed 200 characters".to_string(),
+        ));
+    }
     let limit = params.limit.clamp(1, 100);
     let users = user_service::search_users(&state.pool, query, limit).await?;
     Ok(Json(users))
