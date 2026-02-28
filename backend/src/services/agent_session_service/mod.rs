@@ -7,45 +7,6 @@ pub mod query;
 pub use command::*;
 pub use query::*;
 
-use chrono::{DateTime, Utc};
-use sqlx::prelude::FromRow;
-
-use crate::models::agent_session::{AgentSession, AgentSessionStatus, AgentType};
-
-/// Internal row type shared between query and command submodules.
-#[derive(FromRow)]
-pub(crate) struct AgentSessionRow {
-    pub id: String,
-    pub task_id: String,
-    pub agent_type: AgentType,
-    pub status: AgentSessionStatus,
-    pub prompt: Option<String>,
-    pub worktree_name: Option<String>,
-    pub started_at: Option<DateTime<Utc>>,
-    pub finished_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-impl TryFrom<AgentSessionRow> for AgentSession {
-    type Error = uuid::Error;
-
-    fn try_from(row: AgentSessionRow) -> Result<Self, Self::Error> {
-        Ok(AgentSession {
-            id: row.id.parse()?,
-            task_id: row.task_id.parse()?,
-            agent_type: row.agent_type,
-            status: row.status,
-            prompt: row.prompt,
-            worktree_name: row.worktree_name,
-            started_at: row.started_at,
-            finished_at: row.finished_at,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
