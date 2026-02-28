@@ -174,6 +174,7 @@ pub async fn update_last_synced(pool: &SqlitePool, project_id: Uuid) -> AppResul
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::AppError;
     use crate::models::project::CreateProjectRequest;
     use crate::services::project_service;
     use crate::test_helpers::setup_test_db;
@@ -216,7 +217,7 @@ mod tests {
         let fake_id = Uuid::new_v4();
 
         let result = get_github_link(&pool, fake_id).await;
-        assert!(result.is_err());
+        assert!(matches!(result, Err(AppError::NotFound(_))));
     }
 
     #[tokio::test]
@@ -242,7 +243,7 @@ mod tests {
         let fake_id = Uuid::new_v4();
 
         let result = delete_github_link(&pool, fake_id).await;
-        assert!(result.is_err());
+        assert!(matches!(result, Err(AppError::NotFound(_))));
     }
 
     #[tokio::test]
@@ -311,6 +312,6 @@ mod tests {
         let fake_id = Uuid::new_v4();
 
         let result = update_last_synced(&pool, fake_id).await;
-        assert!(result.is_err());
+        assert!(matches!(result, Err(AppError::NotFound(_))));
     }
 }

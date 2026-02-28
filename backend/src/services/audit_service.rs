@@ -146,11 +146,26 @@ mod tests {
     use super::*;
     use crate::test_helpers::setup_test_db;
 
+    /// Poll `list_events` until at least `expected` events appear (or timeout).
+    async fn wait_for_events(pool: &SqlitePool, expected: i64) {
+        for _ in 0..50 {
+            let result = list_events(pool, None, 100, 0).await.unwrap();
+            if result.total >= expected {
+                return;
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        }
+        panic!(
+            "timed out waiting for {} events, got {}",
+            expected,
+            list_events(pool, None, 100, 0).await.unwrap().total
+        );
+    }
+
     #[tokio::test]
     async fn test_log_event_and_list() {
         let pool = setup_test_db().await;
 
-        // log_event spawns a background task, so call it and wait briefly
         log_event(
             pool.clone(),
             "user.login",
@@ -161,8 +176,7 @@ mod tests {
             Some("127.0.0.1"),
         );
 
-        // Wait for the spawned task to complete
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        wait_for_events(&pool, 1).await;
 
         let result = list_events(&pool, None, 10, 0).await.unwrap();
         assert_eq!(result.total, 1);
@@ -180,7 +194,7 @@ mod tests {
         log_event(pool.clone(), "user.logout", None, None, None, None, None);
         log_event(pool.clone(), "user.login", None, None, None, None, None);
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        wait_for_events(&pool, 3).await;
 
         let result = list_events(&pool, Some("user.login"), 10, 0).await.unwrap();
         assert_eq!(result.total, 2);
@@ -200,7 +214,7 @@ mod tests {
             log_event(pool.clone(), "test.event", None, None, None, None, None);
         }
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        wait_for_events(&pool, 5).await;
 
         let page1 = list_events(&pool, None, 2, 0).await.unwrap();
         assert_eq!(page1.total, 5);
@@ -217,19 +231,25 @@ mod tests {
     async fn test_cleanup_old_events() {
         let pool = setup_test_db().await;
 
-        log_event(pool.clone(), "old.event", None, None, None, None, None);
+        // Insert an event and backdate it via SQL
+        let id = Uuid::new_v4().to_string();
+        sqlx::query(
+            "INSERT INTO audit_events (id, event_type, created_at)
+             VALUES ($1, 'old.event', datetime('now', '-10 days'))",
+        )
+        .bind(&id)
+        .execute(&pool)
+        .await
+        .unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        let before = list_events(&pool, None, 10, 0).await.unwrap();
+        assert_eq!(before.total, 1);
 
-        // retention_days=0 should not delete events created just now
-        let deleted = cleanup_old_events(&pool, 0).await.unwrap();
-        // Events created within the same second may not be cleaned up with 0 days
-        // so just verify the function runs without error
-        assert!(deleted == 0 || deleted == 1);
+        let deleted = cleanup_old_events(&pool, 7).await.unwrap();
+        assert_eq!(deleted, 1);
 
-        // Verify list still works
-        let result = list_events(&pool, None, 10, 0).await.unwrap();
-        assert!(result.total >= 0);
+        let after = list_events(&pool, None, 10, 0).await.unwrap();
+        assert_eq!(after.total, 0);
     }
 
     #[tokio::test]
@@ -238,7 +258,7 @@ mod tests {
 
         log_event(pool.clone(), "system.startup", None, None, None, None, None);
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        wait_for_events(&pool, 1).await;
 
         let result = list_events(&pool, None, 10, 0).await.unwrap();
         assert_eq!(result.total, 1);
