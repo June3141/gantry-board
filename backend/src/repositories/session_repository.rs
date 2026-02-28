@@ -13,7 +13,21 @@ pub async fn insert(
     now: DateTime<Utc>,
     expires_at: DateTime<Utc>,
 ) -> AppResult<()> {
-    todo!()
+    sqlx::query(
+        r#"
+        INSERT INTO sessions (id, user_id, created_at, expires_at, last_active_at)
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+    )
+    .bind(id.to_string())
+    .bind(user_id.to_string())
+    .bind(now)
+    .bind(expires_at)
+    .bind(now)
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn insert_tx(
@@ -23,7 +37,21 @@ pub async fn insert_tx(
     now: DateTime<Utc>,
     expires_at: DateTime<Utc>,
 ) -> AppResult<()> {
-    todo!()
+    sqlx::query(
+        r#"
+        INSERT INTO sessions (id, user_id, created_at, expires_at, last_active_at)
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+    )
+    .bind(id.to_string())
+    .bind(user_id.to_string())
+    .bind(now)
+    .bind(expires_at)
+    .bind(now)
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn find_by_id_not_expired(
@@ -31,7 +59,19 @@ pub async fn find_by_id_not_expired(
     session_id: Uuid,
     now: DateTime<Utc>,
 ) -> AppResult<Option<Session>> {
-    todo!()
+    let session = sqlx::query_as::<_, Session>(
+        r#"
+        SELECT id, user_id, created_at, expires_at, last_active_at
+        FROM sessions
+        WHERE id = $1 AND expires_at > $2
+        "#,
+    )
+    .bind(session_id.to_string())
+    .bind(now)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(session)
 }
 
 pub async fn update_last_active_at(
@@ -39,23 +79,55 @@ pub async fn update_last_active_at(
     session_id: Uuid,
     now: DateTime<Utc>,
 ) -> AppResult<()> {
-    todo!()
+    sqlx::query(
+        r#"
+        UPDATE sessions
+        SET last_active_at = $1
+        WHERE id = $2
+        "#,
+    )
+    .bind(now)
+    .bind(session_id.to_string())
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn delete_by_id(pool: &SqlitePool, session_id: Uuid) -> AppResult<()> {
-    todo!()
+    sqlx::query("DELETE FROM sessions WHERE id = $1")
+        .bind(session_id.to_string())
+        .execute(pool)
+        .await?;
+
+    Ok(())
 }
 
 pub async fn delete_by_user_id(pool: &SqlitePool, user_id: Uuid) -> AppResult<()> {
-    todo!()
+    sqlx::query("DELETE FROM sessions WHERE user_id = $1")
+        .bind(user_id.to_string())
+        .execute(pool)
+        .await?;
+
+    Ok(())
 }
 
 pub async fn delete_by_user_id_tx(conn: &mut SqliteConnection, user_id: Uuid) -> AppResult<()> {
-    todo!()
+    sqlx::query("DELETE FROM sessions WHERE user_id = $1")
+        .bind(user_id.to_string())
+        .execute(&mut *conn)
+        .await?;
+
+    Ok(())
 }
 
 pub async fn delete_expired(pool: &SqlitePool, now: DateTime<Utc>) -> AppResult<u64> {
-    todo!()
+    let result = sqlx::query("DELETE FROM sessions WHERE expires_at <= $1")
+        .bind(now)
+        .execute(pool)
+        .await?;
+
+    Ok(result.rows_affected())
 }
 
 #[cfg(test)]
