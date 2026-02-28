@@ -24,29 +24,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
 import type { AddMemberRequest, ProjectMember, UpdateMemberRequest } from '../../model';
 
-export type listMembersResponse200 = {
-  data: ProjectMember[];
-  status: 200;
-};
-
-export type listMembersResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type listMembersResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type listMembersResponseSuccess = listMembersResponse200 & {
-  headers: Headers;
-};
-export type listMembersResponseError = (listMembersResponse403 | listMembersResponse404) & {
-  headers: Headers;
-};
-
-export type listMembersResponse = listMembersResponseSuccess | listMembersResponseError;
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const getListMembersUrl = (projectId: string) => {
   return `/api/projects/${projectId}/members`;
@@ -55,8 +33,8 @@ export const getListMembersUrl = (projectId: string) => {
 export const listMembers = async (
   projectId: string,
   options?: RequestInit,
-): Promise<listMembersResponse> => {
-  return customInstance<listMembersResponse>(getListMembersUrl(projectId), {
+): Promise<ProjectMember[]> => {
+  return customInstance<ProjectMember[]>(getListMembersUrl(projectId), {
     ...options,
     method: 'GET',
   });
@@ -73,14 +51,15 @@ export const getListMembersQueryOptions = <
   projectId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListMembersQueryKey(projectId);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listMembers>>> = ({ signal }) =>
-    listMembers(projectId, { signal });
+    listMembers(projectId, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!projectId, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listMembers>>,
@@ -104,6 +83,7 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -119,6 +99,7 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -126,6 +107,7 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
   projectId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -134,6 +116,7 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
   projectId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -146,30 +129,6 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type addMemberResponse201 = {
-  data: ProjectMember;
-  status: 201;
-};
-
-export type addMemberResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type addMemberResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type addMemberResponseSuccess = addMemberResponse201 & {
-  headers: Headers;
-};
-export type addMemberResponseError = (addMemberResponse403 | addMemberResponse404) & {
-  headers: Headers;
-};
-
-export type addMemberResponse = addMemberResponseSuccess | addMemberResponseError;
-
 export const getAddMemberUrl = (projectId: string) => {
   return `/api/projects/${projectId}/members`;
 };
@@ -178,8 +137,8 @@ export const addMember = async (
   projectId: string,
   addMemberRequest: AddMemberRequest,
   options?: RequestInit,
-): Promise<addMemberResponse> => {
-  return customInstance<addMemberResponse>(getAddMemberUrl(projectId), {
+): Promise<ProjectMember> => {
+  return customInstance<ProjectMember>(getAddMemberUrl(projectId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -194,6 +153,7 @@ export const getAddMemberMutationOptions = <TError = void, TContext = unknown>(o
     { projectId: string; data: AddMemberRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof addMember>>,
   TError,
@@ -201,11 +161,11 @@ export const getAddMemberMutationOptions = <TError = void, TContext = unknown>(o
   TContext
 > => {
   const mutationKey = ['addMember'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof addMember>>,
@@ -213,7 +173,7 @@ export const getAddMemberMutationOptions = <TError = void, TContext = unknown>(o
   > = (props) => {
     const { projectId, data } = props ?? {};
 
-    return addMember(projectId, data);
+    return addMember(projectId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -231,6 +191,7 @@ export const useAddMember = <TError = void, TContext = unknown>(
       { projectId: string; data: AddMemberRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -241,30 +202,6 @@ export const useAddMember = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getAddMemberMutationOptions(options), queryClient);
 };
-export type getMemberResponse200 = {
-  data: ProjectMember;
-  status: 200;
-};
-
-export type getMemberResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type getMemberResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type getMemberResponseSuccess = getMemberResponse200 & {
-  headers: Headers;
-};
-export type getMemberResponseError = (getMemberResponse403 | getMemberResponse404) & {
-  headers: Headers;
-};
-
-export type getMemberResponse = getMemberResponseSuccess | getMemberResponseError;
-
 export const getGetMemberUrl = (projectId: string, userId: string) => {
   return `/api/projects/${projectId}/members/${userId}`;
 };
@@ -273,8 +210,8 @@ export const getMember = async (
   projectId: string,
   userId: string,
   options?: RequestInit,
-): Promise<getMemberResponse> => {
-  return customInstance<getMemberResponse>(getGetMemberUrl(projectId, userId), {
+): Promise<ProjectMember> => {
+  return customInstance<ProjectMember>(getGetMemberUrl(projectId, userId), {
     ...options,
     method: 'GET',
   });
@@ -292,14 +229,15 @@ export const getGetMemberQueryOptions = <
   userId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMember>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetMemberQueryKey(projectId, userId);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getMember>>> = ({ signal }) =>
-    getMember(projectId, userId, { signal });
+    getMember(projectId, userId, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -327,6 +265,7 @@ export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TErr
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -343,6 +282,7 @@ export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TErr
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -351,6 +291,7 @@ export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TErr
   userId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMember>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -360,6 +301,7 @@ export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TErr
   userId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMember>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -372,30 +314,6 @@ export function useGetMember<TData = Awaited<ReturnType<typeof getMember>>, TErr
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type removeMemberResponse204 = {
-  data: void;
-  status: 204;
-};
-
-export type removeMemberResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type removeMemberResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type removeMemberResponseSuccess = removeMemberResponse204 & {
-  headers: Headers;
-};
-export type removeMemberResponseError = (removeMemberResponse403 | removeMemberResponse404) & {
-  headers: Headers;
-};
-
-export type removeMemberResponse = removeMemberResponseSuccess | removeMemberResponseError;
-
 export const getRemoveMemberUrl = (projectId: string, userId: string) => {
   return `/api/projects/${projectId}/members/${userId}`;
 };
@@ -404,8 +322,8 @@ export const removeMember = async (
   projectId: string,
   userId: string,
   options?: RequestInit,
-): Promise<removeMemberResponse> => {
-  return customInstance<removeMemberResponse>(getRemoveMemberUrl(projectId, userId), {
+): Promise<void> => {
+  return customInstance<void>(getRemoveMemberUrl(projectId, userId), {
     ...options,
     method: 'DELETE',
   });
@@ -418,6 +336,7 @@ export const getRemoveMemberMutationOptions = <TError = void, TContext = unknown
     { projectId: string; userId: string },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof removeMember>>,
   TError,
@@ -425,11 +344,11 @@ export const getRemoveMemberMutationOptions = <TError = void, TContext = unknown
   TContext
 > => {
   const mutationKey = ['removeMember'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof removeMember>>,
@@ -437,7 +356,7 @@ export const getRemoveMemberMutationOptions = <TError = void, TContext = unknown
   > = (props) => {
     const { projectId, userId } = props ?? {};
 
-    return removeMember(projectId, userId);
+    return removeMember(projectId, userId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -455,6 +374,7 @@ export const useRemoveMember = <TError = void, TContext = unknown>(
       { projectId: string; userId: string },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -465,30 +385,6 @@ export const useRemoveMember = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getRemoveMemberMutationOptions(options), queryClient);
 };
-export type updateMemberResponse200 = {
-  data: ProjectMember;
-  status: 200;
-};
-
-export type updateMemberResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type updateMemberResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type updateMemberResponseSuccess = updateMemberResponse200 & {
-  headers: Headers;
-};
-export type updateMemberResponseError = (updateMemberResponse403 | updateMemberResponse404) & {
-  headers: Headers;
-};
-
-export type updateMemberResponse = updateMemberResponseSuccess | updateMemberResponseError;
-
 export const getUpdateMemberUrl = (projectId: string, userId: string) => {
   return `/api/projects/${projectId}/members/${userId}`;
 };
@@ -498,8 +394,8 @@ export const updateMember = async (
   userId: string,
   updateMemberRequest: UpdateMemberRequest,
   options?: RequestInit,
-): Promise<updateMemberResponse> => {
-  return customInstance<updateMemberResponse>(getUpdateMemberUrl(projectId, userId), {
+): Promise<ProjectMember> => {
+  return customInstance<ProjectMember>(getUpdateMemberUrl(projectId, userId), {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -514,6 +410,7 @@ export const getUpdateMemberMutationOptions = <TError = void, TContext = unknown
     { projectId: string; userId: string; data: UpdateMemberRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateMember>>,
   TError,
@@ -521,11 +418,11 @@ export const getUpdateMemberMutationOptions = <TError = void, TContext = unknown
   TContext
 > => {
   const mutationKey = ['updateMember'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateMember>>,
@@ -533,7 +430,7 @@ export const getUpdateMemberMutationOptions = <TError = void, TContext = unknown
   > = (props) => {
     const { projectId, userId, data } = props ?? {};
 
-    return updateMember(projectId, userId, data);
+    return updateMember(projectId, userId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -551,6 +448,7 @@ export const useUpdateMember = <TError = void, TContext = unknown>(
       { projectId: string; userId: string; data: UpdateMemberRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

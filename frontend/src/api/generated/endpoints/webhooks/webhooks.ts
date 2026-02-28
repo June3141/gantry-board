@@ -16,35 +16,13 @@ import { useMutation } from '@tanstack/react-query';
 
 import { customInstance } from '../../../client';
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * This endpoint does NOT require authentication; instead it verifies
 the `X-Hub-Signature-256` HMAC signature using the configured secret.
  * @summary `POST /api/webhooks/github` — receive GitHub webhook events.
  */
-export type githubWebhookResponse200 = {
-  data: void;
-  status: 200;
-};
-
-export type githubWebhookResponse400 = {
-  data: void;
-  status: 400;
-};
-
-export type githubWebhookResponse401 = {
-  data: void;
-  status: 401;
-};
-
-export type githubWebhookResponseSuccess = githubWebhookResponse200 & {
-  headers: Headers;
-};
-export type githubWebhookResponseError = (githubWebhookResponse400 | githubWebhookResponse401) & {
-  headers: Headers;
-};
-
-export type githubWebhookResponse = githubWebhookResponseSuccess | githubWebhookResponseError;
-
 export const getGithubWebhookUrl = () => {
   return `/api/webhooks/github`;
 };
@@ -52,8 +30,8 @@ export const getGithubWebhookUrl = () => {
 export const githubWebhook = async (
   githubWebhookBody: string,
   options?: RequestInit,
-): Promise<githubWebhookResponse> => {
-  return customInstance<githubWebhookResponse>(getGithubWebhookUrl(), {
+): Promise<void> => {
+  return customInstance<void>(getGithubWebhookUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -68,6 +46,7 @@ export const getGithubWebhookMutationOptions = <TError = void, TContext = unknow
     { data: string },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof githubWebhook>>,
   TError,
@@ -75,11 +54,11 @@ export const getGithubWebhookMutationOptions = <TError = void, TContext = unknow
   TContext
 > => {
   const mutationKey = ['githubWebhook'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof githubWebhook>>,
@@ -87,7 +66,7 @@ export const getGithubWebhookMutationOptions = <TError = void, TContext = unknow
   > = (props) => {
     const { data } = props ?? {};
 
-    return githubWebhook(data);
+    return githubWebhook(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -108,6 +87,7 @@ export const useGithubWebhook = <TError = void, TContext = unknown>(
       { data: string },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

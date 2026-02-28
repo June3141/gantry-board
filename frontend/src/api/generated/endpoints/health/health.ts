@@ -21,23 +21,14 @@ import { useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
 import type { HealthResponse, LivenessResponse, ReadinessResponse } from '../../model';
 
-export type healthCheckResponse200 = {
-  data: HealthResponse;
-  status: 200;
-};
-
-export type healthCheckResponseSuccess = healthCheckResponse200 & {
-  headers: Headers;
-};
-
-export type healthCheckResponse = healthCheckResponseSuccess;
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const getHealthCheckUrl = () => {
   return `/health`;
 };
 
-export const healthCheck = async (options?: RequestInit): Promise<healthCheckResponse> => {
-  return customInstance<healthCheckResponse>(getHealthCheckUrl(), {
+export const healthCheck = async (options?: RequestInit): Promise<HealthResponse> => {
+  return customInstance<HealthResponse>(getHealthCheckUrl(), {
     ...options,
     method: 'GET',
   });
@@ -52,13 +43,14 @@ export const getHealthCheckQueryOptions = <
   TError = unknown,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getHealthCheckQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof healthCheck>>> = ({ signal }) =>
-    healthCheck({ signal });
+    healthCheck({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof healthCheck>>,
@@ -81,6 +73,7 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -95,12 +88,14 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, TError = unknown>(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -108,6 +103,7 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, TError = unknown>(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -123,23 +119,12 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 /**
  * @summary Liveness probe — always returns 200 if the process is alive.
  */
-export type livenessResponse200 = {
-  data: LivenessResponse;
-  status: 200;
-};
-
-export type livenessResponseSuccess = livenessResponse200 & {
-  headers: Headers;
-};
-
-export type livenessResponse = livenessResponseSuccess;
-
 export const getLivenessUrl = () => {
   return `/health/live`;
 };
 
-export const liveness = async (options?: RequestInit): Promise<livenessResponse> => {
-  return customInstance<livenessResponse>(getLivenessUrl(), {
+export const liveness = async (options?: RequestInit): Promise<LivenessResponse> => {
+  return customInstance<LivenessResponse>(getLivenessUrl(), {
     ...options,
     method: 'GET',
   });
@@ -154,13 +139,14 @@ export const getLivenessQueryOptions = <
   TError = unknown,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof liveness>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getLivenessQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof liveness>>> = ({ signal }) =>
-    liveness({ signal });
+    liveness({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof liveness>>,
@@ -183,6 +169,7 @@ export function useLiveness<TData = Awaited<ReturnType<typeof liveness>>, TError
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -197,12 +184,14 @@ export function useLiveness<TData = Awaited<ReturnType<typeof liveness>>, TError
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useLiveness<TData = Awaited<ReturnType<typeof liveness>>, TError = unknown>(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof liveness>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -213,6 +202,7 @@ export function useLiveness<TData = Awaited<ReturnType<typeof liveness>>, TError
 export function useLiveness<TData = Awaited<ReturnType<typeof liveness>>, TError = unknown>(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof liveness>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -228,31 +218,12 @@ export function useLiveness<TData = Awaited<ReturnType<typeof liveness>>, TError
 /**
  * @summary Readiness probe — checks database connectivity and Docker health.
  */
-export type readinessResponse200 = {
-  data: ReadinessResponse;
-  status: 200;
-};
-
-export type readinessResponse503 = {
-  data: ReadinessResponse;
-  status: 503;
-};
-
-export type readinessResponseSuccess = readinessResponse200 & {
-  headers: Headers;
-};
-export type readinessResponseError = readinessResponse503 & {
-  headers: Headers;
-};
-
-export type readinessResponse = readinessResponseSuccess | readinessResponseError;
-
 export const getReadinessUrl = () => {
   return `/health/ready`;
 };
 
-export const readiness = async (options?: RequestInit): Promise<readinessResponse> => {
-  return customInstance<readinessResponse>(getReadinessUrl(), {
+export const readiness = async (options?: RequestInit): Promise<ReadinessResponse> => {
+  return customInstance<ReadinessResponse>(getReadinessUrl(), {
     ...options,
     method: 'GET',
   });
@@ -267,13 +238,14 @@ export const getReadinessQueryOptions = <
   TError = ReadinessResponse,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof readiness>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getReadinessQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof readiness>>> = ({ signal }) =>
-    readiness({ signal });
+    readiness({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof readiness>>,
@@ -299,6 +271,7 @@ export function useReadiness<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -316,6 +289,7 @@ export function useReadiness<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -325,6 +299,7 @@ export function useReadiness<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof readiness>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -338,6 +313,7 @@ export function useReadiness<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof readiness>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

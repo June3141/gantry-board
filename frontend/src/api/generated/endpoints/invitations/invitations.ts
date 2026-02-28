@@ -29,26 +29,7 @@ import type {
   ProjectInvitation,
 } from '../../model';
 
-export type getInvitationByTokenResponse200 = {
-  data: InvitationInfo;
-  status: 200;
-};
-
-export type getInvitationByTokenResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type getInvitationByTokenResponseSuccess = getInvitationByTokenResponse200 & {
-  headers: Headers;
-};
-export type getInvitationByTokenResponseError = getInvitationByTokenResponse404 & {
-  headers: Headers;
-};
-
-export type getInvitationByTokenResponse =
-  | getInvitationByTokenResponseSuccess
-  | getInvitationByTokenResponseError;
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const getGetInvitationByTokenUrl = (token: string) => {
   return `/api/invitations/${token}`;
@@ -57,8 +38,8 @@ export const getGetInvitationByTokenUrl = (token: string) => {
 export const getInvitationByToken = async (
   token: string,
   options?: RequestInit,
-): Promise<getInvitationByTokenResponse> => {
-  return customInstance<getInvitationByTokenResponse>(getGetInvitationByTokenUrl(token), {
+): Promise<InvitationInfo> => {
+  return customInstance<InvitationInfo>(getGetInvitationByTokenUrl(token), {
     ...options,
     method: 'GET',
   });
@@ -77,14 +58,15 @@ export const getGetInvitationByTokenQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetInvitationByTokenQueryKey(token);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvitationByToken>>> = ({ signal }) =>
-    getInvitationByToken(token, { signal });
+    getInvitationByToken(token, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!token, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getInvitationByToken>>,
@@ -115,6 +97,7 @@ export function useGetInvitationByToken<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -135,6 +118,7 @@ export function useGetInvitationByToken<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -147,6 +131,7 @@ export function useGetInvitationByToken<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -160,6 +145,7 @@ export function useGetInvitationByToken<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -172,41 +158,6 @@ export function useGetInvitationByToken<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type acceptInvitationResponse200 = {
-  data: ProjectInvitation;
-  status: 200;
-};
-
-export type acceptInvitationResponse400 = {
-  data: void;
-  status: 400;
-};
-
-export type acceptInvitationResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type acceptInvitationResponse409 = {
-  data: void;
-  status: 409;
-};
-
-export type acceptInvitationResponseSuccess = acceptInvitationResponse200 & {
-  headers: Headers;
-};
-export type acceptInvitationResponseError = (
-  | acceptInvitationResponse400
-  | acceptInvitationResponse404
-  | acceptInvitationResponse409
-) & {
-  headers: Headers;
-};
-
-export type acceptInvitationResponse =
-  | acceptInvitationResponseSuccess
-  | acceptInvitationResponseError;
-
 export const getAcceptInvitationUrl = (token: string) => {
   return `/api/invitations/${token}/accept`;
 };
@@ -214,8 +165,8 @@ export const getAcceptInvitationUrl = (token: string) => {
 export const acceptInvitation = async (
   token: string,
   options?: RequestInit,
-): Promise<acceptInvitationResponse> => {
-  return customInstance<acceptInvitationResponse>(getAcceptInvitationUrl(token), {
+): Promise<ProjectInvitation> => {
+  return customInstance<ProjectInvitation>(getAcceptInvitationUrl(token), {
     ...options,
     method: 'POST',
   });
@@ -228,6 +179,7 @@ export const getAcceptInvitationMutationOptions = <TError = void, TContext = unk
     { token: string },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof acceptInvitation>>,
   TError,
@@ -235,11 +187,11 @@ export const getAcceptInvitationMutationOptions = <TError = void, TContext = unk
   TContext
 > => {
   const mutationKey = ['acceptInvitation'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof acceptInvitation>>,
@@ -247,7 +199,7 @@ export const getAcceptInvitationMutationOptions = <TError = void, TContext = unk
   > = (props) => {
     const { token } = props ?? {};
 
-    return acceptInvitation(token);
+    return acceptInvitation(token, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -267,6 +219,7 @@ export const useAcceptInvitation = <TError = void, TContext = unknown>(
       { token: string },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -277,33 +230,6 @@ export const useAcceptInvitation = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getAcceptInvitationMutationOptions(options), queryClient);
 };
-export type listInvitationsResponse200 = {
-  data: ProjectInvitation[];
-  status: 200;
-};
-
-export type listInvitationsResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type listInvitationsResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type listInvitationsResponseSuccess = listInvitationsResponse200 & {
-  headers: Headers;
-};
-export type listInvitationsResponseError = (
-  | listInvitationsResponse403
-  | listInvitationsResponse404
-) & {
-  headers: Headers;
-};
-
-export type listInvitationsResponse = listInvitationsResponseSuccess | listInvitationsResponseError;
-
 export const getListInvitationsUrl = (projectId: string) => {
   return `/api/projects/${projectId}/invitations`;
 };
@@ -311,8 +237,8 @@ export const getListInvitationsUrl = (projectId: string) => {
 export const listInvitations = async (
   projectId: string,
   options?: RequestInit,
-): Promise<listInvitationsResponse> => {
-  return customInstance<listInvitationsResponse>(getListInvitationsUrl(projectId), {
+): Promise<ProjectInvitation[]> => {
+  return customInstance<ProjectInvitation[]>(getListInvitationsUrl(projectId), {
     ...options,
     method: 'GET',
   });
@@ -329,14 +255,15 @@ export const getListInvitationsQueryOptions = <
   projectId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListInvitationsQueryKey(projectId);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvitations>>> = ({ signal }) =>
-    listInvitations(projectId, { signal });
+    listInvitations(projectId, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!projectId, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listInvitations>>,
@@ -363,6 +290,7 @@ export function useListInvitations<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -381,6 +309,7 @@ export function useListInvitations<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -391,6 +320,7 @@ export function useListInvitations<
   projectId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -402,6 +332,7 @@ export function useListInvitations<
   projectId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -414,35 +345,6 @@ export function useListInvitations<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type createInvitationResponse201 = {
-  data: CreateInvitationResponse;
-  status: 201;
-};
-
-export type createInvitationResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type createInvitationResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type createInvitationResponseSuccess = createInvitationResponse201 & {
-  headers: Headers;
-};
-export type createInvitationResponseError = (
-  | createInvitationResponse403
-  | createInvitationResponse404
-) & {
-  headers: Headers;
-};
-
-export type createInvitationResponse =
-  | createInvitationResponseSuccess
-  | createInvitationResponseError;
-
 export const getCreateInvitationUrl = (projectId: string) => {
   return `/api/projects/${projectId}/invitations`;
 };
@@ -451,8 +353,8 @@ export const createInvitation = async (
   projectId: string,
   createInvitationRequest: CreateInvitationRequest,
   options?: RequestInit,
-): Promise<createInvitationResponse> => {
-  return customInstance<createInvitationResponse>(getCreateInvitationUrl(projectId), {
+): Promise<CreateInvitationResponse> => {
+  return customInstance<CreateInvitationResponse>(getCreateInvitationUrl(projectId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -467,6 +369,7 @@ export const getCreateInvitationMutationOptions = <TError = void, TContext = unk
     { projectId: string; data: CreateInvitationRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createInvitation>>,
   TError,
@@ -474,11 +377,11 @@ export const getCreateInvitationMutationOptions = <TError = void, TContext = unk
   TContext
 > => {
   const mutationKey = ['createInvitation'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createInvitation>>,
@@ -486,7 +389,7 @@ export const getCreateInvitationMutationOptions = <TError = void, TContext = unk
   > = (props) => {
     const { projectId, data } = props ?? {};
 
-    return createInvitation(projectId, data);
+    return createInvitation(projectId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -506,6 +409,7 @@ export const useCreateInvitation = <TError = void, TContext = unknown>(
       { projectId: string; data: CreateInvitationRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -516,35 +420,6 @@ export const useCreateInvitation = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getCreateInvitationMutationOptions(options), queryClient);
 };
-export type deleteInvitationResponse204 = {
-  data: void;
-  status: 204;
-};
-
-export type deleteInvitationResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type deleteInvitationResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type deleteInvitationResponseSuccess = deleteInvitationResponse204 & {
-  headers: Headers;
-};
-export type deleteInvitationResponseError = (
-  | deleteInvitationResponse403
-  | deleteInvitationResponse404
-) & {
-  headers: Headers;
-};
-
-export type deleteInvitationResponse =
-  | deleteInvitationResponseSuccess
-  | deleteInvitationResponseError;
-
 export const getDeleteInvitationUrl = (projectId: string, invitationId: string) => {
   return `/api/projects/${projectId}/invitations/${invitationId}`;
 };
@@ -553,8 +428,8 @@ export const deleteInvitation = async (
   projectId: string,
   invitationId: string,
   options?: RequestInit,
-): Promise<deleteInvitationResponse> => {
-  return customInstance<deleteInvitationResponse>(getDeleteInvitationUrl(projectId, invitationId), {
+): Promise<void> => {
+  return customInstance<void>(getDeleteInvitationUrl(projectId, invitationId), {
     ...options,
     method: 'DELETE',
   });
@@ -567,6 +442,7 @@ export const getDeleteInvitationMutationOptions = <TError = void, TContext = unk
     { projectId: string; invitationId: string },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteInvitation>>,
   TError,
@@ -574,11 +450,11 @@ export const getDeleteInvitationMutationOptions = <TError = void, TContext = unk
   TContext
 > => {
   const mutationKey = ['deleteInvitation'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteInvitation>>,
@@ -586,7 +462,7 @@ export const getDeleteInvitationMutationOptions = <TError = void, TContext = unk
   > = (props) => {
     const { projectId, invitationId } = props ?? {};
 
-    return deleteInvitation(projectId, invitationId);
+    return deleteInvitation(projectId, invitationId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -606,6 +482,7 @@ export const useDeleteInvitation = <TError = void, TContext = unknown>(
       { projectId: string; invitationId: string },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

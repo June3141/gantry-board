@@ -24,29 +24,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
 import type { CreateMessageRequest, ListMessagesParams, ProjectMessage } from '../../model';
 
-export type listMessagesResponse200 = {
-  data: ProjectMessage[];
-  status: 200;
-};
-
-export type listMessagesResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type listMessagesResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type listMessagesResponseSuccess = listMessagesResponse200 & {
-  headers: Headers;
-};
-export type listMessagesResponseError = (listMessagesResponse403 | listMessagesResponse404) & {
-  headers: Headers;
-};
-
-export type listMessagesResponse = listMessagesResponseSuccess | listMessagesResponseError;
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const getListMessagesUrl = (projectId: string, params?: ListMessagesParams) => {
   const normalizedParams = new URLSearchParams();
@@ -68,8 +46,8 @@ export const listMessages = async (
   projectId: string,
   params?: ListMessagesParams,
   options?: RequestInit,
-): Promise<listMessagesResponse> => {
-  return customInstance<listMessagesResponse>(getListMessagesUrl(projectId, params), {
+): Promise<ProjectMessage[]> => {
+  return customInstance<ProjectMessage[]>(getListMessagesUrl(projectId, params), {
     ...options,
     method: 'GET',
   });
@@ -87,14 +65,15 @@ export const getListMessagesQueryOptions = <
   params?: ListMessagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMessages>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListMessagesQueryKey(projectId, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listMessages>>> = ({ signal }) =>
-    listMessages(projectId, params, { signal });
+    listMessages(projectId, params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!projectId, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listMessages>>,
@@ -119,6 +98,7 @@ export function useListMessages<TData = Awaited<ReturnType<typeof listMessages>>
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -135,6 +115,7 @@ export function useListMessages<TData = Awaited<ReturnType<typeof listMessages>>
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -143,6 +124,7 @@ export function useListMessages<TData = Awaited<ReturnType<typeof listMessages>>
   params?: ListMessagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMessages>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -152,6 +134,7 @@ export function useListMessages<TData = Awaited<ReturnType<typeof listMessages>>
   params?: ListMessagesParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMessages>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -164,39 +147,6 @@ export function useListMessages<TData = Awaited<ReturnType<typeof listMessages>>
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type createMessageResponse201 = {
-  data: ProjectMessage;
-  status: 201;
-};
-
-export type createMessageResponse400 = {
-  data: void;
-  status: 400;
-};
-
-export type createMessageResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type createMessageResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type createMessageResponseSuccess = createMessageResponse201 & {
-  headers: Headers;
-};
-export type createMessageResponseError = (
-  | createMessageResponse400
-  | createMessageResponse403
-  | createMessageResponse404
-) & {
-  headers: Headers;
-};
-
-export type createMessageResponse = createMessageResponseSuccess | createMessageResponseError;
-
 export const getCreateMessageUrl = (projectId: string) => {
   return `/api/projects/${projectId}/messages`;
 };
@@ -205,8 +155,8 @@ export const createMessage = async (
   projectId: string,
   createMessageRequest: CreateMessageRequest,
   options?: RequestInit,
-): Promise<createMessageResponse> => {
-  return customInstance<createMessageResponse>(getCreateMessageUrl(projectId), {
+): Promise<ProjectMessage> => {
+  return customInstance<ProjectMessage>(getCreateMessageUrl(projectId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -221,6 +171,7 @@ export const getCreateMessageMutationOptions = <TError = void, TContext = unknow
     { projectId: string; data: CreateMessageRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createMessage>>,
   TError,
@@ -228,11 +179,11 @@ export const getCreateMessageMutationOptions = <TError = void, TContext = unknow
   TContext
 > => {
   const mutationKey = ['createMessage'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createMessage>>,
@@ -240,7 +191,7 @@ export const getCreateMessageMutationOptions = <TError = void, TContext = unknow
   > = (props) => {
     const { projectId, data } = props ?? {};
 
-    return createMessage(projectId, data);
+    return createMessage(projectId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -258,6 +209,7 @@ export const useCreateMessage = <TError = void, TContext = unknown>(
       { projectId: string; data: CreateMessageRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -268,30 +220,6 @@ export const useCreateMessage = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getCreateMessageMutationOptions(options), queryClient);
 };
-export type deleteMessageResponse204 = {
-  data: void;
-  status: 204;
-};
-
-export type deleteMessageResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type deleteMessageResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type deleteMessageResponseSuccess = deleteMessageResponse204 & {
-  headers: Headers;
-};
-export type deleteMessageResponseError = (deleteMessageResponse403 | deleteMessageResponse404) & {
-  headers: Headers;
-};
-
-export type deleteMessageResponse = deleteMessageResponseSuccess | deleteMessageResponseError;
-
 export const getDeleteMessageUrl = (projectId: string, messageId: string) => {
   return `/api/projects/${projectId}/messages/${messageId}`;
 };
@@ -300,8 +228,8 @@ export const deleteMessage = async (
   projectId: string,
   messageId: string,
   options?: RequestInit,
-): Promise<deleteMessageResponse> => {
-  return customInstance<deleteMessageResponse>(getDeleteMessageUrl(projectId, messageId), {
+): Promise<void> => {
+  return customInstance<void>(getDeleteMessageUrl(projectId, messageId), {
     ...options,
     method: 'DELETE',
   });
@@ -314,6 +242,7 @@ export const getDeleteMessageMutationOptions = <TError = void, TContext = unknow
     { projectId: string; messageId: string },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteMessage>>,
   TError,
@@ -321,11 +250,11 @@ export const getDeleteMessageMutationOptions = <TError = void, TContext = unknow
   TContext
 > => {
   const mutationKey = ['deleteMessage'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteMessage>>,
@@ -333,7 +262,7 @@ export const getDeleteMessageMutationOptions = <TError = void, TContext = unknow
   > = (props) => {
     const { projectId, messageId } = props ?? {};
 
-    return deleteMessage(projectId, messageId);
+    return deleteMessage(projectId, messageId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -351,6 +280,7 @@ export const useDeleteMessage = <TError = void, TContext = unknown>(
       { projectId: string; messageId: string },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

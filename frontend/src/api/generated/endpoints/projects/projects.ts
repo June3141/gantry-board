@@ -30,16 +30,7 @@ import type {
   UpdateProjectRequest,
 } from '../../model';
 
-export type listProjectsResponse200 = {
-  data: PaginatedResponseProject;
-  status: 200;
-};
-
-export type listProjectsResponseSuccess = listProjectsResponse200 & {
-  headers: Headers;
-};
-
-export type listProjectsResponse = listProjectsResponseSuccess;
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const getListProjectsUrl = (params?: ListProjectsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -58,8 +49,8 @@ export const getListProjectsUrl = (params?: ListProjectsParams) => {
 export const listProjects = async (
   params?: ListProjectsParams,
   options?: RequestInit,
-): Promise<listProjectsResponse> => {
-  return customInstance<listProjectsResponse>(getListProjectsUrl(params), {
+): Promise<PaginatedResponseProject> => {
+  return customInstance<PaginatedResponseProject>(getListProjectsUrl(params), {
     ...options,
     method: 'GET',
   });
@@ -76,14 +67,15 @@ export const getListProjectsQueryOptions = <
   params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListProjectsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjects>>> = ({ signal }) =>
-    listProjects(params, { signal });
+    listProjects(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProjects>>,
@@ -107,6 +99,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -122,6 +115,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -129,6 +123,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -137,6 +132,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   params?: ListProjectsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -149,17 +145,6 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type createProjectResponse201 = {
-  data: Project;
-  status: 201;
-};
-
-export type createProjectResponseSuccess = createProjectResponse201 & {
-  headers: Headers;
-};
-
-export type createProjectResponse = createProjectResponseSuccess;
-
 export const getCreateProjectUrl = () => {
   return `/api/projects`;
 };
@@ -167,8 +152,8 @@ export const getCreateProjectUrl = () => {
 export const createProject = async (
   createProjectRequest: CreateProjectRequest,
   options?: RequestInit,
-): Promise<createProjectResponse> => {
-  return customInstance<createProjectResponse>(getCreateProjectUrl(), {
+): Promise<Project> => {
+  return customInstance<Project>(getCreateProjectUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -183,6 +168,7 @@ export const getCreateProjectMutationOptions = <TError = unknown, TContext = unk
     { data: CreateProjectRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProject>>,
   TError,
@@ -190,11 +176,11 @@ export const getCreateProjectMutationOptions = <TError = unknown, TContext = unk
   TContext
 > => {
   const mutationKey = ['createProject'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProject>>,
@@ -202,7 +188,7 @@ export const getCreateProjectMutationOptions = <TError = unknown, TContext = unk
   > = (props) => {
     const { data } = props ?? {};
 
-    return createProject(data);
+    return createProject(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -220,6 +206,7 @@ export const useCreateProject = <TError = unknown, TContext = unknown>(
       { data: CreateProjectRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -230,39 +217,12 @@ export const useCreateProject = <TError = unknown, TContext = unknown>(
 > => {
   return useMutation(getCreateProjectMutationOptions(options), queryClient);
 };
-export type getProjectResponse200 = {
-  data: Project;
-  status: 200;
-};
-
-export type getProjectResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type getProjectResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type getProjectResponseSuccess = getProjectResponse200 & {
-  headers: Headers;
-};
-export type getProjectResponseError = (getProjectResponse403 | getProjectResponse404) & {
-  headers: Headers;
-};
-
-export type getProjectResponse = getProjectResponseSuccess | getProjectResponseError;
-
 export const getGetProjectUrl = (id: string) => {
   return `/api/projects/${id}`;
 };
 
-export const getProject = async (
-  id: string,
-  options?: RequestInit,
-): Promise<getProjectResponse> => {
-  return customInstance<getProjectResponse>(getGetProjectUrl(id), {
+export const getProject = async (id: string, options?: RequestInit): Promise<Project> => {
+  return customInstance<Project>(getGetProjectUrl(id), {
     ...options,
     method: 'GET',
   });
@@ -279,14 +239,15 @@ export const getGetProjectQueryOptions = <
   id: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetProjectQueryKey(id);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProject>>> = ({ signal }) =>
-    getProject(id, { signal });
+    getProject(id, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getProject>>,
@@ -310,6 +271,7 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -325,6 +287,7 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -332,6 +295,7 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
   id: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -340,6 +304,7 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
   id: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -352,39 +317,12 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type deleteProjectResponse204 = {
-  data: void;
-  status: 204;
-};
-
-export type deleteProjectResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type deleteProjectResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type deleteProjectResponseSuccess = deleteProjectResponse204 & {
-  headers: Headers;
-};
-export type deleteProjectResponseError = (deleteProjectResponse403 | deleteProjectResponse404) & {
-  headers: Headers;
-};
-
-export type deleteProjectResponse = deleteProjectResponseSuccess | deleteProjectResponseError;
-
 export const getDeleteProjectUrl = (id: string) => {
   return `/api/projects/${id}`;
 };
 
-export const deleteProject = async (
-  id: string,
-  options?: RequestInit,
-): Promise<deleteProjectResponse> => {
-  return customInstance<deleteProjectResponse>(getDeleteProjectUrl(id), {
+export const deleteProject = async (id: string, options?: RequestInit): Promise<void> => {
+  return customInstance<void>(getDeleteProjectUrl(id), {
     ...options,
     method: 'DELETE',
   });
@@ -397,6 +335,7 @@ export const getDeleteProjectMutationOptions = <TError = void, TContext = unknow
     { id: string },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProject>>,
   TError,
@@ -404,18 +343,18 @@ export const getDeleteProjectMutationOptions = <TError = void, TContext = unknow
   TContext
 > => {
   const mutationKey = ['deleteProject'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProject>>, { id: string }> = (
     props,
   ) => {
     const { id } = props ?? {};
 
-    return deleteProject(id);
+    return deleteProject(id, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -433,6 +372,7 @@ export const useDeleteProject = <TError = void, TContext = unknown>(
       { id: string },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -443,30 +383,6 @@ export const useDeleteProject = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getDeleteProjectMutationOptions(options), queryClient);
 };
-export type updateProjectResponse200 = {
-  data: Project;
-  status: 200;
-};
-
-export type updateProjectResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type updateProjectResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type updateProjectResponseSuccess = updateProjectResponse200 & {
-  headers: Headers;
-};
-export type updateProjectResponseError = (updateProjectResponse403 | updateProjectResponse404) & {
-  headers: Headers;
-};
-
-export type updateProjectResponse = updateProjectResponseSuccess | updateProjectResponseError;
-
 export const getUpdateProjectUrl = (id: string) => {
   return `/api/projects/${id}`;
 };
@@ -475,8 +391,8 @@ export const updateProject = async (
   id: string,
   updateProjectRequest: UpdateProjectRequest,
   options?: RequestInit,
-): Promise<updateProjectResponse> => {
-  return customInstance<updateProjectResponse>(getUpdateProjectUrl(id), {
+): Promise<Project> => {
+  return customInstance<Project>(getUpdateProjectUrl(id), {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -491,6 +407,7 @@ export const getUpdateProjectMutationOptions = <TError = void, TContext = unknow
     { id: string; data: UpdateProjectRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateProject>>,
   TError,
@@ -498,11 +415,11 @@ export const getUpdateProjectMutationOptions = <TError = void, TContext = unknow
   TContext
 > => {
   const mutationKey = ['updateProject'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateProject>>,
@@ -510,7 +427,7 @@ export const getUpdateProjectMutationOptions = <TError = void, TContext = unknow
   > = (props) => {
     const { id, data } = props ?? {};
 
-    return updateProject(id, data);
+    return updateProject(id, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -528,6 +445,7 @@ export const useUpdateProject = <TError = void, TContext = unknown>(
       { id: string; data: UpdateProjectRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

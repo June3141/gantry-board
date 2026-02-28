@@ -21,24 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
 import type { SearchUsersParams, User } from '../../model';
 
-export type searchUsersResponse200 = {
-  data: User[];
-  status: 200;
-};
-
-export type searchUsersResponse401 = {
-  data: void;
-  status: 401;
-};
-
-export type searchUsersResponseSuccess = searchUsersResponse200 & {
-  headers: Headers;
-};
-export type searchUsersResponseError = searchUsersResponse401 & {
-  headers: Headers;
-};
-
-export type searchUsersResponse = searchUsersResponseSuccess | searchUsersResponseError;
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const getSearchUsersUrl = (params?: SearchUsersParams) => {
   const normalizedParams = new URLSearchParams();
@@ -57,8 +40,8 @@ export const getSearchUsersUrl = (params?: SearchUsersParams) => {
 export const searchUsers = async (
   params?: SearchUsersParams,
   options?: RequestInit,
-): Promise<searchUsersResponse> => {
-  return customInstance<searchUsersResponse>(getSearchUsersUrl(params), {
+): Promise<User[]> => {
+  return customInstance<User[]>(getSearchUsersUrl(params), {
     ...options,
     method: 'GET',
   });
@@ -75,14 +58,15 @@ export const getSearchUsersQueryOptions = <
   params?: SearchUsersParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getSearchUsersQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof searchUsers>>> = ({ signal }) =>
-    searchUsers(params, { signal });
+    searchUsers(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof searchUsers>>,
@@ -106,6 +90,7 @@ export function useSearchUsers<TData = Awaited<ReturnType<typeof searchUsers>>, 
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -121,6 +106,7 @@ export function useSearchUsers<TData = Awaited<ReturnType<typeof searchUsers>>, 
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -128,6 +114,7 @@ export function useSearchUsers<TData = Awaited<ReturnType<typeof searchUsers>>, 
   params?: SearchUsersParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -136,6 +123,7 @@ export function useSearchUsers<TData = Awaited<ReturnType<typeof searchUsers>>, 
   params?: SearchUsersParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

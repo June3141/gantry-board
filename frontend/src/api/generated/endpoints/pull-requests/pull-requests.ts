@@ -21,34 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
 import type { GitHubPullRequest } from '../../model';
 
-export type listPullRequestsResponse200 = {
-  data: GitHubPullRequest[];
-  status: 200;
-};
-
-export type listPullRequestsResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type listPullRequestsResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type listPullRequestsResponseSuccess = listPullRequestsResponse200 & {
-  headers: Headers;
-};
-export type listPullRequestsResponseError = (
-  | listPullRequestsResponse403
-  | listPullRequestsResponse404
-) & {
-  headers: Headers;
-};
-
-export type listPullRequestsResponse =
-  | listPullRequestsResponseSuccess
-  | listPullRequestsResponseError;
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const getListPullRequestsUrl = (taskId: string) => {
   return `/api/tasks/${taskId}/pull-requests`;
@@ -57,8 +30,8 @@ export const getListPullRequestsUrl = (taskId: string) => {
 export const listPullRequests = async (
   taskId: string,
   options?: RequestInit,
-): Promise<listPullRequestsResponse> => {
-  return customInstance<listPullRequestsResponse>(getListPullRequestsUrl(taskId), {
+): Promise<GitHubPullRequest[]> => {
+  return customInstance<GitHubPullRequest[]>(getListPullRequestsUrl(taskId), {
     ...options,
     method: 'GET',
   });
@@ -75,14 +48,15 @@ export const getListPullRequestsQueryOptions = <
   taskId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListPullRequestsQueryKey(taskId);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listPullRequests>>> = ({ signal }) =>
-    listPullRequests(taskId, { signal });
+    listPullRequests(taskId, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!taskId, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listPullRequests>>,
@@ -109,6 +83,7 @@ export function useListPullRequests<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -127,6 +102,7 @@ export function useListPullRequests<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -137,6 +113,7 @@ export function useListPullRequests<
   taskId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -148,6 +125,7 @@ export function useListPullRequests<
   taskId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

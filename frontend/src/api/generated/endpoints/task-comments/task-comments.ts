@@ -24,29 +24,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
 import type { CreateCommentRequest, TaskComment, UpdateCommentRequest } from '../../model';
 
-export type listCommentsResponse200 = {
-  data: TaskComment[];
-  status: 200;
-};
-
-export type listCommentsResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type listCommentsResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type listCommentsResponseSuccess = listCommentsResponse200 & {
-  headers: Headers;
-};
-export type listCommentsResponseError = (listCommentsResponse403 | listCommentsResponse404) & {
-  headers: Headers;
-};
-
-export type listCommentsResponse = listCommentsResponseSuccess | listCommentsResponseError;
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const getListCommentsUrl = (taskId: string) => {
   return `/api/tasks/${taskId}/comments`;
@@ -55,8 +33,8 @@ export const getListCommentsUrl = (taskId: string) => {
 export const listComments = async (
   taskId: string,
   options?: RequestInit,
-): Promise<listCommentsResponse> => {
-  return customInstance<listCommentsResponse>(getListCommentsUrl(taskId), {
+): Promise<TaskComment[]> => {
+  return customInstance<TaskComment[]>(getListCommentsUrl(taskId), {
     ...options,
     method: 'GET',
   });
@@ -73,14 +51,15 @@ export const getListCommentsQueryOptions = <
   taskId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListCommentsQueryKey(taskId);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listComments>>> = ({ signal }) =>
-    listComments(taskId, { signal });
+    listComments(taskId, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!taskId, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listComments>>,
@@ -104,6 +83,7 @@ export function useListComments<TData = Awaited<ReturnType<typeof listComments>>
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -119,6 +99,7 @@ export function useListComments<TData = Awaited<ReturnType<typeof listComments>>
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -126,6 +107,7 @@ export function useListComments<TData = Awaited<ReturnType<typeof listComments>>
   taskId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -134,6 +116,7 @@ export function useListComments<TData = Awaited<ReturnType<typeof listComments>>
   taskId: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -146,39 +129,6 @@ export function useListComments<TData = Awaited<ReturnType<typeof listComments>>
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type createCommentResponse201 = {
-  data: TaskComment;
-  status: 201;
-};
-
-export type createCommentResponse400 = {
-  data: void;
-  status: 400;
-};
-
-export type createCommentResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type createCommentResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type createCommentResponseSuccess = createCommentResponse201 & {
-  headers: Headers;
-};
-export type createCommentResponseError = (
-  | createCommentResponse400
-  | createCommentResponse403
-  | createCommentResponse404
-) & {
-  headers: Headers;
-};
-
-export type createCommentResponse = createCommentResponseSuccess | createCommentResponseError;
-
 export const getCreateCommentUrl = (taskId: string) => {
   return `/api/tasks/${taskId}/comments`;
 };
@@ -187,8 +137,8 @@ export const createComment = async (
   taskId: string,
   createCommentRequest: CreateCommentRequest,
   options?: RequestInit,
-): Promise<createCommentResponse> => {
-  return customInstance<createCommentResponse>(getCreateCommentUrl(taskId), {
+): Promise<TaskComment> => {
+  return customInstance<TaskComment>(getCreateCommentUrl(taskId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -203,6 +153,7 @@ export const getCreateCommentMutationOptions = <TError = void, TContext = unknow
     { taskId: string; data: CreateCommentRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createComment>>,
   TError,
@@ -210,11 +161,11 @@ export const getCreateCommentMutationOptions = <TError = void, TContext = unknow
   TContext
 > => {
   const mutationKey = ['createComment'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createComment>>,
@@ -222,7 +173,7 @@ export const getCreateCommentMutationOptions = <TError = void, TContext = unknow
   > = (props) => {
     const { taskId, data } = props ?? {};
 
-    return createComment(taskId, data);
+    return createComment(taskId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -240,6 +191,7 @@ export const useCreateComment = <TError = void, TContext = unknown>(
       { taskId: string; data: CreateCommentRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -250,30 +202,6 @@ export const useCreateComment = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getCreateCommentMutationOptions(options), queryClient);
 };
-export type deleteCommentResponse204 = {
-  data: void;
-  status: 204;
-};
-
-export type deleteCommentResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type deleteCommentResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type deleteCommentResponseSuccess = deleteCommentResponse204 & {
-  headers: Headers;
-};
-export type deleteCommentResponseError = (deleteCommentResponse403 | deleteCommentResponse404) & {
-  headers: Headers;
-};
-
-export type deleteCommentResponse = deleteCommentResponseSuccess | deleteCommentResponseError;
-
 export const getDeleteCommentUrl = (taskId: string, commentId: string) => {
   return `/api/tasks/${taskId}/comments/${commentId}`;
 };
@@ -282,8 +210,8 @@ export const deleteComment = async (
   taskId: string,
   commentId: string,
   options?: RequestInit,
-): Promise<deleteCommentResponse> => {
-  return customInstance<deleteCommentResponse>(getDeleteCommentUrl(taskId, commentId), {
+): Promise<void> => {
+  return customInstance<void>(getDeleteCommentUrl(taskId, commentId), {
     ...options,
     method: 'DELETE',
   });
@@ -296,6 +224,7 @@ export const getDeleteCommentMutationOptions = <TError = void, TContext = unknow
     { taskId: string; commentId: string },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteComment>>,
   TError,
@@ -303,11 +232,11 @@ export const getDeleteCommentMutationOptions = <TError = void, TContext = unknow
   TContext
 > => {
   const mutationKey = ['deleteComment'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteComment>>,
@@ -315,7 +244,7 @@ export const getDeleteCommentMutationOptions = <TError = void, TContext = unknow
   > = (props) => {
     const { taskId, commentId } = props ?? {};
 
-    return deleteComment(taskId, commentId);
+    return deleteComment(taskId, commentId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -333,6 +262,7 @@ export const useDeleteComment = <TError = void, TContext = unknown>(
       { taskId: string; commentId: string },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -343,39 +273,6 @@ export const useDeleteComment = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getDeleteCommentMutationOptions(options), queryClient);
 };
-export type updateCommentResponse200 = {
-  data: TaskComment;
-  status: 200;
-};
-
-export type updateCommentResponse400 = {
-  data: void;
-  status: 400;
-};
-
-export type updateCommentResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type updateCommentResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type updateCommentResponseSuccess = updateCommentResponse200 & {
-  headers: Headers;
-};
-export type updateCommentResponseError = (
-  | updateCommentResponse400
-  | updateCommentResponse403
-  | updateCommentResponse404
-) & {
-  headers: Headers;
-};
-
-export type updateCommentResponse = updateCommentResponseSuccess | updateCommentResponseError;
-
 export const getUpdateCommentUrl = (taskId: string, commentId: string) => {
   return `/api/tasks/${taskId}/comments/${commentId}`;
 };
@@ -385,8 +282,8 @@ export const updateComment = async (
   commentId: string,
   updateCommentRequest: UpdateCommentRequest,
   options?: RequestInit,
-): Promise<updateCommentResponse> => {
-  return customInstance<updateCommentResponse>(getUpdateCommentUrl(taskId, commentId), {
+): Promise<TaskComment> => {
+  return customInstance<TaskComment>(getUpdateCommentUrl(taskId, commentId), {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -401,6 +298,7 @@ export const getUpdateCommentMutationOptions = <TError = void, TContext = unknow
     { taskId: string; commentId: string; data: UpdateCommentRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateComment>>,
   TError,
@@ -408,11 +306,11 @@ export const getUpdateCommentMutationOptions = <TError = void, TContext = unknow
   TContext
 > => {
   const mutationKey = ['updateComment'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateComment>>,
@@ -420,7 +318,7 @@ export const getUpdateCommentMutationOptions = <TError = void, TContext = unknow
   > = (props) => {
     const { taskId, commentId, data } = props ?? {};
 
-    return updateComment(taskId, commentId, data);
+    return updateComment(taskId, commentId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -438,6 +336,7 @@ export const useUpdateComment = <TError = void, TContext = unknown>(
       { taskId: string; commentId: string; data: UpdateCommentRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

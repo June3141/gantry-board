@@ -24,34 +24,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
 import type { CreateWorktreeRequest, WorktreeResponse } from '../../model';
 
-export type listProjectWorktreesResponse200 = {
-  data: WorktreeResponse[];
-  status: 200;
-};
-
-export type listProjectWorktreesResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type listProjectWorktreesResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type listProjectWorktreesResponseSuccess = listProjectWorktreesResponse200 & {
-  headers: Headers;
-};
-export type listProjectWorktreesResponseError = (
-  | listProjectWorktreesResponse403
-  | listProjectWorktreesResponse404
-) & {
-  headers: Headers;
-};
-
-export type listProjectWorktreesResponse =
-  | listProjectWorktreesResponseSuccess
-  | listProjectWorktreesResponseError;
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const getListProjectWorktreesUrl = (projectId: string) => {
   return `/api/projects/${projectId}/worktrees`;
@@ -60,8 +33,8 @@ export const getListProjectWorktreesUrl = (projectId: string) => {
 export const listProjectWorktrees = async (
   projectId: string,
   options?: RequestInit,
-): Promise<listProjectWorktreesResponse> => {
-  return customInstance<listProjectWorktreesResponse>(getListProjectWorktreesUrl(projectId), {
+): Promise<WorktreeResponse[]> => {
+  return customInstance<WorktreeResponse[]>(getListProjectWorktreesUrl(projectId), {
     ...options,
     method: 'GET',
   });
@@ -80,14 +53,15 @@ export const getListProjectWorktreesQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectWorktrees>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListProjectWorktreesQueryKey(projectId);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectWorktrees>>> = ({ signal }) =>
-    listProjectWorktrees(projectId, { signal });
+    listProjectWorktrees(projectId, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!projectId, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProjectWorktrees>>,
@@ -118,6 +92,7 @@ export function useListProjectWorktrees<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -138,6 +113,7 @@ export function useListProjectWorktrees<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -150,6 +126,7 @@ export function useListProjectWorktrees<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectWorktrees>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -163,6 +140,7 @@ export function useListProjectWorktrees<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectWorktrees>>, TError, TData>
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -175,41 +153,6 @@ export function useListProjectWorktrees<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type createProjectWorktreeResponse201 = {
-  data: WorktreeResponse;
-  status: 201;
-};
-
-export type createProjectWorktreeResponse400 = {
-  data: void;
-  status: 400;
-};
-
-export type createProjectWorktreeResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type createProjectWorktreeResponse409 = {
-  data: void;
-  status: 409;
-};
-
-export type createProjectWorktreeResponseSuccess = createProjectWorktreeResponse201 & {
-  headers: Headers;
-};
-export type createProjectWorktreeResponseError = (
-  | createProjectWorktreeResponse400
-  | createProjectWorktreeResponse403
-  | createProjectWorktreeResponse409
-) & {
-  headers: Headers;
-};
-
-export type createProjectWorktreeResponse =
-  | createProjectWorktreeResponseSuccess
-  | createProjectWorktreeResponseError;
-
 export const getCreateProjectWorktreeUrl = (projectId: string) => {
   return `/api/projects/${projectId}/worktrees`;
 };
@@ -218,8 +161,8 @@ export const createProjectWorktree = async (
   projectId: string,
   createWorktreeRequest: CreateWorktreeRequest,
   options?: RequestInit,
-): Promise<createProjectWorktreeResponse> => {
-  return customInstance<createProjectWorktreeResponse>(getCreateProjectWorktreeUrl(projectId), {
+): Promise<WorktreeResponse> => {
+  return customInstance<WorktreeResponse>(getCreateProjectWorktreeUrl(projectId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -237,6 +180,7 @@ export const getCreateProjectWorktreeMutationOptions = <
     { projectId: string; data: CreateWorktreeRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectWorktree>>,
   TError,
@@ -244,11 +188,11 @@ export const getCreateProjectWorktreeMutationOptions = <
   TContext
 > => {
   const mutationKey = ['createProjectWorktree'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectWorktree>>,
@@ -256,7 +200,7 @@ export const getCreateProjectWorktreeMutationOptions = <
   > = (props) => {
     const { projectId, data } = props ?? {};
 
-    return createProjectWorktree(projectId, data);
+    return createProjectWorktree(projectId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -276,6 +220,7 @@ export const useCreateProjectWorktree = <TError = void, TContext = unknown>(
       { projectId: string; data: CreateWorktreeRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -286,35 +231,6 @@ export const useCreateProjectWorktree = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getCreateProjectWorktreeMutationOptions(options), queryClient);
 };
-export type getProjectWorktreeResponse200 = {
-  data: WorktreeResponse;
-  status: 200;
-};
-
-export type getProjectWorktreeResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type getProjectWorktreeResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type getProjectWorktreeResponseSuccess = getProjectWorktreeResponse200 & {
-  headers: Headers;
-};
-export type getProjectWorktreeResponseError = (
-  | getProjectWorktreeResponse403
-  | getProjectWorktreeResponse404
-) & {
-  headers: Headers;
-};
-
-export type getProjectWorktreeResponse =
-  | getProjectWorktreeResponseSuccess
-  | getProjectWorktreeResponseError;
-
 export const getGetProjectWorktreeUrl = (projectId: string, name: string) => {
   return `/api/projects/${projectId}/worktrees/${name}`;
 };
@@ -323,8 +239,8 @@ export const getProjectWorktree = async (
   projectId: string,
   name: string,
   options?: RequestInit,
-): Promise<getProjectWorktreeResponse> => {
-  return customInstance<getProjectWorktreeResponse>(getGetProjectWorktreeUrl(projectId, name), {
+): Promise<WorktreeResponse> => {
+  return customInstance<WorktreeResponse>(getGetProjectWorktreeUrl(projectId, name), {
     ...options,
     method: 'GET',
   });
@@ -342,14 +258,15 @@ export const getGetProjectWorktreeQueryOptions = <
   name: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectWorktree>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetProjectWorktreeQueryKey(projectId, name);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectWorktree>>> = ({ signal }) =>
-    getProjectWorktree(projectId, name, { signal });
+    getProjectWorktree(projectId, name, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!(projectId && name), ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getProjectWorktree>>,
@@ -379,6 +296,7 @@ export function useGetProjectWorktree<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -400,6 +318,7 @@ export function useGetProjectWorktree<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -411,6 +330,7 @@ export function useGetProjectWorktree<
   name: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectWorktree>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -423,6 +343,7 @@ export function useGetProjectWorktree<
   name: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectWorktree>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -435,35 +356,6 @@ export function useGetProjectWorktree<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type deleteProjectWorktreeResponse204 = {
-  data: void;
-  status: 204;
-};
-
-export type deleteProjectWorktreeResponse403 = {
-  data: void;
-  status: 403;
-};
-
-export type deleteProjectWorktreeResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type deleteProjectWorktreeResponseSuccess = deleteProjectWorktreeResponse204 & {
-  headers: Headers;
-};
-export type deleteProjectWorktreeResponseError = (
-  | deleteProjectWorktreeResponse403
-  | deleteProjectWorktreeResponse404
-) & {
-  headers: Headers;
-};
-
-export type deleteProjectWorktreeResponse =
-  | deleteProjectWorktreeResponseSuccess
-  | deleteProjectWorktreeResponseError;
-
 export const getDeleteProjectWorktreeUrl = (projectId: string, name: string) => {
   return `/api/projects/${projectId}/worktrees/${name}`;
 };
@@ -472,14 +364,11 @@ export const deleteProjectWorktree = async (
   projectId: string,
   name: string,
   options?: RequestInit,
-): Promise<deleteProjectWorktreeResponse> => {
-  return customInstance<deleteProjectWorktreeResponse>(
-    getDeleteProjectWorktreeUrl(projectId, name),
-    {
-      ...options,
-      method: 'DELETE',
-    },
-  );
+): Promise<void> => {
+  return customInstance<void>(getDeleteProjectWorktreeUrl(projectId, name), {
+    ...options,
+    method: 'DELETE',
+  });
 };
 
 export const getDeleteProjectWorktreeMutationOptions = <
@@ -492,6 +381,7 @@ export const getDeleteProjectWorktreeMutationOptions = <
     { projectId: string; name: string },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectWorktree>>,
   TError,
@@ -499,11 +389,11 @@ export const getDeleteProjectWorktreeMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteProjectWorktree'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectWorktree>>,
@@ -511,7 +401,7 @@ export const getDeleteProjectWorktreeMutationOptions = <
   > = (props) => {
     const { projectId, name } = props ?? {};
 
-    return deleteProjectWorktree(projectId, name);
+    return deleteProjectWorktree(projectId, name, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -531,6 +421,7 @@ export const useDeleteProjectWorktree = <TError = void, TContext = unknown>(
       { projectId: string; name: string },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -541,23 +432,12 @@ export const useDeleteProjectWorktree = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getDeleteProjectWorktreeMutationOptions(options), queryClient);
 };
-export type listWorktreesResponse200 = {
-  data: WorktreeResponse[];
-  status: 200;
-};
-
-export type listWorktreesResponseSuccess = listWorktreesResponse200 & {
-  headers: Headers;
-};
-
-export type listWorktreesResponse = listWorktreesResponseSuccess;
-
 export const getListWorktreesUrl = () => {
   return `/api/worktrees`;
 };
 
-export const listWorktrees = async (options?: RequestInit): Promise<listWorktreesResponse> => {
-  return customInstance<listWorktreesResponse>(getListWorktreesUrl(), {
+export const listWorktrees = async (options?: RequestInit): Promise<WorktreeResponse[]> => {
+  return customInstance<WorktreeResponse[]>(getListWorktreesUrl(), {
     ...options,
     method: 'GET',
   });
@@ -572,13 +452,14 @@ export const getListWorktreesQueryOptions = <
   TError = unknown,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorktrees>>, TError, TData>>;
+  request?: SecondParameter<typeof customInstance>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListWorktreesQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorktrees>>> = ({ signal }) =>
-    listWorktrees({ signal });
+    listWorktrees({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listWorktrees>>,
@@ -604,6 +485,7 @@ export function useListWorktrees<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -621,6 +503,7 @@ export function useListWorktrees<
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -630,6 +513,7 @@ export function useListWorktrees<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorktrees>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -640,6 +524,7 @@ export function useListWorktrees<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorktrees>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -652,33 +537,6 @@ export function useListWorktrees<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type createWorktreeResponse201 = {
-  data: WorktreeResponse;
-  status: 201;
-};
-
-export type createWorktreeResponse400 = {
-  data: void;
-  status: 400;
-};
-
-export type createWorktreeResponse409 = {
-  data: void;
-  status: 409;
-};
-
-export type createWorktreeResponseSuccess = createWorktreeResponse201 & {
-  headers: Headers;
-};
-export type createWorktreeResponseError = (
-  | createWorktreeResponse400
-  | createWorktreeResponse409
-) & {
-  headers: Headers;
-};
-
-export type createWorktreeResponse = createWorktreeResponseSuccess | createWorktreeResponseError;
-
 export const getCreateWorktreeUrl = () => {
   return `/api/worktrees`;
 };
@@ -686,8 +544,8 @@ export const getCreateWorktreeUrl = () => {
 export const createWorktree = async (
   createWorktreeRequest: CreateWorktreeRequest,
   options?: RequestInit,
-): Promise<createWorktreeResponse> => {
-  return customInstance<createWorktreeResponse>(getCreateWorktreeUrl(), {
+): Promise<WorktreeResponse> => {
+  return customInstance<WorktreeResponse>(getCreateWorktreeUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -702,6 +560,7 @@ export const getCreateWorktreeMutationOptions = <TError = void, TContext = unkno
     { data: CreateWorktreeRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createWorktree>>,
   TError,
@@ -709,11 +568,11 @@ export const getCreateWorktreeMutationOptions = <TError = void, TContext = unkno
   TContext
 > => {
   const mutationKey = ['createWorktree'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createWorktree>>,
@@ -721,7 +580,7 @@ export const getCreateWorktreeMutationOptions = <TError = void, TContext = unkno
   > = (props) => {
     const { data } = props ?? {};
 
-    return createWorktree(data);
+    return createWorktree(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -739,6 +598,7 @@ export const useCreateWorktree = <TError = void, TContext = unknown>(
       { data: CreateWorktreeRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -749,25 +609,6 @@ export const useCreateWorktree = <TError = void, TContext = unknown>(
 > => {
   return useMutation(getCreateWorktreeMutationOptions(options), queryClient);
 };
-export type getWorktreeResponse200 = {
-  data: WorktreeResponse;
-  status: 200;
-};
-
-export type getWorktreeResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type getWorktreeResponseSuccess = getWorktreeResponse200 & {
-  headers: Headers;
-};
-export type getWorktreeResponseError = getWorktreeResponse404 & {
-  headers: Headers;
-};
-
-export type getWorktreeResponse = getWorktreeResponseSuccess | getWorktreeResponseError;
-
 export const getGetWorktreeUrl = (name: string) => {
   return `/api/worktrees/${name}`;
 };
@@ -775,8 +616,8 @@ export const getGetWorktreeUrl = (name: string) => {
 export const getWorktree = async (
   name: string,
   options?: RequestInit,
-): Promise<getWorktreeResponse> => {
-  return customInstance<getWorktreeResponse>(getGetWorktreeUrl(name), {
+): Promise<WorktreeResponse> => {
+  return customInstance<WorktreeResponse>(getGetWorktreeUrl(name), {
     ...options,
     method: 'GET',
   });
@@ -793,14 +634,15 @@ export const getGetWorktreeQueryOptions = <
   name: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorktree>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetWorktreeQueryKey(name);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorktree>>> = ({ signal }) =>
-    getWorktree(name, { signal });
+    getWorktree(name, { signal, ...requestOptions });
 
   return { queryKey, queryFn, enabled: !!name, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getWorktree>>,
@@ -824,6 +666,7 @@ export function useGetWorktree<TData = Awaited<ReturnType<typeof getWorktree>>, 
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -839,6 +682,7 @@ export function useGetWorktree<TData = Awaited<ReturnType<typeof getWorktree>>, 
         >,
         'initialData'
       >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -846,6 +690,7 @@ export function useGetWorktree<TData = Awaited<ReturnType<typeof getWorktree>>, 
   name: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorktree>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -854,6 +699,7 @@ export function useGetWorktree<TData = Awaited<ReturnType<typeof getWorktree>>, 
   name: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorktree>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -866,34 +712,12 @@ export function useGetWorktree<TData = Awaited<ReturnType<typeof getWorktree>>, 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export type deleteWorktreeResponse204 = {
-  data: void;
-  status: 204;
-};
-
-export type deleteWorktreeResponse404 = {
-  data: void;
-  status: 404;
-};
-
-export type deleteWorktreeResponseSuccess = deleteWorktreeResponse204 & {
-  headers: Headers;
-};
-export type deleteWorktreeResponseError = deleteWorktreeResponse404 & {
-  headers: Headers;
-};
-
-export type deleteWorktreeResponse = deleteWorktreeResponseSuccess | deleteWorktreeResponseError;
-
 export const getDeleteWorktreeUrl = (name: string) => {
   return `/api/worktrees/${name}`;
 };
 
-export const deleteWorktree = async (
-  name: string,
-  options?: RequestInit,
-): Promise<deleteWorktreeResponse> => {
-  return customInstance<deleteWorktreeResponse>(getDeleteWorktreeUrl(name), {
+export const deleteWorktree = async (name: string, options?: RequestInit): Promise<void> => {
+  return customInstance<void>(getDeleteWorktreeUrl(name), {
     ...options,
     method: 'DELETE',
   });
@@ -906,6 +730,7 @@ export const getDeleteWorktreeMutationOptions = <TError = void, TContext = unkno
     { name: string },
     TContext
   >;
+  request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteWorktree>>,
   TError,
@@ -913,11 +738,11 @@ export const getDeleteWorktreeMutationOptions = <TError = void, TContext = unkno
   TContext
 > => {
   const mutationKey = ['deleteWorktree'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteWorktree>>,
@@ -925,7 +750,7 @@ export const getDeleteWorktreeMutationOptions = <TError = void, TContext = unkno
   > = (props) => {
     const { name } = props ?? {};
 
-    return deleteWorktree(name);
+    return deleteWorktree(name, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -943,6 +768,7 @@ export const useDeleteWorktree = <TError = void, TContext = unknown>(
       { name: string },
       TContext
     >;
+    request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
