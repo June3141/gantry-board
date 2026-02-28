@@ -11,7 +11,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 5173
 
-# Vite dev server with host binding for Docker
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
