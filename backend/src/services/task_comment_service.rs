@@ -1,37 +1,10 @@
-use chrono::{DateTime, Utc};
-use sqlx::prelude::FromRow;
+use chrono::Utc;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::task_comment::{CreateCommentRequest, TaskComment, UpdateCommentRequest};
-
-#[derive(FromRow)]
-struct CommentRow {
-    id: String,
-    task_id: String,
-    user_id: String,
-    user_name: String,
-    content: String,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-}
-
-impl TryFrom<CommentRow> for TaskComment {
-    type Error = uuid::Error;
-
-    fn try_from(row: CommentRow) -> Result<Self, Self::Error> {
-        Ok(TaskComment {
-            id: row.id.parse()?,
-            task_id: row.task_id.parse()?,
-            user_id: row.user_id.parse()?,
-            user_name: row.user_name,
-            content: row.content,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        })
-    }
-}
+use crate::repositories::task_comment_repository;
 
 pub async fn create_comment(
     pool: &SqlitePool,
@@ -41,64 +14,16 @@ pub async fn create_comment(
 ) -> AppResult<TaskComment> {
     let id = Uuid::new_v4();
     let now = Utc::now();
-
-    sqlx::query(
-        r#"
-        INSERT INTO task_comments (id, task_id, user_id, content, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        "#,
-    )
-    .bind(id.to_string())
-    .bind(task_id.to_string())
-    .bind(user_id.to_string())
-    .bind(&req.content)
-    .bind(now)
-    .bind(now)
-    .execute(pool)
-    .await?;
-
-    get_comment(pool, id).await
+    task_comment_repository::insert(pool, id, task_id, user_id, &req.content, now).await?;
+    task_comment_repository::find_by_id(pool, id).await
 }
 
 pub async fn get_comment(pool: &SqlitePool, comment_id: Uuid) -> AppResult<TaskComment> {
-    let row = sqlx::query_as::<_, CommentRow>(
-        r#"
-        SELECT c.id, c.task_id, c.user_id, u.name as user_name,
-               c.content, c.created_at, c.updated_at
-        FROM task_comments c
-        JOIN users u ON c.user_id = u.id
-        WHERE c.id = $1
-        "#,
-    )
-    .bind(comment_id.to_string())
-    .fetch_optional(pool)
-    .await?;
-
-    row.map(|r| r.try_into())
-        .transpose()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?
-        .ok_or_else(|| AppError::NotFound(format!("comment {} not found", comment_id)))
+    task_comment_repository::find_by_id(pool, comment_id).await
 }
 
 pub async fn list_comments(pool: &SqlitePool, task_id: Uuid) -> AppResult<Vec<TaskComment>> {
-    let rows = sqlx::query_as::<_, CommentRow>(
-        r#"
-        SELECT c.id, c.task_id, c.user_id, u.name as user_name,
-               c.content, c.created_at, c.updated_at
-        FROM task_comments c
-        JOIN users u ON c.user_id = u.id
-        WHERE c.task_id = $1
-        ORDER BY c.created_at ASC
-        "#,
-    )
-    .bind(task_id.to_string())
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    task_comment_repository::find_all_by_task(pool, task_id).await
 }
 
 pub async fn update_comment(
@@ -107,7 +32,7 @@ pub async fn update_comment(
     user_id: Uuid,
     req: &UpdateCommentRequest,
 ) -> AppResult<TaskComment> {
-    let existing = get_comment(pool, comment_id).await?;
+    let existing = task_comment_repository::find_by_id(pool, comment_id).await?;
 
     if existing.user_id != user_id {
         return Err(AppError::Forbidden(
@@ -116,24 +41,12 @@ pub async fn update_comment(
     }
 
     let now = Utc::now();
-    sqlx::query(
-        r#"
-        UPDATE task_comments
-        SET content = $1, updated_at = $2
-        WHERE id = $3
-        "#,
-    )
-    .bind(&req.content)
-    .bind(now)
-    .bind(comment_id.to_string())
-    .execute(pool)
-    .await?;
-
-    get_comment(pool, comment_id).await
+    task_comment_repository::update_content(pool, comment_id, &req.content, now).await?;
+    task_comment_repository::find_by_id(pool, comment_id).await
 }
 
 pub async fn delete_comment(pool: &SqlitePool, comment_id: Uuid, user_id: Uuid) -> AppResult<()> {
-    let existing = get_comment(pool, comment_id).await?;
+    let existing = task_comment_repository::find_by_id(pool, comment_id).await?;
 
     if existing.user_id != user_id {
         return Err(AppError::Forbidden(
@@ -141,22 +54,15 @@ pub async fn delete_comment(pool: &SqlitePool, comment_id: Uuid, user_id: Uuid) 
         ));
     }
 
-    sqlx::query("DELETE FROM task_comments WHERE id = $1")
-        .bind(comment_id.to_string())
-        .execute(pool)
-        .await?;
-
+    task_comment_repository::delete(pool, comment_id).await?;
     Ok(())
 }
 
 /// Delete a comment regardless of author (for admin use).
 pub async fn delete_comment_admin(pool: &SqlitePool, comment_id: Uuid) -> AppResult<()> {
-    let result = sqlx::query("DELETE FROM task_comments WHERE id = $1")
-        .bind(comment_id.to_string())
-        .execute(pool)
-        .await?;
+    let rows_affected = task_comment_repository::delete(pool, comment_id).await?;
 
-    if result.rows_affected() == 0 {
+    if rows_affected == 0 {
         return Err(AppError::NotFound(format!(
             "comment {} not found",
             comment_id
