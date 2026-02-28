@@ -5,10 +5,7 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -21,648 +18,658 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
+  UseQueryResult,
 } from '@tanstack/react-query';
-
-import type {
-  CreatePreviewRequest,
-  DockerPreview
-} from '../../model';
-
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
-
-
-
+import type { CreatePreviewRequest, DockerPreview } from '../../model';
 
 export type listPreviewsResponse200 = {
-  data: DockerPreview[]
-  status: 200
-}
+  data: DockerPreview[];
+  status: 200;
+};
 
-export type listPreviewsResponseSuccess = (listPreviewsResponse200) & {
+export type listPreviewsResponseSuccess = listPreviewsResponse200 & {
   headers: Headers;
 };
-;
 
-export type listPreviewsResponse = (listPreviewsResponseSuccess)
+export type listPreviewsResponse = listPreviewsResponseSuccess;
 
 export const getListPreviewsUrl = () => {
+  return `/api/previews`;
+};
 
-
-  
-
-  return `/api/previews`
-}
-
-export const listPreviews = async ( options?: RequestInit): Promise<listPreviewsResponse> => {
-  
-  return customInstance<listPreviewsResponse>(getListPreviewsUrl(),
-  {      
+export const listPreviews = async (options?: RequestInit): Promise<listPreviewsResponse> => {
+  return customInstance<listPreviewsResponse>(getListPreviewsUrl(), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
-
-
-
+    method: 'GET',
+  });
+};
 
 export const getListPreviewsQueryKey = () => {
-    return [
-    `/api/previews`
-    ] as const;
-    }
+  return [`/api/previews`] as const;
+};
 
-    
-export const getListPreviewsQueryOptions = <TData = Awaited<ReturnType<typeof listPreviews>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>>, }
-) => {
+export const getListPreviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPreviews>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>>;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListPreviewsQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getListPreviewsQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPreviews>>> = ({ signal }) =>
+    listPreviews({ signal });
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPreviews>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPreviews>>> = ({ signal }) => listPreviews({ signal });
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListPreviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listPreviews>>>
-export type ListPreviewsQueryError = unknown
-
+export type ListPreviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listPreviews>>>;
+export type ListPreviewsQueryError = unknown;
 
 export function useListPreviews<TData = Awaited<ReturnType<typeof listPreviews>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>> & Pick<
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPreviews>>,
           TError,
           Awaited<ReturnType<typeof listPreviews>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListPreviews<TData = Awaited<ReturnType<typeof listPreviews>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>> & Pick<
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPreviews>>,
           TError,
           Awaited<ReturnType<typeof listPreviews>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListPreviews<TData = Awaited<ReturnType<typeof listPreviews>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
 export function useListPreviews<TData = Awaited<ReturnType<typeof listPreviews>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreviews>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPreviewsQueryOptions(options);
 
-  const queryOptions = getListPreviewsQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-
-
-
 export type createPreviewResponse201 = {
-  data: DockerPreview
-  status: 201
-}
+  data: DockerPreview;
+  status: 201;
+};
 
 export type createPreviewResponse404 = {
-  data: void
-  status: 404
-}
+  data: void;
+  status: 404;
+};
 
 export type createPreviewResponse409 = {
-  data: void
-  status: 409
-}
+  data: void;
+  status: 409;
+};
 
-export type createPreviewResponseSuccess = (createPreviewResponse201) & {
+export type createPreviewResponseSuccess = createPreviewResponse201 & {
   headers: Headers;
 };
 export type createPreviewResponseError = (createPreviewResponse404 | createPreviewResponse409) & {
   headers: Headers;
 };
 
-export type createPreviewResponse = (createPreviewResponseSuccess | createPreviewResponseError)
+export type createPreviewResponse = createPreviewResponseSuccess | createPreviewResponseError;
 
 export const getCreatePreviewUrl = () => {
+  return `/api/previews`;
+};
 
-
-  
-
-  return `/api/previews`
-}
-
-export const createPreview = async (createPreviewRequest: CreatePreviewRequest, options?: RequestInit): Promise<createPreviewResponse> => {
-  
-  return customInstance<createPreviewResponse>(getCreatePreviewUrl(),
-  {      
+export const createPreview = async (
+  createPreviewRequest: CreatePreviewRequest,
+  options?: RequestInit,
+): Promise<createPreviewResponse> => {
+  return customInstance<createPreviewResponse>(getCreatePreviewUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createPreviewRequest,)
-  }
-);}
-  
+    body: JSON.stringify(createPreviewRequest),
+  });
+};
 
+export const getCreatePreviewMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPreview>>,
+    TError,
+    { data: CreatePreviewRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPreview>>,
+  TError,
+  { data: CreatePreviewRequest },
+  TContext
+> => {
+  const mutationKey = ['createPreview'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPreview>>,
+    { data: CreatePreviewRequest }
+  > = (props) => {
+    const { data } = props ?? {};
 
-export const getCreatePreviewMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPreview>>, TError,{data: CreatePreviewRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createPreview>>, TError,{data: CreatePreviewRequest}, TContext> => {
+    return createPreview(data);
+  };
 
-const mutationKey = ['createPreview'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type CreatePreviewMutationResult = NonNullable<Awaited<ReturnType<typeof createPreview>>>;
+export type CreatePreviewMutationBody = CreatePreviewRequest;
+export type CreatePreviewMutationError = void;
 
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPreview>>, {data: CreatePreviewRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createPreview(data,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreatePreviewMutationResult = NonNullable<Awaited<ReturnType<typeof createPreview>>>
-    export type CreatePreviewMutationBody = CreatePreviewRequest
-    export type CreatePreviewMutationError = void
-
-    export const useCreatePreview = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPreview>>, TError,{data: CreatePreviewRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createPreview>>,
-        TError,
-        {data: CreatePreviewRequest},
-        TContext
-      > => {
-      return useMutation(getCreatePreviewMutationOptions(options), queryClient);
-    }
-    export type getPreviewResponse200 = {
-  data: DockerPreview
-  status: 200
-}
+export const useCreatePreview = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createPreview>>,
+      TError,
+      { data: CreatePreviewRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createPreview>>,
+  TError,
+  { data: CreatePreviewRequest },
+  TContext
+> => {
+  return useMutation(getCreatePreviewMutationOptions(options), queryClient);
+};
+export type getPreviewResponse200 = {
+  data: DockerPreview;
+  status: 200;
+};
 
 export type getPreviewResponse404 = {
-  data: void
-  status: 404
-}
-
-export type getPreviewResponseSuccess = (getPreviewResponse200) & {
-  headers: Headers;
-};
-export type getPreviewResponseError = (getPreviewResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type getPreviewResponse = (getPreviewResponseSuccess | getPreviewResponseError)
+export type getPreviewResponseSuccess = getPreviewResponse200 & {
+  headers: Headers;
+};
+export type getPreviewResponseError = getPreviewResponse404 & {
+  headers: Headers;
+};
 
-export const getGetPreviewUrl = (id: string,) => {
+export type getPreviewResponse = getPreviewResponseSuccess | getPreviewResponseError;
 
+export const getGetPreviewUrl = (id: string) => {
+  return `/api/previews/${id}`;
+};
 
-  
-
-  return `/api/previews/${id}`
-}
-
-export const getPreview = async (id: string, options?: RequestInit): Promise<getPreviewResponse> => {
-  
-  return customInstance<getPreviewResponse>(getGetPreviewUrl(id),
-  {      
+export const getPreview = async (
+  id: string,
+  options?: RequestInit,
+): Promise<getPreviewResponse> => {
+  return customInstance<getPreviewResponse>(getGetPreviewUrl(id), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getGetPreviewQueryKey = (id: string) => {
+  return [`/api/previews/${id}`] as const;
+};
 
-
-
-export const getGetPreviewQueryKey = (id: string,) => {
-    return [
-    `/api/previews/${id}`
-    ] as const;
-    }
-
-    
-export const getGetPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getPreview>>, TError = void>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>>, }
+export const getGetPreviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPreview>>,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>>;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetPreviewQueryKey(id);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetPreviewQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPreview>>> = ({ signal }) =>
+    getPreview(id, { signal });
 
-  
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPreview>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPreview>>> = ({ signal }) => getPreview(id, { signal });
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getPreview>>>
-export type GetPreviewQueryError = void
-
+export type GetPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getPreview>>>;
+export type GetPreviewQueryError = void;
 
 export function useGetPreview<TData = Awaited<ReturnType<typeof getPreview>>, TError = void>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>> & Pick<
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPreview>>,
           TError,
           Awaited<ReturnType<typeof getPreview>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetPreview<TData = Awaited<ReturnType<typeof getPreview>>, TError = void>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>> & Pick<
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPreview>>,
           TError,
           Awaited<ReturnType<typeof getPreview>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetPreview<TData = Awaited<ReturnType<typeof getPreview>>, TError = void>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
 export function useGetPreview<TData = Awaited<ReturnType<typeof getPreview>>, TError = void>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPreviewQueryOptions(id, options);
 
-  const queryOptions = getGetPreviewQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-
-
-
 export type deletePreviewResponse204 = {
-  data: void
-  status: 204
-}
+  data: void;
+  status: 204;
+};
 
 export type deletePreviewResponse404 = {
-  data: void
-  status: 404
-}
-
-export type deletePreviewResponseSuccess = (deletePreviewResponse204) & {
-  headers: Headers;
-};
-export type deletePreviewResponseError = (deletePreviewResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type deletePreviewResponse = (deletePreviewResponseSuccess | deletePreviewResponseError)
+export type deletePreviewResponseSuccess = deletePreviewResponse204 & {
+  headers: Headers;
+};
+export type deletePreviewResponseError = deletePreviewResponse404 & {
+  headers: Headers;
+};
 
-export const getDeletePreviewUrl = (id: string,) => {
+export type deletePreviewResponse = deletePreviewResponseSuccess | deletePreviewResponseError;
 
+export const getDeletePreviewUrl = (id: string) => {
+  return `/api/previews/${id}`;
+};
 
-  
-
-  return `/api/previews/${id}`
-}
-
-export const deletePreview = async (id: string, options?: RequestInit): Promise<deletePreviewResponse> => {
-  
-  return customInstance<deletePreviewResponse>(getDeletePreviewUrl(id),
-  {      
+export const deletePreview = async (
+  id: string,
+  options?: RequestInit,
+): Promise<deletePreviewResponse> => {
+  return customInstance<deletePreviewResponse>(getDeletePreviewUrl(id), {
     ...options,
-    method: 'DELETE'
-    
-    
-  }
-);}
-  
+    method: 'DELETE',
+  });
+};
 
+export const getDeletePreviewMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePreview>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deletePreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['deletePreview'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePreview>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
 
-export const getDeletePreviewMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePreview>>, TError,{id: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deletePreview>>, TError,{id: string}, TContext> => {
+    return deletePreview(id);
+  };
 
-const mutationKey = ['deletePreview'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type DeletePreviewMutationResult = NonNullable<Awaited<ReturnType<typeof deletePreview>>>;
 
+export type DeletePreviewMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePreview>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  deletePreview(id,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeletePreviewMutationResult = NonNullable<Awaited<ReturnType<typeof deletePreview>>>
-    
-    export type DeletePreviewMutationError = void
-
-    export const useDeletePreview = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePreview>>, TError,{id: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deletePreview>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-      return useMutation(getDeletePreviewMutationOptions(options), queryClient);
-    }
-    export type restartPreviewResponse202 = {
-  data: void
-  status: 202
-}
+export const useDeletePreview = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deletePreview>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deletePreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeletePreviewMutationOptions(options), queryClient);
+};
+export type restartPreviewResponse202 = {
+  data: void;
+  status: 202;
+};
 
 export type restartPreviewResponse404 = {
-  data: void
-  status: 404
-}
-
-export type restartPreviewResponseSuccess = (restartPreviewResponse202) & {
-  headers: Headers;
-};
-export type restartPreviewResponseError = (restartPreviewResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type restartPreviewResponse = (restartPreviewResponseSuccess | restartPreviewResponseError)
+export type restartPreviewResponseSuccess = restartPreviewResponse202 & {
+  headers: Headers;
+};
+export type restartPreviewResponseError = restartPreviewResponse404 & {
+  headers: Headers;
+};
 
-export const getRestartPreviewUrl = (id: string,) => {
+export type restartPreviewResponse = restartPreviewResponseSuccess | restartPreviewResponseError;
 
+export const getRestartPreviewUrl = (id: string) => {
+  return `/api/previews/${id}/restart`;
+};
 
-  
-
-  return `/api/previews/${id}/restart`
-}
-
-export const restartPreview = async (id: string, options?: RequestInit): Promise<restartPreviewResponse> => {
-  
-  return customInstance<restartPreviewResponse>(getRestartPreviewUrl(id),
-  {      
+export const restartPreview = async (
+  id: string,
+  options?: RequestInit,
+): Promise<restartPreviewResponse> => {
+  return customInstance<restartPreviewResponse>(getRestartPreviewUrl(id), {
     ...options,
-    method: 'POST'
-    
-    
-  }
-);}
-  
+    method: 'POST',
+  });
+};
 
+export const getRestartPreviewMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restartPreview>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restartPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['restartPreview'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof restartPreview>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
 
-export const getRestartPreviewMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restartPreview>>, TError,{id: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof restartPreview>>, TError,{id: string}, TContext> => {
+    return restartPreview(id);
+  };
 
-const mutationKey = ['restartPreview'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type RestartPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof restartPreview>>>;
 
+export type RestartPreviewMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restartPreview>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  restartPreview(id,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RestartPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof restartPreview>>>
-    
-    export type RestartPreviewMutationError = void
-
-    export const useRestartPreview = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restartPreview>>, TError,{id: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof restartPreview>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-      return useMutation(getRestartPreviewMutationOptions(options), queryClient);
-    }
-    export type startPreviewResponse202 = {
-  data: void
-  status: 202
-}
+export const useRestartPreview = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof restartPreview>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof restartPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getRestartPreviewMutationOptions(options), queryClient);
+};
+export type startPreviewResponse202 = {
+  data: void;
+  status: 202;
+};
 
 export type startPreviewResponse404 = {
-  data: void
-  status: 404
-}
-
-export type startPreviewResponseSuccess = (startPreviewResponse202) & {
-  headers: Headers;
-};
-export type startPreviewResponseError = (startPreviewResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type startPreviewResponse = (startPreviewResponseSuccess | startPreviewResponseError)
+export type startPreviewResponseSuccess = startPreviewResponse202 & {
+  headers: Headers;
+};
+export type startPreviewResponseError = startPreviewResponse404 & {
+  headers: Headers;
+};
 
-export const getStartPreviewUrl = (id: string,) => {
+export type startPreviewResponse = startPreviewResponseSuccess | startPreviewResponseError;
 
+export const getStartPreviewUrl = (id: string) => {
+  return `/api/previews/${id}/start`;
+};
 
-  
-
-  return `/api/previews/${id}/start`
-}
-
-export const startPreview = async (id: string, options?: RequestInit): Promise<startPreviewResponse> => {
-  
-  return customInstance<startPreviewResponse>(getStartPreviewUrl(id),
-  {      
+export const startPreview = async (
+  id: string,
+  options?: RequestInit,
+): Promise<startPreviewResponse> => {
+  return customInstance<startPreviewResponse>(getStartPreviewUrl(id), {
     ...options,
-    method: 'POST'
-    
-    
-  }
-);}
-  
+    method: 'POST',
+  });
+};
 
+export const getStartPreviewMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startPreview>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['startPreview'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPreview>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
 
-export const getStartPreviewMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPreview>>, TError,{id: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof startPreview>>, TError,{id: string}, TContext> => {
+    return startPreview(id);
+  };
 
-const mutationKey = ['startPreview'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type StartPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof startPreview>>>;
 
+export type StartPreviewMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPreview>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  startPreview(id,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type StartPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof startPreview>>>
-    
-    export type StartPreviewMutationError = void
-
-    export const useStartPreview = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPreview>>, TError,{id: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof startPreview>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-      return useMutation(getStartPreviewMutationOptions(options), queryClient);
-    }
-    export type stopPreviewResponse200 = {
-  data: DockerPreview
-  status: 200
-}
+export const useStartPreview = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startPreview>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof startPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getStartPreviewMutationOptions(options), queryClient);
+};
+export type stopPreviewResponse200 = {
+  data: DockerPreview;
+  status: 200;
+};
 
 export type stopPreviewResponse404 = {
-  data: void
-  status: 404
-}
-
-export type stopPreviewResponseSuccess = (stopPreviewResponse200) & {
-  headers: Headers;
-};
-export type stopPreviewResponseError = (stopPreviewResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type stopPreviewResponse = (stopPreviewResponseSuccess | stopPreviewResponseError)
+export type stopPreviewResponseSuccess = stopPreviewResponse200 & {
+  headers: Headers;
+};
+export type stopPreviewResponseError = stopPreviewResponse404 & {
+  headers: Headers;
+};
 
-export const getStopPreviewUrl = (id: string,) => {
+export type stopPreviewResponse = stopPreviewResponseSuccess | stopPreviewResponseError;
 
+export const getStopPreviewUrl = (id: string) => {
+  return `/api/previews/${id}/stop`;
+};
 
-  
-
-  return `/api/previews/${id}/stop`
-}
-
-export const stopPreview = async (id: string, options?: RequestInit): Promise<stopPreviewResponse> => {
-  
-  return customInstance<stopPreviewResponse>(getStopPreviewUrl(id),
-  {      
+export const stopPreview = async (
+  id: string,
+  options?: RequestInit,
+): Promise<stopPreviewResponse> => {
+  return customInstance<stopPreviewResponse>(getStopPreviewUrl(id), {
     ...options,
-    method: 'POST'
-    
-    
-  }
-);}
-  
+    method: 'POST',
+  });
+};
 
+export const getStopPreviewMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof stopPreview>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof stopPreview>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['stopPreview'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopPreview>>, { id: string }> = (
+    props,
+  ) => {
+    const { id } = props ?? {};
 
-export const getStopPreviewMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopPreview>>, TError,{id: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof stopPreview>>, TError,{id: string}, TContext> => {
+    return stopPreview(id);
+  };
 
-const mutationKey = ['stopPreview'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type StopPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof stopPreview>>>;
 
+export type StopPreviewMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopPreview>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  stopPreview(id,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type StopPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof stopPreview>>>
-    
-    export type StopPreviewMutationError = void
-
-    export const useStopPreview = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopPreview>>, TError,{id: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof stopPreview>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-      return useMutation(getStopPreviewMutationOptions(options), queryClient);
-    }
-    
+export const useStopPreview = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof stopPreview>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof stopPreview>>, TError, { id: string }, TContext> => {
+  return useMutation(getStopPreviewMutationOptions(options), queryClient);
+};

@@ -5,10 +5,7 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -21,519 +18,589 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
+  UseQueryResult,
 } from '@tanstack/react-query';
-
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { customInstance } from '../../../client';
 import type {
   CreateGitHubLinkRequest,
   GitHubLink,
   GitHubLinkStatus,
-  SyncResult
+  SyncResult,
 } from '../../model';
 
-import { customInstance } from '../../../client';
-
-
-
-
 export type getGithubLinkResponse200 = {
-  data: GitHubLink
-  status: 200
-}
+  data: GitHubLink;
+  status: 200;
+};
 
 export type getGithubLinkResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type getGithubLinkResponse404 = {
-  data: void
-  status: 404
-}
+  data: void;
+  status: 404;
+};
 
-export type getGithubLinkResponseSuccess = (getGithubLinkResponse200) & {
+export type getGithubLinkResponseSuccess = getGithubLinkResponse200 & {
   headers: Headers;
 };
 export type getGithubLinkResponseError = (getGithubLinkResponse403 | getGithubLinkResponse404) & {
   headers: Headers;
 };
 
-export type getGithubLinkResponse = (getGithubLinkResponseSuccess | getGithubLinkResponseError)
+export type getGithubLinkResponse = getGithubLinkResponseSuccess | getGithubLinkResponseError;
 
-export const getGetGithubLinkUrl = (projectId: string,) => {
+export const getGetGithubLinkUrl = (projectId: string) => {
+  return `/api/projects/${projectId}/github-link`;
+};
 
-
-  
-
-  return `/api/projects/${projectId}/github-link`
-}
-
-export const getGithubLink = async (projectId: string, options?: RequestInit): Promise<getGithubLinkResponse> => {
-  
-  return customInstance<getGithubLinkResponse>(getGetGithubLinkUrl(projectId),
-  {      
+export const getGithubLink = async (
+  projectId: string,
+  options?: RequestInit,
+): Promise<getGithubLinkResponse> => {
+  return customInstance<getGithubLinkResponse>(getGetGithubLinkUrl(projectId), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getGetGithubLinkQueryKey = (projectId: string) => {
+  return [`/api/projects/${projectId}/github-link`] as const;
+};
 
-
-
-export const getGetGithubLinkQueryKey = (projectId: string,) => {
-    return [
-    `/api/projects/${projectId}/github-link`
-    ] as const;
-    }
-
-    
-export const getGetGithubLinkQueryOptions = <TData = Awaited<ReturnType<typeof getGithubLink>>, TError = void>(projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>>, }
+export const getGetGithubLinkQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGithubLink>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>>;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetGithubLinkQueryKey(projectId);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetGithubLinkQueryKey(projectId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGithubLink>>> = ({ signal }) =>
+    getGithubLink(projectId, { signal });
 
-  
+  return { queryKey, queryFn, enabled: !!projectId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGithubLink>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGithubLink>>> = ({ signal }) => getGithubLink(projectId, { signal });
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetGithubLinkQueryResult = NonNullable<Awaited<ReturnType<typeof getGithubLink>>>
-export type GetGithubLinkQueryError = void
-
+export type GetGithubLinkQueryResult = NonNullable<Awaited<ReturnType<typeof getGithubLink>>>;
+export type GetGithubLinkQueryError = void;
 
 export function useGetGithubLink<TData = Awaited<ReturnType<typeof getGithubLink>>, TError = void>(
- projectId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>> & Pick<
+  projectId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getGithubLink>>,
           TError,
           Awaited<ReturnType<typeof getGithubLink>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetGithubLink<TData = Awaited<ReturnType<typeof getGithubLink>>, TError = void>(
- projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>> & Pick<
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getGithubLink>>,
           TError,
           Awaited<ReturnType<typeof getGithubLink>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetGithubLink<TData = Awaited<ReturnType<typeof getGithubLink>>, TError = void>(
- projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
 export function useGetGithubLink<TData = Awaited<ReturnType<typeof getGithubLink>>, TError = void>(
- projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLink>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetGithubLinkQueryOptions(projectId, options);
 
-  const queryOptions = getGetGithubLinkQueryOptions(projectId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-
-
-
 export type createGithubLinkResponse201 = {
-  data: GitHubLink
-  status: 201
-}
+  data: GitHubLink;
+  status: 201;
+};
 
 export type createGithubLinkResponse400 = {
-  data: void
-  status: 400
-}
+  data: void;
+  status: 400;
+};
 
 export type createGithubLinkResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type createGithubLinkResponse409 = {
-  data: void
-  status: 409
-}
-
-export type createGithubLinkResponseSuccess = (createGithubLinkResponse201) & {
-  headers: Headers;
-};
-export type createGithubLinkResponseError = (createGithubLinkResponse400 | createGithubLinkResponse403 | createGithubLinkResponse409) & {
-  headers: Headers;
+  data: void;
+  status: 409;
 };
 
-export type createGithubLinkResponse = (createGithubLinkResponseSuccess | createGithubLinkResponseError)
+export type createGithubLinkResponseSuccess = createGithubLinkResponse201 & {
+  headers: Headers;
+};
+export type createGithubLinkResponseError = (
+  | createGithubLinkResponse400
+  | createGithubLinkResponse403
+  | createGithubLinkResponse409
+) & {
+  headers: Headers;
+};
 
-export const getCreateGithubLinkUrl = (projectId: string,) => {
+export type createGithubLinkResponse =
+  | createGithubLinkResponseSuccess
+  | createGithubLinkResponseError;
 
+export const getCreateGithubLinkUrl = (projectId: string) => {
+  return `/api/projects/${projectId}/github-link`;
+};
 
-  
-
-  return `/api/projects/${projectId}/github-link`
-}
-
-export const createGithubLink = async (projectId: string,
-    createGitHubLinkRequest: CreateGitHubLinkRequest, options?: RequestInit): Promise<createGithubLinkResponse> => {
-  
-  return customInstance<createGithubLinkResponse>(getCreateGithubLinkUrl(projectId),
-  {      
+export const createGithubLink = async (
+  projectId: string,
+  createGitHubLinkRequest: CreateGitHubLinkRequest,
+  options?: RequestInit,
+): Promise<createGithubLinkResponse> => {
+  return customInstance<createGithubLinkResponse>(getCreateGithubLinkUrl(projectId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createGitHubLinkRequest,)
-  }
-);}
-  
+    body: JSON.stringify(createGitHubLinkRequest),
+  });
+};
 
+export const getCreateGithubLinkMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGithubLink>>,
+    TError,
+    { projectId: string; data: CreateGitHubLinkRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createGithubLink>>,
+  TError,
+  { projectId: string; data: CreateGitHubLinkRequest },
+  TContext
+> => {
+  const mutationKey = ['createGithubLink'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createGithubLink>>,
+    { projectId: string; data: CreateGitHubLinkRequest }
+  > = (props) => {
+    const { projectId, data } = props ?? {};
 
-export const getCreateGithubLinkMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGithubLink>>, TError,{projectId: string;data: CreateGitHubLinkRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createGithubLink>>, TError,{projectId: string;data: CreateGitHubLinkRequest}, TContext> => {
+    return createGithubLink(projectId, data);
+  };
 
-const mutationKey = ['createGithubLink'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type CreateGithubLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createGithubLink>>
+>;
+export type CreateGithubLinkMutationBody = CreateGitHubLinkRequest;
+export type CreateGithubLinkMutationError = void;
 
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGithubLink>>, {projectId: string;data: CreateGitHubLinkRequest}> = (props) => {
-          const {projectId,data} = props ?? {};
-
-          return  createGithubLink(projectId,data,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateGithubLinkMutationResult = NonNullable<Awaited<ReturnType<typeof createGithubLink>>>
-    export type CreateGithubLinkMutationBody = CreateGitHubLinkRequest
-    export type CreateGithubLinkMutationError = void
-
-    export const useCreateGithubLink = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGithubLink>>, TError,{projectId: string;data: CreateGitHubLinkRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createGithubLink>>,
-        TError,
-        {projectId: string;data: CreateGitHubLinkRequest},
-        TContext
-      > => {
-      return useMutation(getCreateGithubLinkMutationOptions(options), queryClient);
-    }
-    export type deleteGithubLinkResponse204 = {
-  data: void
-  status: 204
-}
+export const useCreateGithubLink = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createGithubLink>>,
+      TError,
+      { projectId: string; data: CreateGitHubLinkRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createGithubLink>>,
+  TError,
+  { projectId: string; data: CreateGitHubLinkRequest },
+  TContext
+> => {
+  return useMutation(getCreateGithubLinkMutationOptions(options), queryClient);
+};
+export type deleteGithubLinkResponse204 = {
+  data: void;
+  status: 204;
+};
 
 export type deleteGithubLinkResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type deleteGithubLinkResponse404 = {
-  data: void
-  status: 404
-}
-
-export type deleteGithubLinkResponseSuccess = (deleteGithubLinkResponse204) & {
-  headers: Headers;
-};
-export type deleteGithubLinkResponseError = (deleteGithubLinkResponse403 | deleteGithubLinkResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type deleteGithubLinkResponse = (deleteGithubLinkResponseSuccess | deleteGithubLinkResponseError)
+export type deleteGithubLinkResponseSuccess = deleteGithubLinkResponse204 & {
+  headers: Headers;
+};
+export type deleteGithubLinkResponseError = (
+  | deleteGithubLinkResponse403
+  | deleteGithubLinkResponse404
+) & {
+  headers: Headers;
+};
 
-export const getDeleteGithubLinkUrl = (projectId: string,) => {
+export type deleteGithubLinkResponse =
+  | deleteGithubLinkResponseSuccess
+  | deleteGithubLinkResponseError;
 
+export const getDeleteGithubLinkUrl = (projectId: string) => {
+  return `/api/projects/${projectId}/github-link`;
+};
 
-  
-
-  return `/api/projects/${projectId}/github-link`
-}
-
-export const deleteGithubLink = async (projectId: string, options?: RequestInit): Promise<deleteGithubLinkResponse> => {
-  
-  return customInstance<deleteGithubLinkResponse>(getDeleteGithubLinkUrl(projectId),
-  {      
+export const deleteGithubLink = async (
+  projectId: string,
+  options?: RequestInit,
+): Promise<deleteGithubLinkResponse> => {
+  return customInstance<deleteGithubLinkResponse>(getDeleteGithubLinkUrl(projectId), {
     ...options,
-    method: 'DELETE'
-    
-    
-  }
-);}
-  
+    method: 'DELETE',
+  });
+};
 
+export const getDeleteGithubLinkMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteGithubLink>>,
+    TError,
+    { projectId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteGithubLink>>,
+  TError,
+  { projectId: string },
+  TContext
+> => {
+  const mutationKey = ['deleteGithubLink'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteGithubLink>>,
+    { projectId: string }
+  > = (props) => {
+    const { projectId } = props ?? {};
 
-export const getDeleteGithubLinkMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGithubLink>>, TError,{projectId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteGithubLink>>, TError,{projectId: string}, TContext> => {
+    return deleteGithubLink(projectId);
+  };
 
-const mutationKey = ['deleteGithubLink'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type DeleteGithubLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteGithubLink>>
+>;
 
+export type DeleteGithubLinkMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteGithubLink>>, {projectId: string}> = (props) => {
-          const {projectId} = props ?? {};
-
-          return  deleteGithubLink(projectId,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteGithubLinkMutationResult = NonNullable<Awaited<ReturnType<typeof deleteGithubLink>>>
-    
-    export type DeleteGithubLinkMutationError = void
-
-    export const useDeleteGithubLink = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGithubLink>>, TError,{projectId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteGithubLink>>,
-        TError,
-        {projectId: string},
-        TContext
-      > => {
-      return useMutation(getDeleteGithubLinkMutationOptions(options), queryClient);
-    }
-    export type getGithubLinkStatusResponse200 = {
-  data: GitHubLinkStatus
-  status: 200
-}
+export const useDeleteGithubLink = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteGithubLink>>,
+      TError,
+      { projectId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteGithubLink>>,
+  TError,
+  { projectId: string },
+  TContext
+> => {
+  return useMutation(getDeleteGithubLinkMutationOptions(options), queryClient);
+};
+export type getGithubLinkStatusResponse200 = {
+  data: GitHubLinkStatus;
+  status: 200;
+};
 
 export type getGithubLinkStatusResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type getGithubLinkStatusResponse404 = {
-  data: void
-  status: 404
-}
-
-export type getGithubLinkStatusResponseSuccess = (getGithubLinkStatusResponse200) & {
-  headers: Headers;
-};
-export type getGithubLinkStatusResponseError = (getGithubLinkStatusResponse403 | getGithubLinkStatusResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type getGithubLinkStatusResponse = (getGithubLinkStatusResponseSuccess | getGithubLinkStatusResponseError)
+export type getGithubLinkStatusResponseSuccess = getGithubLinkStatusResponse200 & {
+  headers: Headers;
+};
+export type getGithubLinkStatusResponseError = (
+  | getGithubLinkStatusResponse403
+  | getGithubLinkStatusResponse404
+) & {
+  headers: Headers;
+};
 
-export const getGetGithubLinkStatusUrl = (projectId: string,) => {
+export type getGithubLinkStatusResponse =
+  | getGithubLinkStatusResponseSuccess
+  | getGithubLinkStatusResponseError;
 
+export const getGetGithubLinkStatusUrl = (projectId: string) => {
+  return `/api/projects/${projectId}/github-link/status`;
+};
 
-  
-
-  return `/api/projects/${projectId}/github-link/status`
-}
-
-export const getGithubLinkStatus = async (projectId: string, options?: RequestInit): Promise<getGithubLinkStatusResponse> => {
-  
-  return customInstance<getGithubLinkStatusResponse>(getGetGithubLinkStatusUrl(projectId),
-  {      
+export const getGithubLinkStatus = async (
+  projectId: string,
+  options?: RequestInit,
+): Promise<getGithubLinkStatusResponse> => {
+  return customInstance<getGithubLinkStatusResponse>(getGetGithubLinkStatusUrl(projectId), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getGetGithubLinkStatusQueryKey = (projectId: string) => {
+  return [`/api/projects/${projectId}/github-link/status`] as const;
+};
 
-
-
-export const getGetGithubLinkStatusQueryKey = (projectId: string,) => {
-    return [
-    `/api/projects/${projectId}/github-link/status`
-    ] as const;
-    }
-
-    
-export const getGetGithubLinkStatusQueryOptions = <TData = Awaited<ReturnType<typeof getGithubLinkStatus>>, TError = void>(projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>>, }
+export const getGetGithubLinkStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGithubLinkStatus>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetGithubLinkStatusQueryKey(projectId);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetGithubLinkStatusQueryKey(projectId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGithubLinkStatus>>> = ({ signal }) =>
+    getGithubLinkStatus(projectId, { signal });
 
-  
+  return { queryKey, queryFn, enabled: !!projectId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGithubLinkStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGithubLinkStatus>>> = ({ signal }) => getGithubLinkStatus(projectId, { signal });
+export type GetGithubLinkStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGithubLinkStatus>>
+>;
+export type GetGithubLinkStatusQueryError = void;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetGithubLinkStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getGithubLinkStatus>>>
-export type GetGithubLinkStatusQueryError = void
-
-
-export function useGetGithubLinkStatus<TData = Awaited<ReturnType<typeof getGithubLinkStatus>>, TError = void>(
- projectId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>> & Pick<
+export function useGetGithubLinkStatus<
+  TData = Awaited<ReturnType<typeof getGithubLinkStatus>>,
+  TError = void,
+>(
+  projectId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getGithubLinkStatus>>,
           TError,
           Awaited<ReturnType<typeof getGithubLinkStatus>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetGithubLinkStatus<TData = Awaited<ReturnType<typeof getGithubLinkStatus>>, TError = void>(
- projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetGithubLinkStatus<
+  TData = Awaited<ReturnType<typeof getGithubLinkStatus>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getGithubLinkStatus>>,
           TError,
           Awaited<ReturnType<typeof getGithubLinkStatus>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetGithubLinkStatus<TData = Awaited<ReturnType<typeof getGithubLinkStatus>>, TError = void>(
- projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetGithubLinkStatus<
+  TData = Awaited<ReturnType<typeof getGithubLinkStatus>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useGetGithubLinkStatus<TData = Awaited<ReturnType<typeof getGithubLinkStatus>>, TError = void>(
- projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetGithubLinkStatus<
+  TData = Awaited<ReturnType<typeof getGithubLinkStatus>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGithubLinkStatus>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetGithubLinkStatusQueryOptions(projectId, options);
 
-  const queryOptions = getGetGithubLinkStatusQueryOptions(projectId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-
-
-
 export type syncGithubLinkResponse200 = {
-  data: SyncResult
-  status: 200
-}
+  data: SyncResult;
+  status: 200;
+};
 
 export type syncGithubLinkResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type syncGithubLinkResponse404 = {
-  data: void
-  status: 404
-}
-
-export type syncGithubLinkResponseSuccess = (syncGithubLinkResponse200) & {
-  headers: Headers;
-};
-export type syncGithubLinkResponseError = (syncGithubLinkResponse403 | syncGithubLinkResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type syncGithubLinkResponse = (syncGithubLinkResponseSuccess | syncGithubLinkResponseError)
+export type syncGithubLinkResponseSuccess = syncGithubLinkResponse200 & {
+  headers: Headers;
+};
+export type syncGithubLinkResponseError = (
+  | syncGithubLinkResponse403
+  | syncGithubLinkResponse404
+) & {
+  headers: Headers;
+};
 
-export const getSyncGithubLinkUrl = (projectId: string,) => {
+export type syncGithubLinkResponse = syncGithubLinkResponseSuccess | syncGithubLinkResponseError;
 
+export const getSyncGithubLinkUrl = (projectId: string) => {
+  return `/api/projects/${projectId}/github-link/sync`;
+};
 
-  
-
-  return `/api/projects/${projectId}/github-link/sync`
-}
-
-export const syncGithubLink = async (projectId: string, options?: RequestInit): Promise<syncGithubLinkResponse> => {
-  
-  return customInstance<syncGithubLinkResponse>(getSyncGithubLinkUrl(projectId),
-  {      
+export const syncGithubLink = async (
+  projectId: string,
+  options?: RequestInit,
+): Promise<syncGithubLinkResponse> => {
+  return customInstance<syncGithubLinkResponse>(getSyncGithubLinkUrl(projectId), {
     ...options,
-    method: 'POST'
-    
-    
-  }
-);}
-  
+    method: 'POST',
+  });
+};
 
+export const getSyncGithubLinkMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncGithubLink>>,
+    TError,
+    { projectId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncGithubLink>>,
+  TError,
+  { projectId: string },
+  TContext
+> => {
+  const mutationKey = ['syncGithubLink'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncGithubLink>>,
+    { projectId: string }
+  > = (props) => {
+    const { projectId } = props ?? {};
 
-export const getSyncGithubLinkMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncGithubLink>>, TError,{projectId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof syncGithubLink>>, TError,{projectId: string}, TContext> => {
+    return syncGithubLink(projectId);
+  };
 
-const mutationKey = ['syncGithubLink'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type SyncGithubLinkMutationResult = NonNullable<Awaited<ReturnType<typeof syncGithubLink>>>;
 
+export type SyncGithubLinkMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncGithubLink>>, {projectId: string}> = (props) => {
-          const {projectId} = props ?? {};
-
-          return  syncGithubLink(projectId,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type SyncGithubLinkMutationResult = NonNullable<Awaited<ReturnType<typeof syncGithubLink>>>
-    
-    export type SyncGithubLinkMutationError = void
-
-    export const useSyncGithubLink = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncGithubLink>>, TError,{projectId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof syncGithubLink>>,
-        TError,
-        {projectId: string},
-        TContext
-      > => {
-      return useMutation(getSyncGithubLinkMutationOptions(options), queryClient);
-    }
-    
+export const useSyncGithubLink = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof syncGithubLink>>,
+      TError,
+      { projectId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof syncGithubLink>>,
+  TError,
+  { projectId: string },
+  TContext
+> => {
+  return useMutation(getSyncGithubLinkMutationOptions(options), queryClient);
+};

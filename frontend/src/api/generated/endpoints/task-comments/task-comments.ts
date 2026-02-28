@@ -5,10 +5,7 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -21,413 +18,433 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
+  UseQueryResult,
 } from '@tanstack/react-query';
-
-import type {
-  CreateCommentRequest,
-  TaskComment,
-  UpdateCommentRequest
-} from '../../model';
-
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
-
-
-
+import type { CreateCommentRequest, TaskComment, UpdateCommentRequest } from '../../model';
 
 export type listCommentsResponse200 = {
-  data: TaskComment[]
-  status: 200
-}
+  data: TaskComment[];
+  status: 200;
+};
 
 export type listCommentsResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type listCommentsResponse404 = {
-  data: void
-  status: 404
-}
+  data: void;
+  status: 404;
+};
 
-export type listCommentsResponseSuccess = (listCommentsResponse200) & {
+export type listCommentsResponseSuccess = listCommentsResponse200 & {
   headers: Headers;
 };
 export type listCommentsResponseError = (listCommentsResponse403 | listCommentsResponse404) & {
   headers: Headers;
 };
 
-export type listCommentsResponse = (listCommentsResponseSuccess | listCommentsResponseError)
+export type listCommentsResponse = listCommentsResponseSuccess | listCommentsResponseError;
 
-export const getListCommentsUrl = (taskId: string,) => {
+export const getListCommentsUrl = (taskId: string) => {
+  return `/api/tasks/${taskId}/comments`;
+};
 
-
-  
-
-  return `/api/tasks/${taskId}/comments`
-}
-
-export const listComments = async (taskId: string, options?: RequestInit): Promise<listCommentsResponse> => {
-  
-  return customInstance<listCommentsResponse>(getListCommentsUrl(taskId),
-  {      
+export const listComments = async (
+  taskId: string,
+  options?: RequestInit,
+): Promise<listCommentsResponse> => {
+  return customInstance<listCommentsResponse>(getListCommentsUrl(taskId), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getListCommentsQueryKey = (taskId: string) => {
+  return [`/api/tasks/${taskId}/comments`] as const;
+};
 
-
-
-export const getListCommentsQueryKey = (taskId: string,) => {
-    return [
-    `/api/tasks/${taskId}/comments`
-    ] as const;
-    }
-
-    
-export const getListCommentsQueryOptions = <TData = Awaited<ReturnType<typeof listComments>>, TError = void>(taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>>, }
+export const getListCommentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listComments>>,
+  TError = void,
+>(
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>>;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListCommentsQueryKey(taskId);
 
-  const queryKey =  queryOptions?.queryKey ?? getListCommentsQueryKey(taskId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listComments>>> = ({ signal }) =>
+    listComments(taskId, { signal });
 
-  
+  return { queryKey, queryFn, enabled: !!taskId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listComments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listComments>>> = ({ signal }) => listComments(taskId, { signal });
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(taskId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListCommentsQueryResult = NonNullable<Awaited<ReturnType<typeof listComments>>>
-export type ListCommentsQueryError = void
-
+export type ListCommentsQueryResult = NonNullable<Awaited<ReturnType<typeof listComments>>>;
+export type ListCommentsQueryError = void;
 
 export function useListComments<TData = Awaited<ReturnType<typeof listComments>>, TError = void>(
- taskId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>> & Pick<
+  taskId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listComments>>,
           TError,
           Awaited<ReturnType<typeof listComments>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListComments<TData = Awaited<ReturnType<typeof listComments>>, TError = void>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>> & Pick<
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listComments>>,
           TError,
           Awaited<ReturnType<typeof listComments>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListComments<TData = Awaited<ReturnType<typeof listComments>>, TError = void>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
 export function useListComments<TData = Awaited<ReturnType<typeof listComments>>, TError = void>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listComments>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCommentsQueryOptions(taskId, options);
 
-  const queryOptions = getListCommentsQueryOptions(taskId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-
-
-
 export type createCommentResponse201 = {
-  data: TaskComment
-  status: 201
-}
+  data: TaskComment;
+  status: 201;
+};
 
 export type createCommentResponse400 = {
-  data: void
-  status: 400
-}
+  data: void;
+  status: 400;
+};
 
 export type createCommentResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type createCommentResponse404 = {
-  data: void
-  status: 404
-}
-
-export type createCommentResponseSuccess = (createCommentResponse201) & {
-  headers: Headers;
-};
-export type createCommentResponseError = (createCommentResponse400 | createCommentResponse403 | createCommentResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type createCommentResponse = (createCommentResponseSuccess | createCommentResponseError)
+export type createCommentResponseSuccess = createCommentResponse201 & {
+  headers: Headers;
+};
+export type createCommentResponseError = (
+  | createCommentResponse400
+  | createCommentResponse403
+  | createCommentResponse404
+) & {
+  headers: Headers;
+};
 
-export const getCreateCommentUrl = (taskId: string,) => {
+export type createCommentResponse = createCommentResponseSuccess | createCommentResponseError;
 
+export const getCreateCommentUrl = (taskId: string) => {
+  return `/api/tasks/${taskId}/comments`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/comments`
-}
-
-export const createComment = async (taskId: string,
-    createCommentRequest: CreateCommentRequest, options?: RequestInit): Promise<createCommentResponse> => {
-  
-  return customInstance<createCommentResponse>(getCreateCommentUrl(taskId),
-  {      
+export const createComment = async (
+  taskId: string,
+  createCommentRequest: CreateCommentRequest,
+  options?: RequestInit,
+): Promise<createCommentResponse> => {
+  return customInstance<createCommentResponse>(getCreateCommentUrl(taskId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createCommentRequest,)
-  }
-);}
-  
+    body: JSON.stringify(createCommentRequest),
+  });
+};
 
+export const getCreateCommentMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createComment>>,
+    TError,
+    { taskId: string; data: CreateCommentRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createComment>>,
+  TError,
+  { taskId: string; data: CreateCommentRequest },
+  TContext
+> => {
+  const mutationKey = ['createComment'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createComment>>,
+    { taskId: string; data: CreateCommentRequest }
+  > = (props) => {
+    const { taskId, data } = props ?? {};
 
-export const getCreateCommentMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createComment>>, TError,{taskId: string;data: CreateCommentRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createComment>>, TError,{taskId: string;data: CreateCommentRequest}, TContext> => {
+    return createComment(taskId, data);
+  };
 
-const mutationKey = ['createComment'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type CreateCommentMutationResult = NonNullable<Awaited<ReturnType<typeof createComment>>>;
+export type CreateCommentMutationBody = CreateCommentRequest;
+export type CreateCommentMutationError = void;
 
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createComment>>, {taskId: string;data: CreateCommentRequest}> = (props) => {
-          const {taskId,data} = props ?? {};
-
-          return  createComment(taskId,data,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateCommentMutationResult = NonNullable<Awaited<ReturnType<typeof createComment>>>
-    export type CreateCommentMutationBody = CreateCommentRequest
-    export type CreateCommentMutationError = void
-
-    export const useCreateComment = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createComment>>, TError,{taskId: string;data: CreateCommentRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createComment>>,
-        TError,
-        {taskId: string;data: CreateCommentRequest},
-        TContext
-      > => {
-      return useMutation(getCreateCommentMutationOptions(options), queryClient);
-    }
-    export type deleteCommentResponse204 = {
-  data: void
-  status: 204
-}
+export const useCreateComment = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createComment>>,
+      TError,
+      { taskId: string; data: CreateCommentRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createComment>>,
+  TError,
+  { taskId: string; data: CreateCommentRequest },
+  TContext
+> => {
+  return useMutation(getCreateCommentMutationOptions(options), queryClient);
+};
+export type deleteCommentResponse204 = {
+  data: void;
+  status: 204;
+};
 
 export type deleteCommentResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type deleteCommentResponse404 = {
-  data: void
-  status: 404
-}
+  data: void;
+  status: 404;
+};
 
-export type deleteCommentResponseSuccess = (deleteCommentResponse204) & {
+export type deleteCommentResponseSuccess = deleteCommentResponse204 & {
   headers: Headers;
 };
 export type deleteCommentResponseError = (deleteCommentResponse403 | deleteCommentResponse404) & {
   headers: Headers;
 };
 
-export type deleteCommentResponse = (deleteCommentResponseSuccess | deleteCommentResponseError)
+export type deleteCommentResponse = deleteCommentResponseSuccess | deleteCommentResponseError;
 
-export const getDeleteCommentUrl = (taskId: string,
-    commentId: string,) => {
+export const getDeleteCommentUrl = (taskId: string, commentId: string) => {
+  return `/api/tasks/${taskId}/comments/${commentId}`;
+};
 
-
-  
-
-  return `/api/tasks/${taskId}/comments/${commentId}`
-}
-
-export const deleteComment = async (taskId: string,
-    commentId: string, options?: RequestInit): Promise<deleteCommentResponse> => {
-  
-  return customInstance<deleteCommentResponse>(getDeleteCommentUrl(taskId,commentId),
-  {      
+export const deleteComment = async (
+  taskId: string,
+  commentId: string,
+  options?: RequestInit,
+): Promise<deleteCommentResponse> => {
+  return customInstance<deleteCommentResponse>(getDeleteCommentUrl(taskId, commentId), {
     ...options,
-    method: 'DELETE'
-    
-    
-  }
-);}
-  
+    method: 'DELETE',
+  });
+};
 
+export const getDeleteCommentMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteComment>>,
+    TError,
+    { taskId: string; commentId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteComment>>,
+  TError,
+  { taskId: string; commentId: string },
+  TContext
+> => {
+  const mutationKey = ['deleteComment'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteComment>>,
+    { taskId: string; commentId: string }
+  > = (props) => {
+    const { taskId, commentId } = props ?? {};
 
-export const getDeleteCommentMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteComment>>, TError,{taskId: string;commentId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteComment>>, TError,{taskId: string;commentId: string}, TContext> => {
+    return deleteComment(taskId, commentId);
+  };
 
-const mutationKey = ['deleteComment'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type DeleteCommentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteComment>>>;
 
+export type DeleteCommentMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteComment>>, {taskId: string;commentId: string}> = (props) => {
-          const {taskId,commentId} = props ?? {};
-
-          return  deleteComment(taskId,commentId,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteCommentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteComment>>>
-    
-    export type DeleteCommentMutationError = void
-
-    export const useDeleteComment = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteComment>>, TError,{taskId: string;commentId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteComment>>,
-        TError,
-        {taskId: string;commentId: string},
-        TContext
-      > => {
-      return useMutation(getDeleteCommentMutationOptions(options), queryClient);
-    }
-    export type updateCommentResponse200 = {
-  data: TaskComment
-  status: 200
-}
+export const useDeleteComment = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteComment>>,
+      TError,
+      { taskId: string; commentId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteComment>>,
+  TError,
+  { taskId: string; commentId: string },
+  TContext
+> => {
+  return useMutation(getDeleteCommentMutationOptions(options), queryClient);
+};
+export type updateCommentResponse200 = {
+  data: TaskComment;
+  status: 200;
+};
 
 export type updateCommentResponse400 = {
-  data: void
-  status: 400
-}
+  data: void;
+  status: 400;
+};
 
 export type updateCommentResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type updateCommentResponse404 = {
-  data: void
-  status: 404
-}
-
-export type updateCommentResponseSuccess = (updateCommentResponse200) & {
-  headers: Headers;
-};
-export type updateCommentResponseError = (updateCommentResponse400 | updateCommentResponse403 | updateCommentResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type updateCommentResponse = (updateCommentResponseSuccess | updateCommentResponseError)
+export type updateCommentResponseSuccess = updateCommentResponse200 & {
+  headers: Headers;
+};
+export type updateCommentResponseError = (
+  | updateCommentResponse400
+  | updateCommentResponse403
+  | updateCommentResponse404
+) & {
+  headers: Headers;
+};
 
-export const getUpdateCommentUrl = (taskId: string,
-    commentId: string,) => {
+export type updateCommentResponse = updateCommentResponseSuccess | updateCommentResponseError;
 
+export const getUpdateCommentUrl = (taskId: string, commentId: string) => {
+  return `/api/tasks/${taskId}/comments/${commentId}`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/comments/${commentId}`
-}
-
-export const updateComment = async (taskId: string,
-    commentId: string,
-    updateCommentRequest: UpdateCommentRequest, options?: RequestInit): Promise<updateCommentResponse> => {
-  
-  return customInstance<updateCommentResponse>(getUpdateCommentUrl(taskId,commentId),
-  {      
+export const updateComment = async (
+  taskId: string,
+  commentId: string,
+  updateCommentRequest: UpdateCommentRequest,
+  options?: RequestInit,
+): Promise<updateCommentResponse> => {
+  return customInstance<updateCommentResponse>(getUpdateCommentUrl(taskId, commentId), {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      updateCommentRequest,)
-  }
-);}
-  
+    body: JSON.stringify(updateCommentRequest),
+  });
+};
 
+export const getUpdateCommentMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateComment>>,
+    TError,
+    { taskId: string; commentId: string; data: UpdateCommentRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateComment>>,
+  TError,
+  { taskId: string; commentId: string; data: UpdateCommentRequest },
+  TContext
+> => {
+  const mutationKey = ['updateComment'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateComment>>,
+    { taskId: string; commentId: string; data: UpdateCommentRequest }
+  > = (props) => {
+    const { taskId, commentId, data } = props ?? {};
 
-export const getUpdateCommentMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateComment>>, TError,{taskId: string;commentId: string;data: UpdateCommentRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof updateComment>>, TError,{taskId: string;commentId: string;data: UpdateCommentRequest}, TContext> => {
+    return updateComment(taskId, commentId, data);
+  };
 
-const mutationKey = ['updateComment'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type UpdateCommentMutationResult = NonNullable<Awaited<ReturnType<typeof updateComment>>>;
+export type UpdateCommentMutationBody = UpdateCommentRequest;
+export type UpdateCommentMutationError = void;
 
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateComment>>, {taskId: string;commentId: string;data: UpdateCommentRequest}> = (props) => {
-          const {taskId,commentId,data} = props ?? {};
-
-          return  updateComment(taskId,commentId,data,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UpdateCommentMutationResult = NonNullable<Awaited<ReturnType<typeof updateComment>>>
-    export type UpdateCommentMutationBody = UpdateCommentRequest
-    export type UpdateCommentMutationError = void
-
-    export const useUpdateComment = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateComment>>, TError,{taskId: string;commentId: string;data: UpdateCommentRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof updateComment>>,
-        TError,
-        {taskId: string;commentId: string;data: UpdateCommentRequest},
-        TContext
-      > => {
-      return useMutation(getUpdateCommentMutationOptions(options), queryClient);
-    }
-    
+export const useUpdateComment = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateComment>>,
+      TError,
+      { taskId: string; commentId: string; data: UpdateCommentRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateComment>>,
+  TError,
+  { taskId: string; commentId: string; data: UpdateCommentRequest },
+  TContext
+> => {
+  return useMutation(getUpdateCommentMutationOptions(options), queryClient);
+};

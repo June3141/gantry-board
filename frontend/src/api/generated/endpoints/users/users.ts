@@ -5,9 +5,7 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -17,134 +15,135 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
+  UseQueryResult,
 } from '@tanstack/react-query';
-
-import type {
-  SearchUsersParams,
-  User
-} from '../../model';
-
+import { useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
-
-
-
+import type { SearchUsersParams, User } from '../../model';
 
 export type searchUsersResponse200 = {
-  data: User[]
-  status: 200
-}
+  data: User[];
+  status: 200;
+};
 
 export type searchUsersResponse401 = {
-  data: void
-  status: 401
-}
-
-export type searchUsersResponseSuccess = (searchUsersResponse200) & {
-  headers: Headers;
-};
-export type searchUsersResponseError = (searchUsersResponse401) & {
-  headers: Headers;
+  data: void;
+  status: 401;
 };
 
-export type searchUsersResponse = (searchUsersResponseSuccess | searchUsersResponseError)
+export type searchUsersResponseSuccess = searchUsersResponse200 & {
+  headers: Headers;
+};
+export type searchUsersResponseError = searchUsersResponse401 & {
+  headers: Headers;
+};
 
-export const getSearchUsersUrl = (params?: SearchUsersParams,) => {
+export type searchUsersResponse = searchUsersResponseSuccess | searchUsersResponseError;
+
+export const getSearchUsersUrl = (params?: SearchUsersParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? 'null' : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/users?${stringifiedParams}` : `/api/users`
-}
+  return stringifiedParams.length > 0 ? `/api/users?${stringifiedParams}` : `/api/users`;
+};
 
-export const searchUsers = async (params?: SearchUsersParams, options?: RequestInit): Promise<searchUsersResponse> => {
-  
-  return customInstance<searchUsersResponse>(getSearchUsersUrl(params),
-  {      
+export const searchUsers = async (
+  params?: SearchUsersParams,
+  options?: RequestInit,
+): Promise<searchUsersResponse> => {
+  return customInstance<searchUsersResponse>(getSearchUsersUrl(params), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getSearchUsersQueryKey = (params?: SearchUsersParams) => {
+  return [`/api/users`, ...(params ? [params] : [])] as const;
+};
 
-
-
-export const getSearchUsersQueryKey = (params?: SearchUsersParams,) => {
-    return [
-    `/api/users`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-    
-export const getSearchUsersQueryOptions = <TData = Awaited<ReturnType<typeof searchUsers>>, TError = void>(params?: SearchUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>>, }
+export const getSearchUsersQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchUsers>>,
+  TError = void,
+>(
+  params?: SearchUsersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>>;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getSearchUsersQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getSearchUsersQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchUsers>>> = ({ signal }) =>
+    searchUsers(params, { signal });
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchUsers>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchUsers>>> = ({ signal }) => searchUsers(params, { signal });
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SearchUsersQueryResult = NonNullable<Awaited<ReturnType<typeof searchUsers>>>
-export type SearchUsersQueryError = void
-
+export type SearchUsersQueryResult = NonNullable<Awaited<ReturnType<typeof searchUsers>>>;
+export type SearchUsersQueryError = void;
 
 export function useSearchUsers<TData = Awaited<ReturnType<typeof searchUsers>>, TError = void>(
- params: undefined |  SearchUsersParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>> & Pick<
+  params: undefined | SearchUsersParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof searchUsers>>,
           TError,
           Awaited<ReturnType<typeof searchUsers>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useSearchUsers<TData = Awaited<ReturnType<typeof searchUsers>>, TError = void>(
- params?: SearchUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>> & Pick<
+  params?: SearchUsersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof searchUsers>>,
           TError,
           Awaited<ReturnType<typeof searchUsers>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useSearchUsers<TData = Awaited<ReturnType<typeof searchUsers>>, TError = void>(
- params?: SearchUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  params?: SearchUsersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
 export function useSearchUsers<TData = Awaited<ReturnType<typeof searchUsers>>, TError = void>(
- params?: SearchUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  params?: SearchUsersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchUsers>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchUsersQueryOptions(params, options);
 
-  const queryOptions = getSearchUsersQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
-

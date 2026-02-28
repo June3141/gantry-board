@@ -9,8 +9,7 @@
 /**
  * Pull request state.
  */
-export type PrState = typeof PrState[keyof typeof PrState];
-
+export type PrState = (typeof PrState)[keyof typeof PrState];
 
 export const PrState = {
   open: 'open',

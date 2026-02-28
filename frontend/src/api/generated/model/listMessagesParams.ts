@@ -7,12 +7,12 @@
  */
 
 export type ListMessagesParams = {
-/**
- * Cursor: return messages before this timestamp
- */
-before?: string;
-/**
- * Max messages to return (default 50, max 100)
- */
-limit?: number;
+  /**
+   * Cursor: return messages before this timestamp
+   */
+  before?: string;
+  /**
+   * Max messages to return (default 50, max 100)
+   */
+  limit?: number;
 };

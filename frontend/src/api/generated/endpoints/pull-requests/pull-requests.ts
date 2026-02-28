@@ -5,9 +5,7 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -17,131 +15,147 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
+  UseQueryResult,
 } from '@tanstack/react-query';
-
-import type {
-  GitHubPullRequest
-} from '../../model';
-
+import { useQuery } from '@tanstack/react-query';
 import { customInstance } from '../../../client';
-
-
-
+import type { GitHubPullRequest } from '../../model';
 
 export type listPullRequestsResponse200 = {
-  data: GitHubPullRequest[]
-  status: 200
-}
+  data: GitHubPullRequest[];
+  status: 200;
+};
 
 export type listPullRequestsResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type listPullRequestsResponse404 = {
-  data: void
-  status: 404
-}
-
-export type listPullRequestsResponseSuccess = (listPullRequestsResponse200) & {
-  headers: Headers;
-};
-export type listPullRequestsResponseError = (listPullRequestsResponse403 | listPullRequestsResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type listPullRequestsResponse = (listPullRequestsResponseSuccess | listPullRequestsResponseError)
+export type listPullRequestsResponseSuccess = listPullRequestsResponse200 & {
+  headers: Headers;
+};
+export type listPullRequestsResponseError = (
+  | listPullRequestsResponse403
+  | listPullRequestsResponse404
+) & {
+  headers: Headers;
+};
 
-export const getListPullRequestsUrl = (taskId: string,) => {
+export type listPullRequestsResponse =
+  | listPullRequestsResponseSuccess
+  | listPullRequestsResponseError;
 
+export const getListPullRequestsUrl = (taskId: string) => {
+  return `/api/tasks/${taskId}/pull-requests`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/pull-requests`
-}
-
-export const listPullRequests = async (taskId: string, options?: RequestInit): Promise<listPullRequestsResponse> => {
-  
-  return customInstance<listPullRequestsResponse>(getListPullRequestsUrl(taskId),
-  {      
+export const listPullRequests = async (
+  taskId: string,
+  options?: RequestInit,
+): Promise<listPullRequestsResponse> => {
+  return customInstance<listPullRequestsResponse>(getListPullRequestsUrl(taskId), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getListPullRequestsQueryKey = (taskId: string) => {
+  return [`/api/tasks/${taskId}/pull-requests`] as const;
+};
 
-
-
-export const getListPullRequestsQueryKey = (taskId: string,) => {
-    return [
-    `/api/tasks/${taskId}/pull-requests`
-    ] as const;
-    }
-
-    
-export const getListPullRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listPullRequests>>, TError = void>(taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>>, }
+export const getListPullRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPullRequests>>,
+  TError = void,
+>(
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>>;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListPullRequestsQueryKey(taskId);
 
-  const queryKey =  queryOptions?.queryKey ?? getListPullRequestsQueryKey(taskId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPullRequests>>> = ({ signal }) =>
+    listPullRequests(taskId, { signal });
 
-  
+  return { queryKey, queryFn, enabled: !!taskId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPullRequests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPullRequests>>> = ({ signal }) => listPullRequests(taskId, { signal });
+export type ListPullRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listPullRequests>>>;
+export type ListPullRequestsQueryError = void;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(taskId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListPullRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listPullRequests>>>
-export type ListPullRequestsQueryError = void
-
-
-export function useListPullRequests<TData = Awaited<ReturnType<typeof listPullRequests>>, TError = void>(
- taskId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>> & Pick<
+export function useListPullRequests<
+  TData = Awaited<ReturnType<typeof listPullRequests>>,
+  TError = void,
+>(
+  taskId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPullRequests>>,
           TError,
           Awaited<ReturnType<typeof listPullRequests>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPullRequests<TData = Awaited<ReturnType<typeof listPullRequests>>, TError = void>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPullRequests<
+  TData = Awaited<ReturnType<typeof listPullRequests>>,
+  TError = void,
+>(
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPullRequests>>,
           TError,
           Awaited<ReturnType<typeof listPullRequests>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPullRequests<TData = Awaited<ReturnType<typeof listPullRequests>>, TError = void>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPullRequests<
+  TData = Awaited<ReturnType<typeof listPullRequests>>,
+  TError = void,
+>(
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useListPullRequests<TData = Awaited<ReturnType<typeof listPullRequests>>, TError = void>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListPullRequests<
+  TData = Awaited<ReturnType<typeof listPullRequests>>,
+  TError = void,
+>(
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPullRequests>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPullRequestsQueryOptions(taskId, options);
 
-  const queryOptions = getListPullRequestsQueryOptions(taskId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
-

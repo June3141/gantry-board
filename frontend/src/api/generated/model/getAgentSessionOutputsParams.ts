@@ -7,16 +7,16 @@
  */
 
 export type GetAgentSessionOutputsParams = {
-/**
- * Return outputs after this sequence number
- */
-after?: number;
-/**
- * Maximum number of outputs to return (default: 100, max: 1000)
- */
-limit?: number;
-/**
- * Number of outputs to skip (default: 0)
- */
-offset?: number;
+  /**
+   * Return outputs after this sequence number
+   */
+  after?: number;
+  /**
+   * Maximum number of outputs to return (default: 100, max: 1000)
+   */
+  limit?: number;
+  /**
+   * Number of outputs to skip (default: 0)
+   */
+  offset?: number;
 };

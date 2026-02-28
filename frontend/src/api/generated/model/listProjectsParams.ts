@@ -7,12 +7,12 @@
  */
 
 export type ListProjectsParams = {
-/**
- * Maximum number of items to return (default 50)
- */
-limit?: number;
-/**
- * Number of items to skip (default 0)
- */
-offset?: number;
+  /**
+   * Maximum number of items to return (default 50)
+   */
+  limit?: number;
+  /**
+   * Number of items to skip (default 0)
+   */
+  offset?: number;
 };

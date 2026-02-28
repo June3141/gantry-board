@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
-
+export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
 
 export const TaskStatus = {
   backlog: 'backlog',

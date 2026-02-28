@@ -5,10 +5,7 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -21,9 +18,10 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
+  UseQueryResult,
 } from '@tanstack/react-query';
-
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { customInstance } from '../../../client';
 import type {
   AgentSession,
   AgentSessionOutput,
@@ -31,1061 +29,1247 @@ import type {
   GetAgentSessionOutputsParams,
   StartAgentSessionRequest,
   StartAgentSessionResponse,
-  UpdateAgentSessionRequest
+  UpdateAgentSessionRequest,
 } from '../../model';
 
-import { customInstance } from '../../../client';
-
-
-
-
 export type listAgentSessionsResponse200 = {
-  data: AgentSession[]
-  status: 200
-}
+  data: AgentSession[];
+  status: 200;
+};
 
 export type listAgentSessionsResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type listAgentSessionsResponse404 = {
-  data: void
-  status: 404
-}
-
-export type listAgentSessionsResponseSuccess = (listAgentSessionsResponse200) & {
-  headers: Headers;
-};
-export type listAgentSessionsResponseError = (listAgentSessionsResponse403 | listAgentSessionsResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type listAgentSessionsResponse = (listAgentSessionsResponseSuccess | listAgentSessionsResponseError)
+export type listAgentSessionsResponseSuccess = listAgentSessionsResponse200 & {
+  headers: Headers;
+};
+export type listAgentSessionsResponseError = (
+  | listAgentSessionsResponse403
+  | listAgentSessionsResponse404
+) & {
+  headers: Headers;
+};
 
-export const getListAgentSessionsUrl = (taskId: string,) => {
+export type listAgentSessionsResponse =
+  | listAgentSessionsResponseSuccess
+  | listAgentSessionsResponseError;
 
+export const getListAgentSessionsUrl = (taskId: string) => {
+  return `/api/tasks/${taskId}/sessions`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/sessions`
-}
-
-export const listAgentSessions = async (taskId: string, options?: RequestInit): Promise<listAgentSessionsResponse> => {
-  
-  return customInstance<listAgentSessionsResponse>(getListAgentSessionsUrl(taskId),
-  {      
+export const listAgentSessions = async (
+  taskId: string,
+  options?: RequestInit,
+): Promise<listAgentSessionsResponse> => {
+  return customInstance<listAgentSessionsResponse>(getListAgentSessionsUrl(taskId), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getListAgentSessionsQueryKey = (taskId: string) => {
+  return [`/api/tasks/${taskId}/sessions`] as const;
+};
 
-
-
-export const getListAgentSessionsQueryKey = (taskId: string,) => {
-    return [
-    `/api/tasks/${taskId}/sessions`
-    ] as const;
-    }
-
-    
-export const getListAgentSessionsQueryOptions = <TData = Awaited<ReturnType<typeof listAgentSessions>>, TError = void>(taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>>, }
+export const getListAgentSessionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAgentSessions>>,
+  TError = void,
+>(
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>>;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListAgentSessionsQueryKey(taskId);
 
-  const queryKey =  queryOptions?.queryKey ?? getListAgentSessionsQueryKey(taskId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAgentSessions>>> = ({ signal }) =>
+    listAgentSessions(taskId, { signal });
 
-  
+  return { queryKey, queryFn, enabled: !!taskId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAgentSessions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAgentSessions>>> = ({ signal }) => listAgentSessions(taskId, { signal });
+export type ListAgentSessionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAgentSessions>>
+>;
+export type ListAgentSessionsQueryError = void;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(taskId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListAgentSessionsQueryResult = NonNullable<Awaited<ReturnType<typeof listAgentSessions>>>
-export type ListAgentSessionsQueryError = void
-
-
-export function useListAgentSessions<TData = Awaited<ReturnType<typeof listAgentSessions>>, TError = void>(
- taskId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>> & Pick<
+export function useListAgentSessions<
+  TData = Awaited<ReturnType<typeof listAgentSessions>>,
+  TError = void,
+>(
+  taskId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAgentSessions>>,
           TError,
           Awaited<ReturnType<typeof listAgentSessions>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAgentSessions<TData = Awaited<ReturnType<typeof listAgentSessions>>, TError = void>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAgentSessions<
+  TData = Awaited<ReturnType<typeof listAgentSessions>>,
+  TError = void,
+>(
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAgentSessions>>,
           TError,
           Awaited<ReturnType<typeof listAgentSessions>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAgentSessions<TData = Awaited<ReturnType<typeof listAgentSessions>>, TError = void>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAgentSessions<
+  TData = Awaited<ReturnType<typeof listAgentSessions>>,
+  TError = void,
+>(
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useListAgentSessions<TData = Awaited<ReturnType<typeof listAgentSessions>>, TError = void>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListAgentSessions<
+  TData = Awaited<ReturnType<typeof listAgentSessions>>,
+  TError = void,
+>(
+  taskId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAgentSessions>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListAgentSessionsQueryOptions(taskId, options);
 
-  const queryOptions = getListAgentSessionsQueryOptions(taskId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
 
 export type createAgentSessionResponse201 = {
-  data: AgentSession
-  status: 201
-}
+  data: AgentSession;
+  status: 201;
+};
 
 export type createAgentSessionResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type createAgentSessionResponse404 = {
-  data: void
-  status: 404
-}
-
-export type createAgentSessionResponseSuccess = (createAgentSessionResponse201) & {
-  headers: Headers;
-};
-export type createAgentSessionResponseError = (createAgentSessionResponse403 | createAgentSessionResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type createAgentSessionResponse = (createAgentSessionResponseSuccess | createAgentSessionResponseError)
+export type createAgentSessionResponseSuccess = createAgentSessionResponse201 & {
+  headers: Headers;
+};
+export type createAgentSessionResponseError = (
+  | createAgentSessionResponse403
+  | createAgentSessionResponse404
+) & {
+  headers: Headers;
+};
 
-export const getCreateAgentSessionUrl = (taskId: string,) => {
+export type createAgentSessionResponse =
+  | createAgentSessionResponseSuccess
+  | createAgentSessionResponseError;
 
+export const getCreateAgentSessionUrl = (taskId: string) => {
+  return `/api/tasks/${taskId}/sessions`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/sessions`
-}
-
-export const createAgentSession = async (taskId: string,
-    createAgentSessionRequest: CreateAgentSessionRequest, options?: RequestInit): Promise<createAgentSessionResponse> => {
-  
-  return customInstance<createAgentSessionResponse>(getCreateAgentSessionUrl(taskId),
-  {      
+export const createAgentSession = async (
+  taskId: string,
+  createAgentSessionRequest: CreateAgentSessionRequest,
+  options?: RequestInit,
+): Promise<createAgentSessionResponse> => {
+  return customInstance<createAgentSessionResponse>(getCreateAgentSessionUrl(taskId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createAgentSessionRequest,)
-  }
-);}
-  
+    body: JSON.stringify(createAgentSessionRequest),
+  });
+};
 
+export const getCreateAgentSessionMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAgentSession>>,
+    TError,
+    { taskId: string; data: CreateAgentSessionRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAgentSession>>,
+  TError,
+  { taskId: string; data: CreateAgentSessionRequest },
+  TContext
+> => {
+  const mutationKey = ['createAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAgentSession>>,
+    { taskId: string; data: CreateAgentSessionRequest }
+  > = (props) => {
+    const { taskId, data } = props ?? {};
 
-export const getCreateAgentSessionMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgentSession>>, TError,{taskId: string;data: CreateAgentSessionRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createAgentSession>>, TError,{taskId: string;data: CreateAgentSessionRequest}, TContext> => {
+    return createAgentSession(taskId, data);
+  };
 
-const mutationKey = ['createAgentSession'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type CreateAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAgentSession>>
+>;
+export type CreateAgentSessionMutationBody = CreateAgentSessionRequest;
+export type CreateAgentSessionMutationError = void;
 
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAgentSession>>, {taskId: string;data: CreateAgentSessionRequest}> = (props) => {
-          const {taskId,data} = props ?? {};
-
-          return  createAgentSession(taskId,data,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateAgentSessionMutationResult = NonNullable<Awaited<ReturnType<typeof createAgentSession>>>
-    export type CreateAgentSessionMutationBody = CreateAgentSessionRequest
-    export type CreateAgentSessionMutationError = void
-
-    export const useCreateAgentSession = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgentSession>>, TError,{taskId: string;data: CreateAgentSessionRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createAgentSession>>,
-        TError,
-        {taskId: string;data: CreateAgentSessionRequest},
-        TContext
-      > => {
-      return useMutation(getCreateAgentSessionMutationOptions(options), queryClient);
-    }
-    export type startAgentSessionResponse201 = {
-  data: StartAgentSessionResponse
-  status: 201
-}
+export const useCreateAgentSession = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createAgentSession>>,
+      TError,
+      { taskId: string; data: CreateAgentSessionRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createAgentSession>>,
+  TError,
+  { taskId: string; data: CreateAgentSessionRequest },
+  TContext
+> => {
+  return useMutation(getCreateAgentSessionMutationOptions(options), queryClient);
+};
+export type startAgentSessionResponse201 = {
+  data: StartAgentSessionResponse;
+  status: 201;
+};
 
 export type startAgentSessionResponse400 = {
-  data: void
-  status: 400
-}
+  data: void;
+  status: 400;
+};
 
 export type startAgentSessionResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type startAgentSessionResponse404 = {
-  data: void
-  status: 404
-}
+  data: void;
+  status: 404;
+};
 
 export type startAgentSessionResponse409 = {
-  data: void
-  status: 409
-}
-
-export type startAgentSessionResponseSuccess = (startAgentSessionResponse201) & {
-  headers: Headers;
-};
-export type startAgentSessionResponseError = (startAgentSessionResponse400 | startAgentSessionResponse403 | startAgentSessionResponse404 | startAgentSessionResponse409) & {
-  headers: Headers;
+  data: void;
+  status: 409;
 };
 
-export type startAgentSessionResponse = (startAgentSessionResponseSuccess | startAgentSessionResponseError)
+export type startAgentSessionResponseSuccess = startAgentSessionResponse201 & {
+  headers: Headers;
+};
+export type startAgentSessionResponseError = (
+  | startAgentSessionResponse400
+  | startAgentSessionResponse403
+  | startAgentSessionResponse404
+  | startAgentSessionResponse409
+) & {
+  headers: Headers;
+};
 
-export const getStartAgentSessionUrl = (taskId: string,) => {
+export type startAgentSessionResponse =
+  | startAgentSessionResponseSuccess
+  | startAgentSessionResponseError;
 
+export const getStartAgentSessionUrl = (taskId: string) => {
+  return `/api/tasks/${taskId}/sessions/start`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/sessions/start`
-}
-
-export const startAgentSession = async (taskId: string,
-    startAgentSessionRequest: StartAgentSessionRequest, options?: RequestInit): Promise<startAgentSessionResponse> => {
-  
-  return customInstance<startAgentSessionResponse>(getStartAgentSessionUrl(taskId),
-  {      
+export const startAgentSession = async (
+  taskId: string,
+  startAgentSessionRequest: StartAgentSessionRequest,
+  options?: RequestInit,
+): Promise<startAgentSessionResponse> => {
+  return customInstance<startAgentSessionResponse>(getStartAgentSessionUrl(taskId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      startAgentSessionRequest,)
-  }
-);}
-  
+    body: JSON.stringify(startAgentSessionRequest),
+  });
+};
 
+export const getStartAgentSessionMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startAgentSession>>,
+    TError,
+    { taskId: string; data: StartAgentSessionRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startAgentSession>>,
+  TError,
+  { taskId: string; data: StartAgentSessionRequest },
+  TContext
+> => {
+  const mutationKey = ['startAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startAgentSession>>,
+    { taskId: string; data: StartAgentSessionRequest }
+  > = (props) => {
+    const { taskId, data } = props ?? {};
 
-export const getStartAgentSessionMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAgentSession>>, TError,{taskId: string;data: StartAgentSessionRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof startAgentSession>>, TError,{taskId: string;data: StartAgentSessionRequest}, TContext> => {
+    return startAgentSession(taskId, data);
+  };
 
-const mutationKey = ['startAgentSession'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type StartAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startAgentSession>>
+>;
+export type StartAgentSessionMutationBody = StartAgentSessionRequest;
+export type StartAgentSessionMutationError = void;
 
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startAgentSession>>, {taskId: string;data: StartAgentSessionRequest}> = (props) => {
-          const {taskId,data} = props ?? {};
-
-          return  startAgentSession(taskId,data,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type StartAgentSessionMutationResult = NonNullable<Awaited<ReturnType<typeof startAgentSession>>>
-    export type StartAgentSessionMutationBody = StartAgentSessionRequest
-    export type StartAgentSessionMutationError = void
-
-    export const useStartAgentSession = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAgentSession>>, TError,{taskId: string;data: StartAgentSessionRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof startAgentSession>>,
-        TError,
-        {taskId: string;data: StartAgentSessionRequest},
-        TContext
-      > => {
-      return useMutation(getStartAgentSessionMutationOptions(options), queryClient);
-    }
-    export type getAgentSessionResponse200 = {
-  data: AgentSession
-  status: 200
-}
+export const useStartAgentSession = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startAgentSession>>,
+      TError,
+      { taskId: string; data: StartAgentSessionRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof startAgentSession>>,
+  TError,
+  { taskId: string; data: StartAgentSessionRequest },
+  TContext
+> => {
+  return useMutation(getStartAgentSessionMutationOptions(options), queryClient);
+};
+export type getAgentSessionResponse200 = {
+  data: AgentSession;
+  status: 200;
+};
 
 export type getAgentSessionResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type getAgentSessionResponse404 = {
-  data: void
-  status: 404
-}
-
-export type getAgentSessionResponseSuccess = (getAgentSessionResponse200) & {
-  headers: Headers;
-};
-export type getAgentSessionResponseError = (getAgentSessionResponse403 | getAgentSessionResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type getAgentSessionResponse = (getAgentSessionResponseSuccess | getAgentSessionResponseError)
+export type getAgentSessionResponseSuccess = getAgentSessionResponse200 & {
+  headers: Headers;
+};
+export type getAgentSessionResponseError = (
+  | getAgentSessionResponse403
+  | getAgentSessionResponse404
+) & {
+  headers: Headers;
+};
 
-export const getGetAgentSessionUrl = (taskId: string,
-    sessionId: string,) => {
+export type getAgentSessionResponse = getAgentSessionResponseSuccess | getAgentSessionResponseError;
 
+export const getGetAgentSessionUrl = (taskId: string, sessionId: string) => {
+  return `/api/tasks/${taskId}/sessions/${sessionId}`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/sessions/${sessionId}`
-}
-
-export const getAgentSession = async (taskId: string,
-    sessionId: string, options?: RequestInit): Promise<getAgentSessionResponse> => {
-  
-  return customInstance<getAgentSessionResponse>(getGetAgentSessionUrl(taskId,sessionId),
-  {      
+export const getAgentSession = async (
+  taskId: string,
+  sessionId: string,
+  options?: RequestInit,
+): Promise<getAgentSessionResponse> => {
+  return customInstance<getAgentSessionResponse>(getGetAgentSessionUrl(taskId, sessionId), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getGetAgentSessionQueryKey = (taskId: string, sessionId: string) => {
+  return [`/api/tasks/${taskId}/sessions/${sessionId}`] as const;
+};
 
-
-
-export const getGetAgentSessionQueryKey = (taskId: string,
-    sessionId: string,) => {
-    return [
-    `/api/tasks/${taskId}/sessions/${sessionId}`
-    ] as const;
-    }
-
-    
-export const getGetAgentSessionQueryOptions = <TData = Awaited<ReturnType<typeof getAgentSession>>, TError = void>(taskId: string,
-    sessionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>>, }
+export const getGetAgentSessionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAgentSession>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>>;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetAgentSessionQueryKey(taskId, sessionId);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetAgentSessionQueryKey(taskId,sessionId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentSession>>> = ({ signal }) =>
+    getAgentSession(taskId, sessionId, { signal });
 
-  
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(taskId && sessionId),
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentSession>>> = ({ signal }) => getAgentSession(taskId,sessionId, { signal });
+export type GetAgentSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getAgentSession>>>;
+export type GetAgentSessionQueryError = void;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(taskId && sessionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetAgentSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getAgentSession>>>
-export type GetAgentSessionQueryError = void
-
-
-export function useGetAgentSession<TData = Awaited<ReturnType<typeof getAgentSession>>, TError = void>(
- taskId: string,
-    sessionId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>> & Pick<
+export function useGetAgentSession<
+  TData = Awaited<ReturnType<typeof getAgentSession>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAgentSession>>,
           TError,
           Awaited<ReturnType<typeof getAgentSession>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAgentSession<TData = Awaited<ReturnType<typeof getAgentSession>>, TError = void>(
- taskId: string,
-    sessionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAgentSession<
+  TData = Awaited<ReturnType<typeof getAgentSession>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAgentSession>>,
           TError,
           Awaited<ReturnType<typeof getAgentSession>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAgentSession<TData = Awaited<ReturnType<typeof getAgentSession>>, TError = void>(
- taskId: string,
-    sessionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAgentSession<
+  TData = Awaited<ReturnType<typeof getAgentSession>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useGetAgentSession<TData = Awaited<ReturnType<typeof getAgentSession>>, TError = void>(
- taskId: string,
-    sessionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetAgentSession<
+  TData = Awaited<ReturnType<typeof getAgentSession>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSession>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetAgentSessionQueryOptions(taskId, sessionId, options);
 
-  const queryOptions = getGetAgentSessionQueryOptions(taskId,sessionId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-
-
-
 export type updateAgentSessionResponse200 = {
-  data: AgentSession
-  status: 200
-}
+  data: AgentSession;
+  status: 200;
+};
 
 export type updateAgentSessionResponse400 = {
-  data: void
-  status: 400
-}
+  data: void;
+  status: 400;
+};
 
 export type updateAgentSessionResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type updateAgentSessionResponse404 = {
-  data: void
-  status: 404
-}
-
-export type updateAgentSessionResponseSuccess = (updateAgentSessionResponse200) & {
-  headers: Headers;
-};
-export type updateAgentSessionResponseError = (updateAgentSessionResponse400 | updateAgentSessionResponse403 | updateAgentSessionResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type updateAgentSessionResponse = (updateAgentSessionResponseSuccess | updateAgentSessionResponseError)
+export type updateAgentSessionResponseSuccess = updateAgentSessionResponse200 & {
+  headers: Headers;
+};
+export type updateAgentSessionResponseError = (
+  | updateAgentSessionResponse400
+  | updateAgentSessionResponse403
+  | updateAgentSessionResponse404
+) & {
+  headers: Headers;
+};
 
-export const getUpdateAgentSessionUrl = (taskId: string,
-    sessionId: string,) => {
+export type updateAgentSessionResponse =
+  | updateAgentSessionResponseSuccess
+  | updateAgentSessionResponseError;
 
+export const getUpdateAgentSessionUrl = (taskId: string, sessionId: string) => {
+  return `/api/tasks/${taskId}/sessions/${sessionId}`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/sessions/${sessionId}`
-}
-
-export const updateAgentSession = async (taskId: string,
-    sessionId: string,
-    updateAgentSessionRequest: UpdateAgentSessionRequest, options?: RequestInit): Promise<updateAgentSessionResponse> => {
-  
-  return customInstance<updateAgentSessionResponse>(getUpdateAgentSessionUrl(taskId,sessionId),
-  {      
+export const updateAgentSession = async (
+  taskId: string,
+  sessionId: string,
+  updateAgentSessionRequest: UpdateAgentSessionRequest,
+  options?: RequestInit,
+): Promise<updateAgentSessionResponse> => {
+  return customInstance<updateAgentSessionResponse>(getUpdateAgentSessionUrl(taskId, sessionId), {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      updateAgentSessionRequest,)
-  }
-);}
-  
+    body: JSON.stringify(updateAgentSessionRequest),
+  });
+};
 
+export const getUpdateAgentSessionMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAgentSession>>,
+    TError,
+    { taskId: string; sessionId: string; data: UpdateAgentSessionRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string; data: UpdateAgentSessionRequest },
+  TContext
+> => {
+  const mutationKey = ['updateAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAgentSession>>,
+    { taskId: string; sessionId: string; data: UpdateAgentSessionRequest }
+  > = (props) => {
+    const { taskId, sessionId, data } = props ?? {};
 
-export const getUpdateAgentSessionMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAgentSession>>, TError,{taskId: string;sessionId: string;data: UpdateAgentSessionRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof updateAgentSession>>, TError,{taskId: string;sessionId: string;data: UpdateAgentSessionRequest}, TContext> => {
+    return updateAgentSession(taskId, sessionId, data);
+  };
 
-const mutationKey = ['updateAgentSession'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type UpdateAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAgentSession>>
+>;
+export type UpdateAgentSessionMutationBody = UpdateAgentSessionRequest;
+export type UpdateAgentSessionMutationError = void;
 
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAgentSession>>, {taskId: string;sessionId: string;data: UpdateAgentSessionRequest}> = (props) => {
-          const {taskId,sessionId,data} = props ?? {};
-
-          return  updateAgentSession(taskId,sessionId,data,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UpdateAgentSessionMutationResult = NonNullable<Awaited<ReturnType<typeof updateAgentSession>>>
-    export type UpdateAgentSessionMutationBody = UpdateAgentSessionRequest
-    export type UpdateAgentSessionMutationError = void
-
-    export const useUpdateAgentSession = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAgentSession>>, TError,{taskId: string;sessionId: string;data: UpdateAgentSessionRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof updateAgentSession>>,
-        TError,
-        {taskId: string;sessionId: string;data: UpdateAgentSessionRequest},
-        TContext
-      > => {
-      return useMutation(getUpdateAgentSessionMutationOptions(options), queryClient);
-    }
-    export type getAgentSessionOutputsResponse200 = {
-  data: AgentSessionOutput[]
-  status: 200
-}
+export const useUpdateAgentSession = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateAgentSession>>,
+      TError,
+      { taskId: string; sessionId: string; data: UpdateAgentSessionRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string; data: UpdateAgentSessionRequest },
+  TContext
+> => {
+  return useMutation(getUpdateAgentSessionMutationOptions(options), queryClient);
+};
+export type getAgentSessionOutputsResponse200 = {
+  data: AgentSessionOutput[];
+  status: 200;
+};
 
 export type getAgentSessionOutputsResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type getAgentSessionOutputsResponse404 = {
-  data: void
-  status: 404
-}
-
-export type getAgentSessionOutputsResponseSuccess = (getAgentSessionOutputsResponse200) & {
-  headers: Headers;
-};
-export type getAgentSessionOutputsResponseError = (getAgentSessionOutputsResponse403 | getAgentSessionOutputsResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type getAgentSessionOutputsResponse = (getAgentSessionOutputsResponseSuccess | getAgentSessionOutputsResponseError)
+export type getAgentSessionOutputsResponseSuccess = getAgentSessionOutputsResponse200 & {
+  headers: Headers;
+};
+export type getAgentSessionOutputsResponseError = (
+  | getAgentSessionOutputsResponse403
+  | getAgentSessionOutputsResponse404
+) & {
+  headers: Headers;
+};
 
-export const getGetAgentSessionOutputsUrl = (taskId: string,
-    sessionId: string,
-    params?: GetAgentSessionOutputsParams,) => {
+export type getAgentSessionOutputsResponse =
+  | getAgentSessionOutputsResponseSuccess
+  | getAgentSessionOutputsResponseError;
+
+export const getGetAgentSessionOutputsUrl = (
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? 'null' : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/tasks/${taskId}/sessions/${sessionId}/outputs?${stringifiedParams}` : `/api/tasks/${taskId}/sessions/${sessionId}/outputs`
-}
+  return stringifiedParams.length > 0
+    ? `/api/tasks/${taskId}/sessions/${sessionId}/outputs?${stringifiedParams}`
+    : `/api/tasks/${taskId}/sessions/${sessionId}/outputs`;
+};
 
-export const getAgentSessionOutputs = async (taskId: string,
-    sessionId: string,
-    params?: GetAgentSessionOutputsParams, options?: RequestInit): Promise<getAgentSessionOutputsResponse> => {
-  
-  return customInstance<getAgentSessionOutputsResponse>(getGetAgentSessionOutputsUrl(taskId,sessionId,params),
-  {      
-    ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+export const getAgentSessionOutputs = async (
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  options?: RequestInit,
+): Promise<getAgentSessionOutputsResponse> => {
+  return customInstance<getAgentSessionOutputsResponse>(
+    getGetAgentSessionOutputsUrl(taskId, sessionId, params),
+    {
+      ...options,
+      method: 'GET',
+    },
+  );
+};
 
-
-
-
-export const getGetAgentSessionOutputsQueryKey = (taskId: string,
-    sessionId: string,
-    params?: GetAgentSessionOutputsParams,) => {
-    return [
-    `/api/tasks/${taskId}/sessions/${sessionId}/outputs`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-    
-export const getGetAgentSessionOutputsQueryOptions = <TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError = void>(taskId: string,
-    sessionId: string,
-    params?: GetAgentSessionOutputsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>>, }
+export const getGetAgentSessionOutputsQueryKey = (
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
 ) => {
+  return [
+    `/api/tasks/${taskId}/sessions/${sessionId}/outputs`,
+    ...(params ? [params] : []),
+  ] as const;
+};
 
-const {query: queryOptions} = options ?? {};
+export const getGetAgentSessionOutputsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetAgentSessionOutputsQueryKey(taskId,sessionId,params);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAgentSessionOutputsQueryKey(taskId, sessionId, params);
 
-  
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentSessionOutputs>>> = ({ signal }) =>
+    getAgentSessionOutputs(taskId, sessionId, params, { signal });
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentSessionOutputs>>> = ({ signal }) => getAgentSessionOutputs(taskId,sessionId,params, { signal });
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(taskId && sessionId),
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
 
-      
+export type GetAgentSessionOutputsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAgentSessionOutputs>>
+>;
+export type GetAgentSessionOutputsQueryError = void;
 
-      
-
-   return  { queryKey, queryFn, enabled: !!(taskId && sessionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetAgentSessionOutputsQueryResult = NonNullable<Awaited<ReturnType<typeof getAgentSessionOutputs>>>
-export type GetAgentSessionOutputsQueryError = void
-
-
-export function useGetAgentSessionOutputs<TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError = void>(
- taskId: string,
-    sessionId: string,
-    params: undefined |  GetAgentSessionOutputsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>> & Pick<
+export function useGetAgentSessionOutputs<
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  params: undefined | GetAgentSessionOutputsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAgentSessionOutputs>>,
           TError,
           Awaited<ReturnType<typeof getAgentSessionOutputs>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAgentSessionOutputs<TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError = void>(
- taskId: string,
-    sessionId: string,
-    params?: GetAgentSessionOutputsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAgentSessionOutputs<
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAgentSessionOutputs>>,
           TError,
           Awaited<ReturnType<typeof getAgentSessionOutputs>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAgentSessionOutputs<TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError = void>(
- taskId: string,
-    sessionId: string,
-    params?: GetAgentSessionOutputsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAgentSessionOutputs<
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useGetAgentSessionOutputs<TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError = void>(
- taskId: string,
-    sessionId: string,
-    params?: GetAgentSessionOutputsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetAgentSessionOutputs<
+  TData = Awaited<ReturnType<typeof getAgentSessionOutputs>>,
+  TError = void,
+>(
+  taskId: string,
+  sessionId: string,
+  params?: GetAgentSessionOutputsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionOutputs>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetAgentSessionOutputsQueryOptions(taskId, sessionId, params, options);
 
-  const queryOptions = getGetAgentSessionOutputsQueryOptions(taskId,sessionId,params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-
-
-
 export type pauseAgentSessionResponse200 = {
-  data: AgentSession
-  status: 200
-}
+  data: AgentSession;
+  status: 200;
+};
 
 export type pauseAgentSessionResponse400 = {
-  data: void
-  status: 400
-}
+  data: void;
+  status: 400;
+};
 
 export type pauseAgentSessionResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type pauseAgentSessionResponse404 = {
-  data: void
-  status: 404
-}
+  data: void;
+  status: 404;
+};
 
 export type pauseAgentSessionResponse500 = {
-  data: void
-  status: 500
-}
-
-export type pauseAgentSessionResponseSuccess = (pauseAgentSessionResponse200) & {
-  headers: Headers;
-};
-export type pauseAgentSessionResponseError = (pauseAgentSessionResponse400 | pauseAgentSessionResponse403 | pauseAgentSessionResponse404 | pauseAgentSessionResponse500) & {
-  headers: Headers;
+  data: void;
+  status: 500;
 };
 
-export type pauseAgentSessionResponse = (pauseAgentSessionResponseSuccess | pauseAgentSessionResponseError)
+export type pauseAgentSessionResponseSuccess = pauseAgentSessionResponse200 & {
+  headers: Headers;
+};
+export type pauseAgentSessionResponseError = (
+  | pauseAgentSessionResponse400
+  | pauseAgentSessionResponse403
+  | pauseAgentSessionResponse404
+  | pauseAgentSessionResponse500
+) & {
+  headers: Headers;
+};
 
-export const getPauseAgentSessionUrl = (taskId: string,
-    sessionId: string,) => {
+export type pauseAgentSessionResponse =
+  | pauseAgentSessionResponseSuccess
+  | pauseAgentSessionResponseError;
 
+export const getPauseAgentSessionUrl = (taskId: string, sessionId: string) => {
+  return `/api/tasks/${taskId}/sessions/${sessionId}/pause`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/sessions/${sessionId}/pause`
-}
-
-export const pauseAgentSession = async (taskId: string,
-    sessionId: string, options?: RequestInit): Promise<pauseAgentSessionResponse> => {
-  
-  return customInstance<pauseAgentSessionResponse>(getPauseAgentSessionUrl(taskId,sessionId),
-  {      
+export const pauseAgentSession = async (
+  taskId: string,
+  sessionId: string,
+  options?: RequestInit,
+): Promise<pauseAgentSessionResponse> => {
+  return customInstance<pauseAgentSessionResponse>(getPauseAgentSessionUrl(taskId, sessionId), {
     ...options,
-    method: 'POST'
-    
-    
-  }
-);}
-  
+    method: 'POST',
+  });
+};
 
+export const getPauseAgentSessionMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof pauseAgentSession>>,
+    TError,
+    { taskId: string; sessionId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof pauseAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationKey = ['pauseAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof pauseAgentSession>>,
+    { taskId: string; sessionId: string }
+  > = (props) => {
+    const { taskId, sessionId } = props ?? {};
 
-export const getPauseAgentSessionMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pauseAgentSession>>, TError,{taskId: string;sessionId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof pauseAgentSession>>, TError,{taskId: string;sessionId: string}, TContext> => {
+    return pauseAgentSession(taskId, sessionId);
+  };
 
-const mutationKey = ['pauseAgentSession'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type PauseAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof pauseAgentSession>>
+>;
 
+export type PauseAgentSessionMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof pauseAgentSession>>, {taskId: string;sessionId: string}> = (props) => {
-          const {taskId,sessionId} = props ?? {};
-
-          return  pauseAgentSession(taskId,sessionId,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type PauseAgentSessionMutationResult = NonNullable<Awaited<ReturnType<typeof pauseAgentSession>>>
-    
-    export type PauseAgentSessionMutationError = void
-
-    export const usePauseAgentSession = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pauseAgentSession>>, TError,{taskId: string;sessionId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof pauseAgentSession>>,
-        TError,
-        {taskId: string;sessionId: string},
-        TContext
-      > => {
-      return useMutation(getPauseAgentSessionMutationOptions(options), queryClient);
-    }
-    export type restartAgentSessionResponse201 = {
-  data: StartAgentSessionResponse
-  status: 201
-}
+export const usePauseAgentSession = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof pauseAgentSession>>,
+      TError,
+      { taskId: string; sessionId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof pauseAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  return useMutation(getPauseAgentSessionMutationOptions(options), queryClient);
+};
+export type restartAgentSessionResponse201 = {
+  data: StartAgentSessionResponse;
+  status: 201;
+};
 
 export type restartAgentSessionResponse400 = {
-  data: void
-  status: 400
-}
+  data: void;
+  status: 400;
+};
 
 export type restartAgentSessionResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type restartAgentSessionResponse404 = {
-  data: void
-  status: 404
-}
+  data: void;
+  status: 404;
+};
 
 export type restartAgentSessionResponse409 = {
-  data: void
-  status: 409
-}
-
-export type restartAgentSessionResponseSuccess = (restartAgentSessionResponse201) & {
-  headers: Headers;
-};
-export type restartAgentSessionResponseError = (restartAgentSessionResponse400 | restartAgentSessionResponse403 | restartAgentSessionResponse404 | restartAgentSessionResponse409) & {
-  headers: Headers;
+  data: void;
+  status: 409;
 };
 
-export type restartAgentSessionResponse = (restartAgentSessionResponseSuccess | restartAgentSessionResponseError)
+export type restartAgentSessionResponseSuccess = restartAgentSessionResponse201 & {
+  headers: Headers;
+};
+export type restartAgentSessionResponseError = (
+  | restartAgentSessionResponse400
+  | restartAgentSessionResponse403
+  | restartAgentSessionResponse404
+  | restartAgentSessionResponse409
+) & {
+  headers: Headers;
+};
 
-export const getRestartAgentSessionUrl = (taskId: string,
-    sessionId: string,) => {
+export type restartAgentSessionResponse =
+  | restartAgentSessionResponseSuccess
+  | restartAgentSessionResponseError;
 
+export const getRestartAgentSessionUrl = (taskId: string, sessionId: string) => {
+  return `/api/tasks/${taskId}/sessions/${sessionId}/restart`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/sessions/${sessionId}/restart`
-}
-
-export const restartAgentSession = async (taskId: string,
-    sessionId: string, options?: RequestInit): Promise<restartAgentSessionResponse> => {
-  
-  return customInstance<restartAgentSessionResponse>(getRestartAgentSessionUrl(taskId,sessionId),
-  {      
+export const restartAgentSession = async (
+  taskId: string,
+  sessionId: string,
+  options?: RequestInit,
+): Promise<restartAgentSessionResponse> => {
+  return customInstance<restartAgentSessionResponse>(getRestartAgentSessionUrl(taskId, sessionId), {
     ...options,
-    method: 'POST'
-    
-    
-  }
-);}
-  
+    method: 'POST',
+  });
+};
 
+export const getRestartAgentSessionMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restartAgentSession>>,
+    TError,
+    { taskId: string; sessionId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restartAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationKey = ['restartAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof restartAgentSession>>,
+    { taskId: string; sessionId: string }
+  > = (props) => {
+    const { taskId, sessionId } = props ?? {};
 
-export const getRestartAgentSessionMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restartAgentSession>>, TError,{taskId: string;sessionId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof restartAgentSession>>, TError,{taskId: string;sessionId: string}, TContext> => {
+    return restartAgentSession(taskId, sessionId);
+  };
 
-const mutationKey = ['restartAgentSession'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type RestartAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof restartAgentSession>>
+>;
 
+export type RestartAgentSessionMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restartAgentSession>>, {taskId: string;sessionId: string}> = (props) => {
-          const {taskId,sessionId} = props ?? {};
-
-          return  restartAgentSession(taskId,sessionId,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RestartAgentSessionMutationResult = NonNullable<Awaited<ReturnType<typeof restartAgentSession>>>
-    
-    export type RestartAgentSessionMutationError = void
-
-    export const useRestartAgentSession = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restartAgentSession>>, TError,{taskId: string;sessionId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof restartAgentSession>>,
-        TError,
-        {taskId: string;sessionId: string},
-        TContext
-      > => {
-      return useMutation(getRestartAgentSessionMutationOptions(options), queryClient);
-    }
-    export type resumeAgentSessionResponse200 = {
-  data: AgentSession
-  status: 200
-}
+export const useRestartAgentSession = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof restartAgentSession>>,
+      TError,
+      { taskId: string; sessionId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof restartAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  return useMutation(getRestartAgentSessionMutationOptions(options), queryClient);
+};
+export type resumeAgentSessionResponse200 = {
+  data: AgentSession;
+  status: 200;
+};
 
 export type resumeAgentSessionResponse400 = {
-  data: void
-  status: 400
-}
+  data: void;
+  status: 400;
+};
 
 export type resumeAgentSessionResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type resumeAgentSessionResponse404 = {
-  data: void
-  status: 404
-}
+  data: void;
+  status: 404;
+};
 
 export type resumeAgentSessionResponse500 = {
-  data: void
-  status: 500
-}
-
-export type resumeAgentSessionResponseSuccess = (resumeAgentSessionResponse200) & {
-  headers: Headers;
-};
-export type resumeAgentSessionResponseError = (resumeAgentSessionResponse400 | resumeAgentSessionResponse403 | resumeAgentSessionResponse404 | resumeAgentSessionResponse500) & {
-  headers: Headers;
+  data: void;
+  status: 500;
 };
 
-export type resumeAgentSessionResponse = (resumeAgentSessionResponseSuccess | resumeAgentSessionResponseError)
+export type resumeAgentSessionResponseSuccess = resumeAgentSessionResponse200 & {
+  headers: Headers;
+};
+export type resumeAgentSessionResponseError = (
+  | resumeAgentSessionResponse400
+  | resumeAgentSessionResponse403
+  | resumeAgentSessionResponse404
+  | resumeAgentSessionResponse500
+) & {
+  headers: Headers;
+};
 
-export const getResumeAgentSessionUrl = (taskId: string,
-    sessionId: string,) => {
+export type resumeAgentSessionResponse =
+  | resumeAgentSessionResponseSuccess
+  | resumeAgentSessionResponseError;
 
+export const getResumeAgentSessionUrl = (taskId: string, sessionId: string) => {
+  return `/api/tasks/${taskId}/sessions/${sessionId}/resume`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/sessions/${sessionId}/resume`
-}
-
-export const resumeAgentSession = async (taskId: string,
-    sessionId: string, options?: RequestInit): Promise<resumeAgentSessionResponse> => {
-  
-  return customInstance<resumeAgentSessionResponse>(getResumeAgentSessionUrl(taskId,sessionId),
-  {      
+export const resumeAgentSession = async (
+  taskId: string,
+  sessionId: string,
+  options?: RequestInit,
+): Promise<resumeAgentSessionResponse> => {
+  return customInstance<resumeAgentSessionResponse>(getResumeAgentSessionUrl(taskId, sessionId), {
     ...options,
-    method: 'POST'
-    
-    
-  }
-);}
-  
+    method: 'POST',
+  });
+};
 
+export const getResumeAgentSessionMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resumeAgentSession>>,
+    TError,
+    { taskId: string; sessionId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resumeAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationKey = ['resumeAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resumeAgentSession>>,
+    { taskId: string; sessionId: string }
+  > = (props) => {
+    const { taskId, sessionId } = props ?? {};
 
-export const getResumeAgentSessionMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumeAgentSession>>, TError,{taskId: string;sessionId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof resumeAgentSession>>, TError,{taskId: string;sessionId: string}, TContext> => {
+    return resumeAgentSession(taskId, sessionId);
+  };
 
-const mutationKey = ['resumeAgentSession'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type ResumeAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resumeAgentSession>>
+>;
 
+export type ResumeAgentSessionMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resumeAgentSession>>, {taskId: string;sessionId: string}> = (props) => {
-          const {taskId,sessionId} = props ?? {};
-
-          return  resumeAgentSession(taskId,sessionId,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ResumeAgentSessionMutationResult = NonNullable<Awaited<ReturnType<typeof resumeAgentSession>>>
-    
-    export type ResumeAgentSessionMutationError = void
-
-    export const useResumeAgentSession = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumeAgentSession>>, TError,{taskId: string;sessionId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof resumeAgentSession>>,
-        TError,
-        {taskId: string;sessionId: string},
-        TContext
-      > => {
-      return useMutation(getResumeAgentSessionMutationOptions(options), queryClient);
-    }
-    export type stopAgentSessionResponse200 = {
-  data: AgentSession
-  status: 200
-}
+export const useResumeAgentSession = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resumeAgentSession>>,
+      TError,
+      { taskId: string; sessionId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resumeAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  return useMutation(getResumeAgentSessionMutationOptions(options), queryClient);
+};
+export type stopAgentSessionResponse200 = {
+  data: AgentSession;
+  status: 200;
+};
 
 export type stopAgentSessionResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type stopAgentSessionResponse404 = {
-  data: void
-  status: 404
-}
-
-export type stopAgentSessionResponseSuccess = (stopAgentSessionResponse200) & {
-  headers: Headers;
-};
-export type stopAgentSessionResponseError = (stopAgentSessionResponse403 | stopAgentSessionResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type stopAgentSessionResponse = (stopAgentSessionResponseSuccess | stopAgentSessionResponseError)
+export type stopAgentSessionResponseSuccess = stopAgentSessionResponse200 & {
+  headers: Headers;
+};
+export type stopAgentSessionResponseError = (
+  | stopAgentSessionResponse403
+  | stopAgentSessionResponse404
+) & {
+  headers: Headers;
+};
 
-export const getStopAgentSessionUrl = (taskId: string,
-    sessionId: string,) => {
+export type stopAgentSessionResponse =
+  | stopAgentSessionResponseSuccess
+  | stopAgentSessionResponseError;
 
+export const getStopAgentSessionUrl = (taskId: string, sessionId: string) => {
+  return `/api/tasks/${taskId}/sessions/${sessionId}/stop`;
+};
 
-  
-
-  return `/api/tasks/${taskId}/sessions/${sessionId}/stop`
-}
-
-export const stopAgentSession = async (taskId: string,
-    sessionId: string, options?: RequestInit): Promise<stopAgentSessionResponse> => {
-  
-  return customInstance<stopAgentSessionResponse>(getStopAgentSessionUrl(taskId,sessionId),
-  {      
+export const stopAgentSession = async (
+  taskId: string,
+  sessionId: string,
+  options?: RequestInit,
+): Promise<stopAgentSessionResponse> => {
+  return customInstance<stopAgentSessionResponse>(getStopAgentSessionUrl(taskId, sessionId), {
     ...options,
-    method: 'POST'
-    
-    
-  }
-);}
-  
+    method: 'POST',
+  });
+};
 
+export const getStopAgentSessionMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof stopAgentSession>>,
+    TError,
+    { taskId: string; sessionId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof stopAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  const mutationKey = ['stopAgentSession'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof stopAgentSession>>,
+    { taskId: string; sessionId: string }
+  > = (props) => {
+    const { taskId, sessionId } = props ?? {};
 
-export const getStopAgentSessionMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopAgentSession>>, TError,{taskId: string;sessionId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof stopAgentSession>>, TError,{taskId: string;sessionId: string}, TContext> => {
+    return stopAgentSession(taskId, sessionId);
+  };
 
-const mutationKey = ['stopAgentSession'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type StopAgentSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof stopAgentSession>>
+>;
 
+export type StopAgentSessionMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopAgentSession>>, {taskId: string;sessionId: string}> = (props) => {
-          const {taskId,sessionId} = props ?? {};
-
-          return  stopAgentSession(taskId,sessionId,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type StopAgentSessionMutationResult = NonNullable<Awaited<ReturnType<typeof stopAgentSession>>>
-    
-    export type StopAgentSessionMutationError = void
-
-    export const useStopAgentSession = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopAgentSession>>, TError,{taskId: string;sessionId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof stopAgentSession>>,
-        TError,
-        {taskId: string;sessionId: string},
-        TContext
-      > => {
-      return useMutation(getStopAgentSessionMutationOptions(options), queryClient);
-    }
-    
+export const useStopAgentSession = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof stopAgentSession>>,
+      TError,
+      { taskId: string; sessionId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof stopAgentSession>>,
+  TError,
+  { taskId: string; sessionId: string },
+  TContext
+> => {
+  return useMutation(getStopAgentSessionMutationOptions(options), queryClient);
+};

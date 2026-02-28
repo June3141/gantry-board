@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type PreviewStatus = typeof PreviewStatus[keyof typeof PreviewStatus];
-
+export type PreviewStatus = (typeof PreviewStatus)[keyof typeof PreviewStatus];
 
 export const PreviewStatus = {
   pending: 'pending',

@@ -1,9 +1,6 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
-export const customInstance = async <T>(
-  url: string,
-  options?: RequestInit,
-): Promise<T> => {
+export const customInstance = async <T>(url: string, options?: RequestInit): Promise<T> => {
   const fullUrl = `${BASE_URL}${url}`;
 
   const response = await fetch(fullUrl, {

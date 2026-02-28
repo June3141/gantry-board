@@ -5,10 +5,7 @@
  * AI Agent Orchestration Kanban Board API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -21,516 +18,601 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
+  UseQueryResult,
 } from '@tanstack/react-query';
-
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { customInstance } from '../../../client';
 import type {
   CreateInvitationRequest,
   CreateInvitationResponse,
   InvitationInfo,
-  ProjectInvitation
+  ProjectInvitation,
 } from '../../model';
 
-import { customInstance } from '../../../client';
-
-
-
-
 export type getInvitationByTokenResponse200 = {
-  data: InvitationInfo
-  status: 200
-}
+  data: InvitationInfo;
+  status: 200;
+};
 
 export type getInvitationByTokenResponse404 = {
-  data: void
-  status: 404
-}
-
-export type getInvitationByTokenResponseSuccess = (getInvitationByTokenResponse200) & {
-  headers: Headers;
-};
-export type getInvitationByTokenResponseError = (getInvitationByTokenResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type getInvitationByTokenResponse = (getInvitationByTokenResponseSuccess | getInvitationByTokenResponseError)
+export type getInvitationByTokenResponseSuccess = getInvitationByTokenResponse200 & {
+  headers: Headers;
+};
+export type getInvitationByTokenResponseError = getInvitationByTokenResponse404 & {
+  headers: Headers;
+};
 
-export const getGetInvitationByTokenUrl = (token: string,) => {
+export type getInvitationByTokenResponse =
+  | getInvitationByTokenResponseSuccess
+  | getInvitationByTokenResponseError;
 
+export const getGetInvitationByTokenUrl = (token: string) => {
+  return `/api/invitations/${token}`;
+};
 
-  
-
-  return `/api/invitations/${token}`
-}
-
-export const getInvitationByToken = async (token: string, options?: RequestInit): Promise<getInvitationByTokenResponse> => {
-  
-  return customInstance<getInvitationByTokenResponse>(getGetInvitationByTokenUrl(token),
-  {      
+export const getInvitationByToken = async (
+  token: string,
+  options?: RequestInit,
+): Promise<getInvitationByTokenResponse> => {
+  return customInstance<getInvitationByTokenResponse>(getGetInvitationByTokenUrl(token), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getGetInvitationByTokenQueryKey = (token: string) => {
+  return [`/api/invitations/${token}`] as const;
+};
 
-
-
-export const getGetInvitationByTokenQueryKey = (token: string,) => {
-    return [
-    `/api/invitations/${token}`
-    ] as const;
-    }
-
-    
-export const getGetInvitationByTokenQueryOptions = <TData = Awaited<ReturnType<typeof getInvitationByToken>>, TError = void>(token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>>, }
+export const getGetInvitationByTokenQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInvitationByToken>>,
+  TError = void,
+>(
+  token: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetInvitationByTokenQueryKey(token);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetInvitationByTokenQueryKey(token);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvitationByToken>>> = ({ signal }) =>
+    getInvitationByToken(token, { signal });
 
-  
+  return { queryKey, queryFn, enabled: !!token, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getInvitationByToken>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvitationByToken>>> = ({ signal }) => getInvitationByToken(token, { signal });
+export type GetInvitationByTokenQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInvitationByToken>>
+>;
+export type GetInvitationByTokenQueryError = void;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(token), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetInvitationByTokenQueryResult = NonNullable<Awaited<ReturnType<typeof getInvitationByToken>>>
-export type GetInvitationByTokenQueryError = void
-
-
-export function useGetInvitationByToken<TData = Awaited<ReturnType<typeof getInvitationByToken>>, TError = void>(
- token: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>> & Pick<
+export function useGetInvitationByToken<
+  TData = Awaited<ReturnType<typeof getInvitationByToken>>,
+  TError = void,
+>(
+  token: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getInvitationByToken>>,
           TError,
           Awaited<ReturnType<typeof getInvitationByToken>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetInvitationByToken<TData = Awaited<ReturnType<typeof getInvitationByToken>>, TError = void>(
- token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetInvitationByToken<
+  TData = Awaited<ReturnType<typeof getInvitationByToken>>,
+  TError = void,
+>(
+  token: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getInvitationByToken>>,
           TError,
           Awaited<ReturnType<typeof getInvitationByToken>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetInvitationByToken<TData = Awaited<ReturnType<typeof getInvitationByToken>>, TError = void>(
- token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetInvitationByToken<
+  TData = Awaited<ReturnType<typeof getInvitationByToken>>,
+  TError = void,
+>(
+  token: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useGetInvitationByToken<TData = Awaited<ReturnType<typeof getInvitationByToken>>, TError = void>(
- token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetInvitationByToken<
+  TData = Awaited<ReturnType<typeof getInvitationByToken>>,
+  TError = void,
+>(
+  token: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInvitationByToken>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetInvitationByTokenQueryOptions(token, options);
 
-  const queryOptions = getGetInvitationByTokenQueryOptions(token,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
 
 export type acceptInvitationResponse200 = {
-  data: ProjectInvitation
-  status: 200
-}
+  data: ProjectInvitation;
+  status: 200;
+};
 
 export type acceptInvitationResponse400 = {
-  data: void
-  status: 400
-}
+  data: void;
+  status: 400;
+};
 
 export type acceptInvitationResponse404 = {
-  data: void
-  status: 404
-}
+  data: void;
+  status: 404;
+};
 
 export type acceptInvitationResponse409 = {
-  data: void
-  status: 409
-}
-
-export type acceptInvitationResponseSuccess = (acceptInvitationResponse200) & {
-  headers: Headers;
-};
-export type acceptInvitationResponseError = (acceptInvitationResponse400 | acceptInvitationResponse404 | acceptInvitationResponse409) & {
-  headers: Headers;
+  data: void;
+  status: 409;
 };
 
-export type acceptInvitationResponse = (acceptInvitationResponseSuccess | acceptInvitationResponseError)
+export type acceptInvitationResponseSuccess = acceptInvitationResponse200 & {
+  headers: Headers;
+};
+export type acceptInvitationResponseError = (
+  | acceptInvitationResponse400
+  | acceptInvitationResponse404
+  | acceptInvitationResponse409
+) & {
+  headers: Headers;
+};
 
-export const getAcceptInvitationUrl = (token: string,) => {
+export type acceptInvitationResponse =
+  | acceptInvitationResponseSuccess
+  | acceptInvitationResponseError;
 
+export const getAcceptInvitationUrl = (token: string) => {
+  return `/api/invitations/${token}/accept`;
+};
 
-  
-
-  return `/api/invitations/${token}/accept`
-}
-
-export const acceptInvitation = async (token: string, options?: RequestInit): Promise<acceptInvitationResponse> => {
-  
-  return customInstance<acceptInvitationResponse>(getAcceptInvitationUrl(token),
-  {      
+export const acceptInvitation = async (
+  token: string,
+  options?: RequestInit,
+): Promise<acceptInvitationResponse> => {
+  return customInstance<acceptInvitationResponse>(getAcceptInvitationUrl(token), {
     ...options,
-    method: 'POST'
-    
-    
-  }
-);}
-  
+    method: 'POST',
+  });
+};
 
+export const getAcceptInvitationMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptInvitation>>,
+    TError,
+    { token: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acceptInvitation>>,
+  TError,
+  { token: string },
+  TContext
+> => {
+  const mutationKey = ['acceptInvitation'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acceptInvitation>>,
+    { token: string }
+  > = (props) => {
+    const { token } = props ?? {};
 
-export const getAcceptInvitationMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptInvitation>>, TError,{token: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof acceptInvitation>>, TError,{token: string}, TContext> => {
+    return acceptInvitation(token);
+  };
 
-const mutationKey = ['acceptInvitation'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type AcceptInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acceptInvitation>>
+>;
 
+export type AcceptInvitationMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acceptInvitation>>, {token: string}> = (props) => {
-          const {token} = props ?? {};
-
-          return  acceptInvitation(token,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AcceptInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof acceptInvitation>>>
-    
-    export type AcceptInvitationMutationError = void
-
-    export const useAcceptInvitation = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptInvitation>>, TError,{token: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof acceptInvitation>>,
-        TError,
-        {token: string},
-        TContext
-      > => {
-      return useMutation(getAcceptInvitationMutationOptions(options), queryClient);
-    }
-    export type listInvitationsResponse200 = {
-  data: ProjectInvitation[]
-  status: 200
-}
+export const useAcceptInvitation = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof acceptInvitation>>,
+      TError,
+      { token: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof acceptInvitation>>,
+  TError,
+  { token: string },
+  TContext
+> => {
+  return useMutation(getAcceptInvitationMutationOptions(options), queryClient);
+};
+export type listInvitationsResponse200 = {
+  data: ProjectInvitation[];
+  status: 200;
+};
 
 export type listInvitationsResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type listInvitationsResponse404 = {
-  data: void
-  status: 404
-}
-
-export type listInvitationsResponseSuccess = (listInvitationsResponse200) & {
-  headers: Headers;
-};
-export type listInvitationsResponseError = (listInvitationsResponse403 | listInvitationsResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type listInvitationsResponse = (listInvitationsResponseSuccess | listInvitationsResponseError)
+export type listInvitationsResponseSuccess = listInvitationsResponse200 & {
+  headers: Headers;
+};
+export type listInvitationsResponseError = (
+  | listInvitationsResponse403
+  | listInvitationsResponse404
+) & {
+  headers: Headers;
+};
 
-export const getListInvitationsUrl = (projectId: string,) => {
+export type listInvitationsResponse = listInvitationsResponseSuccess | listInvitationsResponseError;
 
+export const getListInvitationsUrl = (projectId: string) => {
+  return `/api/projects/${projectId}/invitations`;
+};
 
-  
-
-  return `/api/projects/${projectId}/invitations`
-}
-
-export const listInvitations = async (projectId: string, options?: RequestInit): Promise<listInvitationsResponse> => {
-  
-  return customInstance<listInvitationsResponse>(getListInvitationsUrl(projectId),
-  {      
+export const listInvitations = async (
+  projectId: string,
+  options?: RequestInit,
+): Promise<listInvitationsResponse> => {
+  return customInstance<listInvitationsResponse>(getListInvitationsUrl(projectId), {
     ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
+    method: 'GET',
+  });
+};
 
+export const getListInvitationsQueryKey = (projectId: string) => {
+  return [`/api/projects/${projectId}/invitations`] as const;
+};
 
-
-
-export const getListInvitationsQueryKey = (projectId: string,) => {
-    return [
-    `/api/projects/${projectId}/invitations`
-    ] as const;
-    }
-
-    
-export const getListInvitationsQueryOptions = <TData = Awaited<ReturnType<typeof listInvitations>>, TError = void>(projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>, }
+export const getListInvitationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listInvitations>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListInvitationsQueryKey(projectId);
 
-  const queryKey =  queryOptions?.queryKey ?? getListInvitationsQueryKey(projectId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvitations>>> = ({ signal }) =>
+    listInvitations(projectId, { signal });
 
-  
+  return { queryKey, queryFn, enabled: !!projectId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listInvitations>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvitations>>> = ({ signal }) => listInvitations(projectId, { signal });
+export type ListInvitationsQueryResult = NonNullable<Awaited<ReturnType<typeof listInvitations>>>;
+export type ListInvitationsQueryError = void;
 
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListInvitationsQueryResult = NonNullable<Awaited<ReturnType<typeof listInvitations>>>
-export type ListInvitationsQueryError = void
-
-
-export function useListInvitations<TData = Awaited<ReturnType<typeof listInvitations>>, TError = void>(
- projectId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>> & Pick<
+export function useListInvitations<
+  TData = Awaited<ReturnType<typeof listInvitations>>,
+  TError = void,
+>(
+  projectId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listInvitations>>,
           TError,
           Awaited<ReturnType<typeof listInvitations>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListInvitations<TData = Awaited<ReturnType<typeof listInvitations>>, TError = void>(
- projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListInvitations<
+  TData = Awaited<ReturnType<typeof listInvitations>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listInvitations>>,
           TError,
           Awaited<ReturnType<typeof listInvitations>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListInvitations<TData = Awaited<ReturnType<typeof listInvitations>>, TError = void>(
- projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListInvitations<
+  TData = Awaited<ReturnType<typeof listInvitations>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-export function useListInvitations<TData = Awaited<ReturnType<typeof listInvitations>>, TError = void>(
- projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListInvitations<
+  TData = Awaited<ReturnType<typeof listInvitations>>,
+  TError = void,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListInvitationsQueryOptions(projectId, options);
 
-  const queryOptions = getListInvitationsQueryOptions(projectId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-
-
-
 export type createInvitationResponse201 = {
-  data: CreateInvitationResponse
-  status: 201
-}
+  data: CreateInvitationResponse;
+  status: 201;
+};
 
 export type createInvitationResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type createInvitationResponse404 = {
-  data: void
-  status: 404
-}
-
-export type createInvitationResponseSuccess = (createInvitationResponse201) & {
-  headers: Headers;
-};
-export type createInvitationResponseError = (createInvitationResponse403 | createInvitationResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type createInvitationResponse = (createInvitationResponseSuccess | createInvitationResponseError)
+export type createInvitationResponseSuccess = createInvitationResponse201 & {
+  headers: Headers;
+};
+export type createInvitationResponseError = (
+  | createInvitationResponse403
+  | createInvitationResponse404
+) & {
+  headers: Headers;
+};
 
-export const getCreateInvitationUrl = (projectId: string,) => {
+export type createInvitationResponse =
+  | createInvitationResponseSuccess
+  | createInvitationResponseError;
 
+export const getCreateInvitationUrl = (projectId: string) => {
+  return `/api/projects/${projectId}/invitations`;
+};
 
-  
-
-  return `/api/projects/${projectId}/invitations`
-}
-
-export const createInvitation = async (projectId: string,
-    createInvitationRequest: CreateInvitationRequest, options?: RequestInit): Promise<createInvitationResponse> => {
-  
-  return customInstance<createInvitationResponse>(getCreateInvitationUrl(projectId),
-  {      
+export const createInvitation = async (
+  projectId: string,
+  createInvitationRequest: CreateInvitationRequest,
+  options?: RequestInit,
+): Promise<createInvitationResponse> => {
+  return customInstance<createInvitationResponse>(getCreateInvitationUrl(projectId), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createInvitationRequest,)
-  }
-);}
-  
+    body: JSON.stringify(createInvitationRequest),
+  });
+};
 
+export const getCreateInvitationMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInvitation>>,
+    TError,
+    { projectId: string; data: CreateInvitationRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createInvitation>>,
+  TError,
+  { projectId: string; data: CreateInvitationRequest },
+  TContext
+> => {
+  const mutationKey = ['createInvitation'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createInvitation>>,
+    { projectId: string; data: CreateInvitationRequest }
+  > = (props) => {
+    const { projectId, data } = props ?? {};
 
-export const getCreateInvitationMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvitation>>, TError,{projectId: string;data: CreateInvitationRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createInvitation>>, TError,{projectId: string;data: CreateInvitationRequest}, TContext> => {
+    return createInvitation(projectId, data);
+  };
 
-const mutationKey = ['createInvitation'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type CreateInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createInvitation>>
+>;
+export type CreateInvitationMutationBody = CreateInvitationRequest;
+export type CreateInvitationMutationError = void;
 
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInvitation>>, {projectId: string;data: CreateInvitationRequest}> = (props) => {
-          const {projectId,data} = props ?? {};
-
-          return  createInvitation(projectId,data,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof createInvitation>>>
-    export type CreateInvitationMutationBody = CreateInvitationRequest
-    export type CreateInvitationMutationError = void
-
-    export const useCreateInvitation = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvitation>>, TError,{projectId: string;data: CreateInvitationRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createInvitation>>,
-        TError,
-        {projectId: string;data: CreateInvitationRequest},
-        TContext
-      > => {
-      return useMutation(getCreateInvitationMutationOptions(options), queryClient);
-    }
-    export type deleteInvitationResponse204 = {
-  data: void
-  status: 204
-}
+export const useCreateInvitation = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createInvitation>>,
+      TError,
+      { projectId: string; data: CreateInvitationRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createInvitation>>,
+  TError,
+  { projectId: string; data: CreateInvitationRequest },
+  TContext
+> => {
+  return useMutation(getCreateInvitationMutationOptions(options), queryClient);
+};
+export type deleteInvitationResponse204 = {
+  data: void;
+  status: 204;
+};
 
 export type deleteInvitationResponse403 = {
-  data: void
-  status: 403
-}
+  data: void;
+  status: 403;
+};
 
 export type deleteInvitationResponse404 = {
-  data: void
-  status: 404
-}
-
-export type deleteInvitationResponseSuccess = (deleteInvitationResponse204) & {
-  headers: Headers;
-};
-export type deleteInvitationResponseError = (deleteInvitationResponse403 | deleteInvitationResponse404) & {
-  headers: Headers;
+  data: void;
+  status: 404;
 };
 
-export type deleteInvitationResponse = (deleteInvitationResponseSuccess | deleteInvitationResponseError)
+export type deleteInvitationResponseSuccess = deleteInvitationResponse204 & {
+  headers: Headers;
+};
+export type deleteInvitationResponseError = (
+  | deleteInvitationResponse403
+  | deleteInvitationResponse404
+) & {
+  headers: Headers;
+};
 
-export const getDeleteInvitationUrl = (projectId: string,
-    invitationId: string,) => {
+export type deleteInvitationResponse =
+  | deleteInvitationResponseSuccess
+  | deleteInvitationResponseError;
 
+export const getDeleteInvitationUrl = (projectId: string, invitationId: string) => {
+  return `/api/projects/${projectId}/invitations/${invitationId}`;
+};
 
-  
-
-  return `/api/projects/${projectId}/invitations/${invitationId}`
-}
-
-export const deleteInvitation = async (projectId: string,
-    invitationId: string, options?: RequestInit): Promise<deleteInvitationResponse> => {
-  
-  return customInstance<deleteInvitationResponse>(getDeleteInvitationUrl(projectId,invitationId),
-  {      
+export const deleteInvitation = async (
+  projectId: string,
+  invitationId: string,
+  options?: RequestInit,
+): Promise<deleteInvitationResponse> => {
+  return customInstance<deleteInvitationResponse>(getDeleteInvitationUrl(projectId, invitationId), {
     ...options,
-    method: 'DELETE'
-    
-    
-  }
-);}
-  
+    method: 'DELETE',
+  });
+};
 
+export const getDeleteInvitationMutationOptions = <TError = void, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteInvitation>>,
+    TError,
+    { projectId: string; invitationId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteInvitation>>,
+  TError,
+  { projectId: string; invitationId: string },
+  TContext
+> => {
+  const mutationKey = ['deleteInvitation'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteInvitation>>,
+    { projectId: string; invitationId: string }
+  > = (props) => {
+    const { projectId, invitationId } = props ?? {};
 
-export const getDeleteInvitationMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInvitation>>, TError,{projectId: string;invitationId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteInvitation>>, TError,{projectId: string;invitationId: string}, TContext> => {
+    return deleteInvitation(projectId, invitationId);
+  };
 
-const mutationKey = ['deleteInvitation'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+  return { mutationFn, ...mutationOptions };
+};
 
-      
+export type DeleteInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteInvitation>>
+>;
 
+export type DeleteInvitationMutationError = void;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInvitation>>, {projectId: string;invitationId: string}> = (props) => {
-          const {projectId,invitationId} = props ?? {};
-
-          return  deleteInvitation(projectId,invitationId,)
-        }
-
-
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInvitation>>>
-    
-    export type DeleteInvitationMutationError = void
-
-    export const useDeleteInvitation = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInvitation>>, TError,{projectId: string;invitationId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteInvitation>>,
-        TError,
-        {projectId: string;invitationId: string},
-        TContext
-      > => {
-      return useMutation(getDeleteInvitationMutationOptions(options), queryClient);
-    }
-    
+export const useDeleteInvitation = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteInvitation>>,
+      TError,
+      { projectId: string; invitationId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteInvitation>>,
+  TError,
+  { projectId: string; invitationId: string },
+  TContext
+> => {
+  return useMutation(getDeleteInvitationMutationOptions(options), queryClient);
+};

@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AgentType = typeof AgentType[keyof typeof AgentType];
-
+export type AgentType = (typeof AgentType)[keyof typeof AgentType];
 
 export const AgentType = {
   claude_code: 'claude_code',

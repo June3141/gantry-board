@@ -15,50 +15,64 @@ import type { TaskComment } from './taskComment';
 /**
  * Server-Sent Event for real-time updates
  */
-export type SseEvent = {
-  task: Task;
-  type: 'TaskCreated';
-} | {
-  task: Task;
-  type: 'TaskUpdated';
-} | {
-  task_id: string;
-  type: 'TaskDeleted';
-} | {
-  session_id: string;
-  text: string;
-  type: 'AgentOutput';
-} | {
-  session: AgentSession;
-  type: 'AgentSessionStatusChanged';
-} | {
-  comment: TaskComment;
-  type: 'CommentCreated';
-} | {
-  comment: TaskComment;
-  type: 'CommentUpdated';
-} | {
-  comment_id: string;
-  task_id: string;
-  type: 'CommentDeleted';
-} | {
-  message: ProjectMessage;
-  type: 'ProjectMessageCreated';
-} | {
-  message_id: string;
-  project_id: string;
-  type: 'ProjectMessageDeleted';
-} | {
-  preview: DockerPreview;
-  type: 'PreviewStatusChanged';
-} | {
-  preview_id: string;
-  type: 'PreviewDeleted';
-} | {
-  result: SyncResult;
-  type: 'GitHubSyncCompleted';
-} | {
-  error: string;
-  project_id: string;
-  type: 'GitHubSyncFailed';
-};
+export type SseEvent =
+  | {
+      task: Task;
+      type: 'TaskCreated';
+    }
+  | {
+      task: Task;
+      type: 'TaskUpdated';
+    }
+  | {
+      task_id: string;
+      type: 'TaskDeleted';
+    }
+  | {
+      session_id: string;
+      text: string;
+      type: 'AgentOutput';
+    }
+  | {
+      session: AgentSession;
+      type: 'AgentSessionStatusChanged';
+    }
+  | {
+      comment: TaskComment;
+      type: 'CommentCreated';
+    }
+  | {
+      comment: TaskComment;
+      type: 'CommentUpdated';
+    }
+  | {
+      comment_id: string;
+      task_id: string;
+      type: 'CommentDeleted';
+    }
+  | {
+      message: ProjectMessage;
+      type: 'ProjectMessageCreated';
+    }
+  | {
+      message_id: string;
+      project_id: string;
+      type: 'ProjectMessageDeleted';
+    }
+  | {
+      preview: DockerPreview;
+      type: 'PreviewStatusChanged';
+    }
+  | {
+      preview_id: string;
+      type: 'PreviewDeleted';
+    }
+  | {
+      result: SyncResult;
+      type: 'GitHubSyncCompleted';
+    }
+  | {
+      error: string;
+      project_id: string;
+      type: 'GitHubSyncFailed';
+    };

@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AgentSessionStatus = typeof AgentSessionStatus[keyof typeof AgentSessionStatus];
-
+export type AgentSessionStatus = (typeof AgentSessionStatus)[keyof typeof AgentSessionStatus];
 
 export const AgentSessionStatus = {
   pending: 'pending',

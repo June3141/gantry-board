@@ -9,8 +9,7 @@
 /**
  * Machine-readable error codes for client-side handling.
  */
-export type ErrorCode = typeof ErrorCode[keyof typeof ErrorCode];
-
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 export const ErrorCode = {
   NOT_FOUND: 'NOT_FOUND',

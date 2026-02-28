@@ -7,16 +7,16 @@
  */
 
 export type ListTasksParams = {
-/**
- * Filter by project ID
- */
-project_id: string;
-/**
- * Maximum number of items to return (default 50)
- */
-limit?: number;
-/**
- * Number of items to skip (default 0)
- */
-offset?: number;
+  /**
+   * Filter by project ID
+   */
+  project_id: string;
+  /**
+   * Maximum number of items to return (default 50)
+   */
+  limit?: number;
+  /**
+   * Number of items to skip (default 0)
+   */
+  offset?: number;
 };

@@ -7,12 +7,12 @@
  */
 
 export type SearchUsersParams = {
-/**
- * Search term for name or email
- */
-q?: string;
-/**
- * Maximum number of results (default 50)
- */
-limit?: number;
+  /**
+   * Search term for name or email
+   */
+  q?: string;
+  /**
+   * Maximum number of results (default 50)
+   */
+  limit?: number;
 };
