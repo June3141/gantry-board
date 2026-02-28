@@ -427,6 +427,22 @@ impl PreviewManager {
     }
 }
 
+fn create_tar_context(dir: &std::path::Path) -> AppResult<Vec<u8>> {
+    use std::io::Write;
+
+    let buf = Vec::new();
+    let mut archive = tar::Builder::new(buf);
+    archive
+        .append_dir_all(".", dir)
+        .map_err(|e| AppError::Internal(format!("tar creation error: {e}")))?;
+    let mut buf = archive
+        .into_inner()
+        .map_err(|e| AppError::Internal(format!("tar finalize error: {e}")))?;
+    buf.flush()
+        .map_err(|e| AppError::Internal(format!("tar flush error: {e}")))?;
+    Ok(buf)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -505,20 +521,4 @@ mod tests {
         let cb = DockerCircuitBreaker::default();
         assert_eq!(cb.state(), CircuitState::Closed);
     }
-}
-
-fn create_tar_context(dir: &std::path::Path) -> AppResult<Vec<u8>> {
-    use std::io::Write;
-
-    let buf = Vec::new();
-    let mut archive = tar::Builder::new(buf);
-    archive
-        .append_dir_all(".", dir)
-        .map_err(|e| AppError::Internal(format!("tar creation error: {e}")))?;
-    let mut buf = archive
-        .into_inner()
-        .map_err(|e| AppError::Internal(format!("tar finalize error: {e}")))?;
-    buf.flush()
-        .map_err(|e| AppError::Internal(format!("tar flush error: {e}")))?;
-    Ok(buf)
 }
