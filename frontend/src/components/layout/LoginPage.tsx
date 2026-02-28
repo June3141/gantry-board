@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useLogin } from '@/api/generated/endpoints/auth/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { useMe } from '@/api/generated/endpoints/auth/auth';
 import { ProjectBoardPage } from '@/components/board';
 import { ErrorBoundary, ToastContainer } from '@/components/common';
