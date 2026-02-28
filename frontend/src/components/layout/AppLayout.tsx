@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { LogOut } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router';
 import { useLogout } from '@/api/generated/endpoints/auth/auth';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { Button } from '@/components/ui/button';

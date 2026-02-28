@@ -1,6 +1,6 @@
 import { MessageSquare, Settings, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { ProjectChatPanel, ProjectMembersPanel, ProjectSettingsModal } from '@/components/project';
 import { TaskCreateDialog } from '@/components/task';
 import { Button } from '@/components/ui/button';

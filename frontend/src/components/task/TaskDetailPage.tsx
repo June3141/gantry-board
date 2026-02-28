@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import {
   getGetTaskQueryKey,

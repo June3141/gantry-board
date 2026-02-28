@@ -1,6 +1,6 @@
 import { Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import type { Project } from '@/api/generated/model';
 import { Button } from '@/components/ui/button';
 
