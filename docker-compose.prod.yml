@@ -2,7 +2,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile.prod
+      dockerfile: backend/Dockerfile.standalone
     environment:
       - GANTRY_BIND_ADDR=0.0.0.0:3000
       - GANTRY_DATABASE_URL=sqlite:/data/gantry_board.db?mode=rwc
