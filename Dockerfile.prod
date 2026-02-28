@@ -1,5 +1,5 @@
 # Stage 1: Build backend
-FROM rust:1.85-slim-bookworm AS backend-builder
+FROM rust:1.93-slim-trixie AS backend-builder
 
 WORKDIR /workspace
 
@@ -25,7 +25,7 @@ COPY backend/migrations backend/migrations
 RUN cargo build --release -p gantry-board
 
 # Stage 2: Build frontend
-FROM node:22-slim AS frontend-builder
+FROM node:24-slim AS frontend-builder
 
 WORKDIR /app
 
@@ -36,10 +36,10 @@ COPY frontend/ .
 RUN npm run build
 
 # Stage 3: Runtime
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 RUN apt-get update && apt-get install -y \
-    libssl3 \
+    libssl3t64 \
     ca-certificates \
     curl \
     nginx \

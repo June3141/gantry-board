@@ -1,4 +1,4 @@
-FROM rust:1.85-slim-bookworm
+FROM rust:1.93-slim-trixie
 
 WORKDIR /workspace
 
