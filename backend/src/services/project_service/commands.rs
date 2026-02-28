@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::project::{CreateProjectRequest, Project, UpdateProjectRequest};
+use crate::repositories::project_repository;
 
 use super::queries::get_project;
 
@@ -12,19 +13,14 @@ pub async fn create_project(pool: &SqlitePool, req: &CreateProjectRequest) -> Ap
     let id = Uuid::new_v4();
     let now = Utc::now();
 
-    sqlx::query(
-        r#"
-        INSERT INTO projects (id, name, description, repository_path, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        "#,
+    project_repository::insert(
+        pool,
+        id,
+        &req.name,
+        req.description.as_deref(),
+        req.repository_path.as_deref(),
+        now,
     )
-    .bind(id.to_string())
-    .bind(&req.name)
-    .bind(&req.description)
-    .bind(&req.repository_path)
-    .bind(now)
-    .bind(now)
-    .execute(pool)
     .await?;
 
     Ok(Project {
@@ -56,19 +52,14 @@ pub async fn update_project(
         .as_ref()
         .or(existing.repository_path.as_ref());
 
-    sqlx::query(
-        r#"
-        UPDATE projects
-        SET name = $1, description = $2, repository_path = $3, updated_at = $4
-        WHERE id = $5
-        "#,
+    project_repository::update(
+        pool,
+        id,
+        name,
+        description.map(|s| s.as_str()),
+        repository_path.map(|s| s.as_str()),
+        now,
     )
-    .bind(name)
-    .bind(description)
-    .bind(repository_path)
-    .bind(now)
-    .bind(id.to_string())
-    .execute(pool)
     .await?;
 
     Ok(Project {
@@ -106,17 +97,9 @@ pub fn validate_repository_path(path: &str) -> AppResult<()> {
 
 #[tracing::instrument(skip(pool), fields(project_id = %id))]
 pub async fn delete_project(pool: &SqlitePool, id: Uuid) -> AppResult<()> {
-    let result = sqlx::query(
-        r#"
-        DELETE FROM projects
-        WHERE id = $1
-        "#,
-    )
-    .bind(id.to_string())
-    .execute(pool)
-    .await?;
+    let rows = project_repository::delete(pool, id).await?;
 
-    if result.rows_affected() == 0 {
+    if rows == 0 {
         return Err(AppError::NotFound(format!("project {} not found", id)));
     }
 

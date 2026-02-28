@@ -3,42 +3,16 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::project::Project;
-
-use super::ProjectRow;
+use crate::repositories::project_repository;
 
 pub async fn get_project(pool: &SqlitePool, id: Uuid) -> AppResult<Project> {
-    let row = sqlx::query_as::<_, ProjectRow>(
-        r#"
-        SELECT id, name, description, repository_path, created_at, updated_at
-        FROM projects
-        WHERE id = $1
-        "#,
-    )
-    .bind(id.to_string())
-    .fetch_optional(pool)
-    .await?;
-
-    row.map(|r| r.try_into())
-        .transpose()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?
+    project_repository::find_by_id(pool, id)
+        .await?
         .ok_or_else(|| AppError::NotFound(format!("project {} not found", id)))
 }
 
 pub async fn list_projects(pool: &SqlitePool) -> AppResult<Vec<Project>> {
-    let rows = sqlx::query_as::<_, ProjectRow>(
-        r#"
-        SELECT id, name, description, repository_path, created_at, updated_at
-        FROM projects
-        ORDER BY created_at DESC
-        "#,
-    )
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    project_repository::find_all(pool).await
 }
 
 pub async fn list_projects_paginated(
@@ -46,54 +20,11 @@ pub async fn list_projects_paginated(
     limit: i64,
     offset: i64,
 ) -> AppResult<(Vec<Project>, i64)> {
-    let total: (i64,) = sqlx::query_as(
-        r#"
-        SELECT COUNT(*) FROM projects
-        "#,
-    )
-    .fetch_one(pool)
-    .await?;
-
-    let rows = sqlx::query_as::<_, ProjectRow>(
-        r#"
-        SELECT id, name, description, repository_path, created_at, updated_at
-        FROM projects
-        ORDER BY created_at DESC
-        LIMIT $1 OFFSET $2
-        "#,
-    )
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(pool)
-    .await?;
-
-    let projects = rows
-        .into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?;
-
-    Ok((projects, total.0))
+    project_repository::find_all_paginated(pool, limit, offset).await
 }
 
 pub async fn list_projects_for_user(pool: &SqlitePool, user_id: Uuid) -> AppResult<Vec<Project>> {
-    let rows = sqlx::query_as::<_, ProjectRow>(
-        r#"
-        SELECT p.id, p.name, p.description, p.repository_path, p.created_at, p.updated_at
-        FROM projects p
-        INNER JOIN project_members pm ON p.id = pm.project_id
-        WHERE pm.user_id = $1
-        ORDER BY p.created_at DESC
-        "#,
-    )
-    .bind(user_id.to_string())
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    project_repository::find_all_for_user(pool, user_id).await
 }
 
 pub async fn list_projects_for_user_paginated(
@@ -102,41 +33,7 @@ pub async fn list_projects_for_user_paginated(
     limit: i64,
     offset: i64,
 ) -> AppResult<(Vec<Project>, i64)> {
-    let total: (i64,) = sqlx::query_as(
-        r#"
-        SELECT COUNT(*)
-        FROM projects p
-        INNER JOIN project_members pm ON p.id = pm.project_id
-        WHERE pm.user_id = $1
-        "#,
-    )
-    .bind(user_id.to_string())
-    .fetch_one(pool)
-    .await?;
-
-    let rows = sqlx::query_as::<_, ProjectRow>(
-        r#"
-        SELECT p.id, p.name, p.description, p.repository_path, p.created_at, p.updated_at
-        FROM projects p
-        INNER JOIN project_members pm ON p.id = pm.project_id
-        WHERE pm.user_id = $1
-        ORDER BY p.created_at DESC
-        LIMIT $2 OFFSET $3
-        "#,
-    )
-    .bind(user_id.to_string())
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(pool)
-    .await?;
-
-    let projects = rows
-        .into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?;
-
-    Ok((projects, total.0))
+    project_repository::find_all_for_user_paginated(pool, user_id, limit, offset).await
 }
 
 #[cfg(test)]
