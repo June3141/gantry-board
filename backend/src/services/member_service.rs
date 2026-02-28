@@ -1,35 +1,10 @@
-use chrono::{DateTime, Utc};
-use sqlx::prelude::FromRow;
+use chrono::Utc;
 use sqlx::{SqliteConnection, SqlitePool};
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
-use crate::models::project::{AddMemberRequest, MemberRole, ProjectMember, UpdateMemberRequest};
-
-#[derive(FromRow)]
-struct MemberRow {
-    project_id: String,
-    user_id: String,
-    role: MemberRole,
-    user_name: String,
-    user_email: String,
-    created_at: DateTime<Utc>,
-}
-
-impl TryFrom<MemberRow> for ProjectMember {
-    type Error = uuid::Error;
-
-    fn try_from(row: MemberRow) -> Result<Self, Self::Error> {
-        Ok(ProjectMember {
-            project_id: row.project_id.parse()?,
-            user_id: row.user_id.parse()?,
-            role: row.role,
-            user_name: row.user_name,
-            user_email: row.user_email,
-            created_at: row.created_at,
-        })
-    }
-}
+use crate::models::project::{AddMemberRequest, ProjectMember, UpdateMemberRequest};
+use crate::repositories::member_repository;
 
 #[tracing::instrument(skip(pool, req), fields(%project_id, user_id = %req.user_id))]
 #[allow(clippy::explicit_auto_deref)] // sqlx Transaction requires explicit deref
@@ -41,11 +16,7 @@ pub async fn add_member(
     let mut tx = pool.begin().await?;
 
     // Validate that the user exists within the transaction
-    let user_exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM users WHERE id = $1")
-        .bind(req.user_id.to_string())
-        .fetch_optional(&mut *tx)
-        .await?;
-    if user_exists.is_none() {
+    if !member_repository::user_exists_tx(&mut *tx, req.user_id).await? {
         return Err(AppError::NotFound(format!(
             "user {} not found",
             req.user_id
@@ -53,19 +24,7 @@ pub async fn add_member(
     }
 
     let now = Utc::now();
-
-    sqlx::query(
-        r#"
-        INSERT INTO project_members (project_id, user_id, role, created_at)
-        VALUES ($1, $2, $3, $4)
-        "#,
-    )
-    .bind(project_id.to_string())
-    .bind(req.user_id.to_string())
-    .bind(&req.role)
-    .bind(now)
-    .execute(&mut *tx)
-    .await?;
+    member_repository::insert_tx(&mut *tx, project_id, req.user_id, &req.role, now).await?;
 
     tx.commit().await?;
 
@@ -78,11 +37,7 @@ pub async fn add_member_tx(
     project_id: Uuid,
     req: &AddMemberRequest,
 ) -> AppResult<()> {
-    let user_exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM users WHERE id = $1")
-        .bind(req.user_id.to_string())
-        .fetch_optional(&mut *conn)
-        .await?;
-    if user_exists.is_none() {
+    if !member_repository::user_exists_tx(&mut *conn, req.user_id).await? {
         return Err(AppError::NotFound(format!(
             "user {} not found",
             req.user_id
@@ -90,21 +45,7 @@ pub async fn add_member_tx(
     }
 
     let now = Utc::now();
-
-    sqlx::query(
-        r#"
-        INSERT INTO project_members (project_id, user_id, role, created_at)
-        VALUES ($1, $2, $3, $4)
-        "#,
-    )
-    .bind(project_id.to_string())
-    .bind(req.user_id.to_string())
-    .bind(&req.role)
-    .bind(now)
-    .execute(&mut *conn)
-    .await?;
-
-    Ok(())
+    member_repository::insert_tx(&mut *conn, project_id, req.user_id, &req.role, now).await
 }
 
 pub async fn get_member(
@@ -112,24 +53,8 @@ pub async fn get_member(
     project_id: Uuid,
     user_id: Uuid,
 ) -> AppResult<ProjectMember> {
-    let row = sqlx::query_as::<_, MemberRow>(
-        r#"
-        SELECT pm.project_id, pm.user_id, pm.role,
-               u.name as user_name, u.email as user_email,
-               pm.created_at
-        FROM project_members pm
-        JOIN users u ON pm.user_id = u.id
-        WHERE pm.project_id = $1 AND pm.user_id = $2
-        "#,
-    )
-    .bind(project_id.to_string())
-    .bind(user_id.to_string())
-    .fetch_optional(pool)
-    .await?;
-
-    row.map(|r| r.try_into())
-        .transpose()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?
+    member_repository::find_by_project_and_user(pool, project_id, user_id)
+        .await?
         .ok_or_else(|| {
             AppError::NotFound(format!(
                 "member {} not found in project {}",
@@ -139,25 +64,7 @@ pub async fn get_member(
 }
 
 pub async fn list_members(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<ProjectMember>> {
-    let rows = sqlx::query_as::<_, MemberRow>(
-        r#"
-        SELECT pm.project_id, pm.user_id, pm.role,
-               u.name as user_name, u.email as user_email,
-               pm.created_at
-        FROM project_members pm
-        JOIN users u ON pm.user_id = u.id
-        WHERE pm.project_id = $1
-        ORDER BY pm.created_at ASC
-        "#,
-    )
-    .bind(project_id.to_string())
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    member_repository::find_all_by_project(pool, project_id).await
 }
 
 #[tracing::instrument(skip(pool, req), fields(%project_id, %user_id))]
@@ -170,36 +77,16 @@ pub async fn update_member_role(
     // Verify member exists
     get_member(pool, project_id, user_id).await?;
 
-    sqlx::query(
-        r#"
-        UPDATE project_members
-        SET role = $1
-        WHERE project_id = $2 AND user_id = $3
-        "#,
-    )
-    .bind(&req.role)
-    .bind(project_id.to_string())
-    .bind(user_id.to_string())
-    .execute(pool)
-    .await?;
+    member_repository::update_role(pool, project_id, user_id, &req.role).await?;
 
     get_member(pool, project_id, user_id).await
 }
 
 #[tracing::instrument(skip(pool), fields(%project_id, %user_id))]
 pub async fn remove_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) -> AppResult<()> {
-    let result = sqlx::query(
-        r#"
-        DELETE FROM project_members
-        WHERE project_id = $1 AND user_id = $2
-        "#,
-    )
-    .bind(project_id.to_string())
-    .bind(user_id.to_string())
-    .execute(pool)
-    .await?;
+    let rows = member_repository::delete(pool, project_id, user_id).await?;
 
-    if result.rows_affected() == 0 {
+    if rows == 0 {
         return Err(AppError::NotFound(format!(
             "member {} not found in project {}",
             user_id, project_id
@@ -212,7 +99,7 @@ pub async fn remove_member(pool: &SqlitePool, project_id: Uuid, user_id: Uuid) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::project::CreateProjectRequest;
+    use crate::models::project::{CreateProjectRequest, MemberRole};
     use crate::models::user::RegisterRequest;
     use crate::services::{project_service, user_service};
     use crate::test_helpers::setup_test_db;
@@ -423,7 +310,6 @@ mod tests {
         let project_id = create_test_project(&pool).await;
         let nonexistent_user = Uuid::new_v4();
 
-        // Attempt to add a nonexistent user as a member — should fail
         let result = add_member(
             &pool,
             project_id,
@@ -436,7 +322,6 @@ mod tests {
 
         assert!(result.is_err());
 
-        // Verify no member row was created (atomicity guarantee)
         let members = list_members(&pool, project_id)
             .await
             .expect("list should succeed");

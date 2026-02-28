@@ -4,6 +4,7 @@ use uuid::Uuid;
 use crate::error::{AppError, AppResult};
 use crate::models::project::MemberRole;
 use crate::models::task::Task;
+use crate::repositories::member_repository;
 use crate::services::{project_service, task_service};
 
 /// Fetch a task and verify the user is a member of its project.
@@ -38,20 +39,11 @@ pub async fn require_project_member(
         return Ok(MemberRole::Owner);
     }
 
-    let row = sqlx::query_scalar::<_, String>(
-        r#"
-        SELECT role FROM project_members
-        WHERE project_id = $1 AND user_id = $2
-        "#,
-    )
-    .bind(project_id.to_string())
-    .bind(user_id.to_string())
-    .fetch_optional(pool)
-    .await?;
+    let role_str = member_repository::find_role(pool, project_id, user_id).await?;
 
-    match row {
-        Some(role_str) => {
-            let role: MemberRole = serde_json::from_value(serde_json::Value::String(role_str))
+    match role_str {
+        Some(s) => {
+            let role: MemberRole = serde_json::from_value(serde_json::Value::String(s))
                 .map_err(|e| AppError::Internal(e.to_string()))?;
             Ok(role)
         }
@@ -103,14 +95,7 @@ pub async fn require_any_project_membership(pool: &SqlitePool, user_id: Uuid) ->
         return Ok(());
     }
 
-    let count = sqlx::query_scalar::<_, i32>(
-        "SELECT COUNT(*) FROM project_members WHERE user_id = $1 LIMIT 1",
-    )
-    .bind(user_id.to_string())
-    .fetch_one(pool)
-    .await?;
-
-    if count == 0 {
+    if !member_repository::has_any_membership(pool, user_id).await? {
         return Err(AppError::Forbidden(
             "user is not a member of any project".to_string(),
         ));
@@ -120,37 +105,12 @@ pub async fn require_any_project_membership(pool: &SqlitePool, user_id: Uuid) ->
 
 /// List project IDs the user is a member of.
 pub async fn list_user_project_ids(pool: &SqlitePool, user_id: Uuid) -> AppResult<Vec<Uuid>> {
-    let rows = sqlx::query_scalar::<_, String>(
-        r#"
-        SELECT project_id FROM project_members
-        WHERE user_id = $1
-        "#,
-    )
-    .bind(user_id.to_string())
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|s| {
-            s.parse()
-                .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
-        })
-        .collect()
+    member_repository::list_project_ids_by_user(pool, user_id).await
 }
 
 /// Count owners in a project.
 pub async fn count_owners(pool: &SqlitePool, project_id: Uuid) -> AppResult<i64> {
-    let count = sqlx::query_scalar::<_, i32>(
-        r#"
-        SELECT COUNT(*) FROM project_members
-        WHERE project_id = $1 AND role = 'owner'
-        "#,
-    )
-    .bind(project_id.to_string())
-    .fetch_one(pool)
-    .await?;
-
-    Ok(count as i64)
+    member_repository::count_owners(pool, project_id).await
 }
 
 #[cfg(test)]
