@@ -2,7 +2,7 @@
 # For the all-in-one image (backend + frontend + nginx), see the root Dockerfile.prod.
 
 # Stage 1: Build
-FROM rust:1.85-slim-bookworm AS builder
+FROM rust:1.93-slim-trixie AS builder
 
 WORKDIR /workspace
 
@@ -28,10 +28,10 @@ COPY backend/migrations backend/migrations
 RUN cargo build --release -p gantry-board
 
 # Stage 2: Runtime
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 RUN apt-get update && apt-get install -y \
-    libssl3 \
+    libssl3t64 \
     ca-certificates \
     curl \
     && rm -rf /var/lib/apt/lists/*
