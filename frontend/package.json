@@ -48,6 +48,7 @@
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
+    "babel-plugin-react-compiler": "^1.0.0",
     "jsdom": "^26.1.0",
     "msw": "^2.12.10",
     "orval": "^7.13.2",
