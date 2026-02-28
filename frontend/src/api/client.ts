@@ -1,40 +1,16 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
-export const customInstance = async <T>({
-  url,
-  method,
-  params,
-  data,
-  headers,
-  signal,
-}: {
-  url: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  params?: Record<string, string | number | boolean | undefined>;
-  data?: unknown;
-  headers?: Record<string, string>;
-  signal?: AbortSignal;
-}): Promise<T> => {
-  const searchParams = new URLSearchParams();
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined) {
-        searchParams.set(key, String(value));
-      }
-    }
-  }
-  const fullUrl = `${BASE_URL}${url}${searchParams.toString() ? `?${searchParams}` : ''}`;
+export const customInstance = async <T>(url: string, options?: RequestInit): Promise<T> => {
+  const fullUrl = `${BASE_URL}${url}`;
 
   const response = await fetch(fullUrl, {
-    method,
     credentials: 'include', // Include cookies for session auth
+    ...options,
     headers: {
       'Content-Type': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
-      ...headers,
+      ...options?.headers,
     },
-    ...(data ? { body: JSON.stringify(data) } : {}),
-    signal,
   });
 
   if (!response.ok) {

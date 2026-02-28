@@ -15,6 +15,9 @@ export default defineConfig({
           path: './src/api/client.ts',
           name: 'customInstance',
         },
+        fetch: {
+          includeHttpResponseReturnType: false,
+        },
       },
     },
   },
