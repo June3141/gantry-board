@@ -427,6 +427,86 @@ impl PreviewManager {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn circuit_breaker_starts_closed() {
+        let cb = DockerCircuitBreaker::new();
+        assert_eq!(cb.state(), CircuitState::Closed);
+        assert!(cb.check().is_ok());
+    }
+
+    #[test]
+    fn circuit_breaker_opens_after_threshold_failures() {
+        let cb = DockerCircuitBreaker::new();
+
+        for _ in 0..FAILURE_THRESHOLD {
+            cb.record_failure();
+        }
+
+        assert_eq!(cb.state(), CircuitState::Open);
+        assert!(cb.check().is_err());
+    }
+
+    #[test]
+    fn circuit_breaker_stays_closed_below_threshold() {
+        let cb = DockerCircuitBreaker::new();
+
+        for _ in 0..(FAILURE_THRESHOLD - 1) {
+            cb.record_failure();
+        }
+
+        assert_eq!(cb.state(), CircuitState::Closed);
+        assert!(cb.check().is_ok());
+    }
+
+    #[test]
+    fn circuit_breaker_resets_on_success() {
+        let cb = DockerCircuitBreaker::new();
+
+        for _ in 0..(FAILURE_THRESHOLD - 1) {
+            cb.record_failure();
+        }
+
+        cb.record_success();
+        assert_eq!(cb.state(), CircuitState::Closed);
+
+        // After reset, need full threshold again to open
+        for _ in 0..FAILURE_THRESHOLD {
+            cb.record_failure();
+        }
+        assert_eq!(cb.state(), CircuitState::Open);
+    }
+
+    #[test]
+    fn circuit_breaker_half_open_after_recovery_window() {
+        let cb = DockerCircuitBreaker::new();
+
+        // Record failures with a timestamp in the past
+        let past = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            - RECOVERY_WINDOW_SECS
+            - 1;
+        cb.last_failure_epoch
+            .store(past, std::sync::atomic::Ordering::Release);
+        cb.consecutive_failures
+            .store(FAILURE_THRESHOLD, std::sync::atomic::Ordering::Release);
+
+        assert_eq!(cb.state(), CircuitState::HalfOpen);
+        assert!(cb.check().is_ok()); // HalfOpen allows a probe
+    }
+
+    #[test]
+    fn circuit_breaker_default_trait() {
+        let cb = DockerCircuitBreaker::default();
+        assert_eq!(cb.state(), CircuitState::Closed);
+    }
+}
+
 fn create_tar_context(dir: &std::path::Path) -> AppResult<Vec<u8>> {
     use std::io::Write;
 

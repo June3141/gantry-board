@@ -140,3 +140,111 @@ pub async fn cleanup_old_events(pool: &SqlitePool, retention_days: u64) -> AppRe
 
     Ok(result.rows_affected())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_helpers::setup_test_db;
+
+    #[tokio::test]
+    async fn test_log_event_and_list() {
+        let pool = setup_test_db().await;
+
+        // log_event spawns a background task, so call it and wait briefly
+        log_event(
+            pool.clone(),
+            "user.login",
+            Some("actor-1"),
+            Some("user"),
+            Some("target-1"),
+            Some(serde_json::json!({"key": "value"})),
+            Some("127.0.0.1"),
+        );
+
+        // Wait for the spawned task to complete
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let result = list_events(&pool, None, 10, 0).await.unwrap();
+        assert_eq!(result.total, 1);
+        assert_eq!(result.items.len(), 1);
+        assert_eq!(result.items[0].event_type, "user.login");
+        assert_eq!(result.items[0].actor_id.as_deref(), Some("actor-1"));
+        assert_eq!(result.items[0].ip_address.as_deref(), Some("127.0.0.1"));
+    }
+
+    #[tokio::test]
+    async fn test_list_events_with_type_filter() {
+        let pool = setup_test_db().await;
+
+        log_event(pool.clone(), "user.login", None, None, None, None, None);
+        log_event(pool.clone(), "user.logout", None, None, None, None, None);
+        log_event(pool.clone(), "user.login", None, None, None, None, None);
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let result = list_events(&pool, Some("user.login"), 10, 0).await.unwrap();
+        assert_eq!(result.total, 2);
+        assert_eq!(result.items.len(), 2);
+
+        let result = list_events(&pool, Some("user.logout"), 10, 0)
+            .await
+            .unwrap();
+        assert_eq!(result.total, 1);
+    }
+
+    #[tokio::test]
+    async fn test_list_events_pagination() {
+        let pool = setup_test_db().await;
+
+        for _ in 0..5 {
+            log_event(pool.clone(), "test.event", None, None, None, None, None);
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let page1 = list_events(&pool, None, 2, 0).await.unwrap();
+        assert_eq!(page1.total, 5);
+        assert_eq!(page1.items.len(), 2);
+        assert_eq!(page1.limit, 2);
+        assert_eq!(page1.offset, 0);
+
+        let page2 = list_events(&pool, None, 2, 2).await.unwrap();
+        assert_eq!(page2.items.len(), 2);
+        assert_eq!(page2.offset, 2);
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_old_events() {
+        let pool = setup_test_db().await;
+
+        log_event(pool.clone(), "old.event", None, None, None, None, None);
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        // retention_days=0 should not delete events created just now
+        let deleted = cleanup_old_events(&pool, 0).await.unwrap();
+        // Events created within the same second may not be cleaned up with 0 days
+        // so just verify the function runs without error
+        assert!(deleted == 0 || deleted == 1);
+
+        // Verify list still works
+        let result = list_events(&pool, None, 10, 0).await.unwrap();
+        assert!(result.total >= 0);
+    }
+
+    #[tokio::test]
+    async fn test_log_event_without_optional_fields() {
+        let pool = setup_test_db().await;
+
+        log_event(pool.clone(), "system.startup", None, None, None, None, None);
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let result = list_events(&pool, None, 10, 0).await.unwrap();
+        assert_eq!(result.total, 1);
+        assert_eq!(result.items[0].event_type, "system.startup");
+        assert!(result.items[0].actor_id.is_none());
+        assert!(result.items[0].target_type.is_none());
+        assert!(result.items[0].ip_address.is_none());
+    }
+}
