@@ -59,23 +59,86 @@ pub async fn insert_tx(
     assigned_to: Option<Uuid>,
     now: DateTime<Utc>,
 ) -> AppResult<()> {
-    todo!()
+    sqlx::query(
+        r#"
+        INSERT INTO tasks (id, project_id, title, description, status, priority, parent_id, assigned_to, position, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        "#,
+    )
+    .bind(id.to_string())
+    .bind(project_id.to_string())
+    .bind(title)
+    .bind(description)
+    .bind(status)
+    .bind(priority)
+    .bind(parent_id.map(|u| u.to_string()))
+    .bind(assigned_to.map(|u| u.to_string()))
+    .bind(0i32)
+    .bind(now)
+    .bind(now)
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn find_by_id(pool: &SqlitePool, id: Uuid) -> AppResult<Task> {
-    todo!()
+    let row = sqlx::query_as::<_, TaskRow>(
+        r#"
+        SELECT id, project_id, title, description, status, priority, parent_id, assigned_to, position, created_at, updated_at
+        FROM tasks
+        WHERE id = $1
+        "#,
+    )
+    .bind(id.to_string())
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(row_to_task)
+        .transpose()?
+        .ok_or_else(|| AppError::NotFound(format!("task {} not found", id)))
 }
 
 pub async fn find_by_id_tx(conn: &mut SqliteConnection, id: Uuid) -> AppResult<Task> {
-    todo!()
+    let row = sqlx::query_as::<_, TaskRow>(
+        r#"
+        SELECT id, project_id, title, description, status, priority, parent_id, assigned_to, position, created_at, updated_at
+        FROM tasks
+        WHERE id = $1
+        "#,
+    )
+    .bind(id.to_string())
+    .fetch_optional(&mut *conn)
+    .await?;
+
+    row.map(row_to_task)
+        .transpose()?
+        .ok_or_else(|| AppError::NotFound(format!("task {} not found", id)))
 }
 
 pub async fn find_all_by_project(pool: &SqlitePool, project_id: Uuid) -> AppResult<Vec<Task>> {
-    todo!()
+    let rows = sqlx::query_as::<_, TaskRow>(
+        r#"
+        SELECT id, project_id, title, description, status, priority, parent_id, assigned_to, position, created_at, updated_at
+        FROM tasks
+        WHERE project_id = $1
+        ORDER BY position ASC, created_at ASC
+        "#,
+    )
+    .bind(project_id.to_string())
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter().map(row_to_task).collect()
 }
 
 pub async fn count_by_project(pool: &SqlitePool, project_id: Uuid) -> AppResult<i64> {
-    todo!()
+    let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM tasks WHERE project_id = $1")
+        .bind(project_id.to_string())
+        .fetch_one(pool)
+        .await?;
+
+    Ok(total.0)
 }
 
 pub async fn find_paginated_by_project(
@@ -84,7 +147,22 @@ pub async fn find_paginated_by_project(
     limit: i64,
     offset: i64,
 ) -> AppResult<Vec<Task>> {
-    todo!()
+    let rows = sqlx::query_as::<_, TaskRow>(
+        r#"
+        SELECT id, project_id, title, description, status, priority, parent_id, assigned_to, position, created_at, updated_at
+        FROM tasks
+        WHERE project_id = $1
+        ORDER BY position ASC, created_at ASC
+        LIMIT $2 OFFSET $3
+        "#,
+    )
+    .bind(project_id.to_string())
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter().map(row_to_task).collect()
 }
 
 pub async fn update_tx(
@@ -99,15 +177,48 @@ pub async fn update_tx(
     position: i32,
     now: DateTime<Utc>,
 ) -> AppResult<()> {
-    todo!()
+    sqlx::query(
+        r#"
+        UPDATE tasks
+        SET title = $1, description = $2, status = $3, priority = $4, parent_id = $5, assigned_to = $6, position = $7, updated_at = $8
+        WHERE id = $9
+        "#,
+    )
+    .bind(title)
+    .bind(description)
+    .bind(status)
+    .bind(priority)
+    .bind(parent_id.map(|u| u.to_string()))
+    .bind(assigned_to.map(|u| u.to_string()))
+    .bind(position)
+    .bind(now)
+    .bind(id.to_string())
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn delete(pool: &SqlitePool, id: Uuid) -> AppResult<()> {
-    todo!()
+    let result = sqlx::query("DELETE FROM tasks WHERE id = $1")
+        .bind(id.to_string())
+        .execute(pool)
+        .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!("task {} not found", id)));
+    }
+
+    Ok(())
 }
 
 pub async fn user_exists_tx(conn: &mut SqliteConnection, user_id: Uuid) -> AppResult<bool> {
-    todo!()
+    let exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM users WHERE id = $1")
+        .bind(user_id.to_string())
+        .fetch_optional(&mut *conn)
+        .await?;
+
+    Ok(exists.is_some())
 }
 
 pub async fn is_project_member_tx(
@@ -115,7 +226,14 @@ pub async fn is_project_member_tx(
     project_id: Uuid,
     user_id: Uuid,
 ) -> AppResult<bool> {
-    todo!()
+    let exists: Option<(i32,)> =
+        sqlx::query_as("SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2")
+            .bind(project_id.to_string())
+            .bind(user_id.to_string())
+            .fetch_optional(&mut *conn)
+            .await?;
+
+    Ok(exists.is_some())
 }
 
 #[cfg(test)]
