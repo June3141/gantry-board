@@ -141,7 +141,7 @@ pub async fn find_role(
     pool: &SqlitePool,
     project_id: Uuid,
     user_id: Uuid,
-) -> AppResult<Option<String>> {
+) -> AppResult<Option<MemberRole>> {
     let row = sqlx::query_scalar::<_, String>(
         "SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2",
     )
@@ -150,18 +150,21 @@ pub async fn find_role(
     .fetch_optional(pool)
     .await?;
 
-    Ok(row)
+    row.map(|s| {
+        serde_json::from_value(serde_json::Value::String(s))
+            .map_err(|e| AppError::Internal(e.to_string()))
+    })
+    .transpose()
 }
 
 pub async fn has_any_membership(pool: &SqlitePool, user_id: Uuid) -> AppResult<bool> {
-    let count = sqlx::query_scalar::<_, i32>(
-        "SELECT COUNT(*) FROM project_members WHERE user_id = $1 LIMIT 1",
-    )
-    .bind(user_id.to_string())
-    .fetch_one(pool)
-    .await?;
+    let exists: Option<(i32,)> =
+        sqlx::query_as("SELECT 1 FROM project_members WHERE user_id = $1 LIMIT 1")
+            .bind(user_id.to_string())
+            .fetch_optional(pool)
+            .await?;
 
-    Ok(count > 0)
+    Ok(exists.is_some())
 }
 
 pub async fn list_project_ids_by_user(pool: &SqlitePool, user_id: Uuid) -> AppResult<Vec<Uuid>> {
@@ -181,14 +184,14 @@ pub async fn list_project_ids_by_user(pool: &SqlitePool, user_id: Uuid) -> AppRe
 }
 
 pub async fn count_owners(pool: &SqlitePool, project_id: Uuid) -> AppResult<i64> {
-    let count = sqlx::query_scalar::<_, i32>(
+    let count = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM project_members WHERE project_id = $1 AND role = 'owner'",
     )
     .bind(project_id.to_string())
     .fetch_one(pool)
     .await?;
 
-    Ok(count as i64)
+    Ok(count)
 }
 
 pub async fn user_exists_tx(conn: &mut SqliteConnection, user_id: Uuid) -> AppResult<bool> {
@@ -242,7 +245,7 @@ mod tests {
 
         let mut tx = pool.begin().await.unwrap();
         insert_tx(
-            &mut *tx,
+            &mut tx,
             project_id,
             user_id,
             &MemberRole::Member,
@@ -279,10 +282,10 @@ mod tests {
         let u2 = create_test_user(&pool).await;
 
         let mut tx = pool.begin().await.unwrap();
-        insert_tx(&mut *tx, project_id, u1, &MemberRole::Owner, Utc::now())
+        insert_tx(&mut tx, project_id, u1, &MemberRole::Owner, Utc::now())
             .await
             .unwrap();
-        insert_tx(&mut *tx, project_id, u2, &MemberRole::Member, Utc::now())
+        insert_tx(&mut tx, project_id, u2, &MemberRole::Member, Utc::now())
             .await
             .unwrap();
         tx.commit().await.unwrap();
@@ -301,7 +304,7 @@ mod tests {
 
         let mut tx = pool.begin().await.unwrap();
         insert_tx(
-            &mut *tx,
+            &mut tx,
             project_id,
             user_id,
             &MemberRole::Member,
@@ -330,7 +333,7 @@ mod tests {
 
         let mut tx = pool.begin().await.unwrap();
         insert_tx(
-            &mut *tx,
+            &mut tx,
             project_id,
             user_id,
             &MemberRole::Member,
@@ -356,22 +359,16 @@ mod tests {
         let user_id = create_test_user(&pool).await;
 
         let mut tx = pool.begin().await.unwrap();
-        insert_tx(
-            &mut *tx,
-            project_id,
-            user_id,
-            &MemberRole::Admin,
-            Utc::now(),
-        )
-        .await
-        .unwrap();
+        insert_tx(&mut tx, project_id, user_id, &MemberRole::Admin, Utc::now())
+            .await
+            .unwrap();
         tx.commit().await.unwrap();
 
         let role = find_role(&pool, project_id, user_id)
             .await
             .expect("find_role")
             .expect("should have role");
-        assert_eq!(role, "admin");
+        assert_eq!(role, MemberRole::Admin);
 
         assert!(find_role(&pool, project_id, Uuid::new_v4())
             .await
@@ -389,7 +386,7 @@ mod tests {
 
         let mut tx = pool.begin().await.unwrap();
         insert_tx(
-            &mut *tx,
+            &mut tx,
             project_id,
             user_id,
             &MemberRole::Member,
@@ -410,10 +407,10 @@ mod tests {
         let user_id = create_test_user(&pool).await;
 
         let mut tx = pool.begin().await.unwrap();
-        insert_tx(&mut *tx, p1, user_id, &MemberRole::Owner, Utc::now())
+        insert_tx(&mut tx, p1, user_id, &MemberRole::Owner, Utc::now())
             .await
             .unwrap();
-        insert_tx(&mut *tx, p2, user_id, &MemberRole::Member, Utc::now())
+        insert_tx(&mut tx, p2, user_id, &MemberRole::Member, Utc::now())
             .await
             .unwrap();
         tx.commit().await.unwrap();
@@ -433,13 +430,13 @@ mod tests {
         let u3 = create_test_user(&pool).await;
 
         let mut tx = pool.begin().await.unwrap();
-        insert_tx(&mut *tx, project_id, u1, &MemberRole::Owner, Utc::now())
+        insert_tx(&mut tx, project_id, u1, &MemberRole::Owner, Utc::now())
             .await
             .unwrap();
-        insert_tx(&mut *tx, project_id, u2, &MemberRole::Owner, Utc::now())
+        insert_tx(&mut tx, project_id, u2, &MemberRole::Owner, Utc::now())
             .await
             .unwrap();
-        insert_tx(&mut *tx, project_id, u3, &MemberRole::Admin, Utc::now())
+        insert_tx(&mut tx, project_id, u3, &MemberRole::Admin, Utc::now())
             .await
             .unwrap();
         tx.commit().await.unwrap();
@@ -454,8 +451,8 @@ mod tests {
         let user_id = create_test_user(&pool).await;
 
         let mut tx = pool.begin().await.unwrap();
-        assert!(user_exists_tx(&mut *tx, user_id).await.unwrap());
-        assert!(!user_exists_tx(&mut *tx, Uuid::new_v4()).await.unwrap());
+        assert!(user_exists_tx(&mut tx, user_id).await.unwrap());
+        assert!(!user_exists_tx(&mut tx, Uuid::new_v4()).await.unwrap());
         tx.commit().await.unwrap();
     }
 }

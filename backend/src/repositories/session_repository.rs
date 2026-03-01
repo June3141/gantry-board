@@ -282,7 +282,7 @@ mod tests {
         // Insert via transaction
         let id = Uuid::new_v4();
         let mut tx = pool.begin().await.unwrap();
-        insert_tx(&mut *tx, id, user_id, now, expires_at)
+        insert_tx(&mut tx, id, user_id, now, expires_at)
             .await
             .expect("insert_tx");
         tx.commit().await.unwrap();
@@ -295,7 +295,7 @@ mod tests {
 
         // Delete via transaction
         let mut tx = pool.begin().await.unwrap();
-        delete_by_user_id_tx(&mut *tx, user_id)
+        delete_by_user_id_tx(&mut tx, user_id)
             .await
             .expect("delete_tx");
         tx.commit().await.unwrap();

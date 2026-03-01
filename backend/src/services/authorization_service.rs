@@ -39,19 +39,14 @@ pub async fn require_project_member(
         return Ok(MemberRole::Owner);
     }
 
-    let role_str = member_repository::find_role(pool, project_id, user_id).await?;
-
-    match role_str {
-        Some(s) => {
-            let role: MemberRole = serde_json::from_value(serde_json::Value::String(s))
-                .map_err(|e| AppError::Internal(e.to_string()))?;
-            Ok(role)
-        }
-        None => Err(AppError::Forbidden(format!(
-            "user {} is not a member of project {}",
-            user_id, project_id
-        ))),
-    }
+    member_repository::find_role(pool, project_id, user_id)
+        .await?
+        .ok_or_else(|| {
+            AppError::Forbidden(format!(
+                "user {} is not a member of project {}",
+                user_id, project_id
+            ))
+        })
 }
 
 /// Check if user has Owner or Admin role in the project.

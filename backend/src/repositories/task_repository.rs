@@ -47,6 +47,7 @@ fn row_to_task(row: TaskRow) -> AppResult<Task> {
         .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn insert_tx(
     conn: &mut SqliteConnection,
     id: Uuid,
@@ -165,6 +166,7 @@ pub async fn find_paginated_by_project(
     rows.into_iter().map(row_to_task).collect()
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn update_tx(
     conn: &mut SqliteConnection,
     id: Uuid,
@@ -278,7 +280,7 @@ mod tests {
 
         let mut tx = pool.begin().await.unwrap();
         insert_tx(
-            &mut *tx,
+            &mut tx,
             id,
             project_id,
             "Test Task",
@@ -315,7 +317,7 @@ mod tests {
         for i in 0..3 {
             let mut tx = pool.begin().await.unwrap();
             insert_tx(
-                &mut *tx,
+                &mut tx,
                 Uuid::new_v4(),
                 project_id,
                 &format!("Task {i}"),
@@ -346,7 +348,7 @@ mod tests {
         for i in 0..5 {
             let mut tx = pool.begin().await.unwrap();
             insert_tx(
-                &mut *tx,
+                &mut tx,
                 Uuid::new_v4(),
                 project_id,
                 &format!("Task {i}"),
@@ -380,7 +382,7 @@ mod tests {
 
         let mut tx = pool.begin().await.unwrap();
         insert_tx(
-            &mut *tx,
+            &mut tx,
             id,
             project_id,
             "Original",
@@ -398,7 +400,7 @@ mod tests {
         let later = now + chrono::Duration::seconds(10);
         let mut tx = pool.begin().await.unwrap();
         update_tx(
-            &mut *tx,
+            &mut tx,
             id,
             "Updated",
             Some("new desc"),
@@ -429,7 +431,7 @@ mod tests {
 
         let mut tx = pool.begin().await.unwrap();
         insert_tx(
-            &mut *tx,
+            &mut tx,
             id,
             project_id,
             "To Delete",
@@ -464,8 +466,8 @@ mod tests {
         let user_id = create_test_user(&pool).await;
 
         let mut tx = pool.begin().await.unwrap();
-        assert!(user_exists_tx(&mut *tx, user_id).await.expect("check"));
-        assert!(!user_exists_tx(&mut *tx, Uuid::new_v4())
+        assert!(user_exists_tx(&mut tx, user_id).await.expect("check"));
+        assert!(!user_exists_tx(&mut tx, Uuid::new_v4())
             .await
             .expect("check"));
         tx.commit().await.unwrap();
@@ -486,10 +488,10 @@ mod tests {
             .expect("add member");
 
         let mut tx = pool.begin().await.unwrap();
-        assert!(is_project_member_tx(&mut *tx, project_id, user_id)
+        assert!(is_project_member_tx(&mut tx, project_id, user_id)
             .await
             .expect("check"));
-        assert!(!is_project_member_tx(&mut *tx, project_id, Uuid::new_v4())
+        assert!(!is_project_member_tx(&mut tx, project_id, Uuid::new_v4())
             .await
             .expect("check"));
         tx.commit().await.unwrap();

@@ -16,7 +16,7 @@ pub struct Project {
 // ProjectMember types - used in PR 2 (Project Member API)
 // Defined here alongside the migration schema for consistency.
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, sqlx::Type)]
 #[sqlx(type_name = "TEXT", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum MemberRole {

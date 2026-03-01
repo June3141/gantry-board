@@ -14,8 +14,8 @@ mod tests;
 pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResult<Task> {
     let mut tx = pool.begin().await?;
 
-    validate_assigned_to_tx(&mut *tx, req.assigned_to, req.project_id).await?;
-    validate_parent_project_tx(&mut *tx, req.parent_id, req.project_id).await?;
+    validate_assigned_to_tx(&mut tx, req.assigned_to, req.project_id).await?;
+    validate_parent_project_tx(&mut tx, req.parent_id, req.project_id).await?;
 
     let id = uuid::Uuid::new_v4();
     let now = chrono::Utc::now();
@@ -23,7 +23,7 @@ pub async fn create_task(pool: &SqlitePool, req: &CreateTaskRequest) -> AppResul
     let priority = req.priority.clone().unwrap_or(TaskPriority::Medium);
 
     task_repository::insert_tx(
-        &mut *tx,
+        &mut tx,
         id,
         req.project_id,
         &req.title,
@@ -78,10 +78,10 @@ pub async fn list_tasks_paginated(
 pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -> AppResult<Task> {
     let mut tx = pool.begin().await?;
 
-    let existing = task_repository::find_by_id_tx(&mut *tx, id).await?;
+    let existing = task_repository::find_by_id_tx(&mut tx, id).await?;
 
-    validate_assigned_to_tx(&mut *tx, req.assigned_to, existing.project_id).await?;
-    validate_parent_project_tx(&mut *tx, req.parent_id, existing.project_id).await?;
+    validate_assigned_to_tx(&mut tx, req.assigned_to, existing.project_id).await?;
+    validate_parent_project_tx(&mut tx, req.parent_id, existing.project_id).await?;
 
     let now = chrono::Utc::now();
 
@@ -97,7 +97,7 @@ pub async fn update_task(pool: &SqlitePool, id: Uuid, req: &UpdateTaskRequest) -
     let status_changed = *status != existing.status;
 
     task_repository::update_tx(
-        &mut *tx,
+        &mut tx,
         id,
         title,
         description.map(|s| s.as_str()),

@@ -16,7 +16,7 @@ pub async fn add_member(
     let mut tx = pool.begin().await?;
 
     // Validate that the user exists within the transaction
-    if !member_repository::user_exists_tx(&mut *tx, req.user_id).await? {
+    if !member_repository::user_exists_tx(&mut tx, req.user_id).await? {
         return Err(AppError::NotFound(format!(
             "user {} not found",
             req.user_id
@@ -24,7 +24,7 @@ pub async fn add_member(
     }
 
     let now = Utc::now();
-    member_repository::insert_tx(&mut *tx, project_id, req.user_id, &req.role, now).await?;
+    member_repository::insert_tx(&mut tx, project_id, req.user_id, &req.role, now).await?;
 
     tx.commit().await?;
 

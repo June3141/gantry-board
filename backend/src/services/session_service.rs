@@ -73,13 +73,13 @@ pub async fn rotate_session(
 ) -> AppResult<Session> {
     let mut tx = pool.begin().await?;
 
-    session_repository::delete_by_user_id_tx(&mut *tx, user_id).await?;
+    session_repository::delete_by_user_id_tx(&mut tx, user_id).await?;
 
     let id = Uuid::new_v4();
     let now = Utc::now();
     let expires_at = now + Duration::hours(duration_hours as i64);
 
-    session_repository::insert_tx(&mut *tx, id, user_id, now, expires_at).await?;
+    session_repository::insert_tx(&mut tx, id, user_id, now, expires_at).await?;
 
     tx.commit().await?;
 
