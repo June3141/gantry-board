@@ -15,6 +15,7 @@ if [ ! -d node_modules ] \
    || [ "$(cat "$MARKER")" != "$PLATFORM" ]; then
   echo "Installing dependencies (platform: $PLATFORM)..."
   npm ci
+  touch -r package-lock.json node_modules/.package-lock.json
   echo "$PLATFORM" > "$MARKER"
 fi
 
