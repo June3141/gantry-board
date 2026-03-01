@@ -3,11 +3,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppRoutes } from './App';
 import * as authApi from '@/api/generated/endpoints/auth/auth';
 import * as projectsApi from '@/api/generated/endpoints/projects/projects';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
+import { AppRoutes } from './App';
 
 // Mock EventSource for SSE
 class MockEventSource {

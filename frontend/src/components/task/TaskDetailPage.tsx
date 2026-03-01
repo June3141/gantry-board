@@ -11,12 +11,12 @@ import {
   useUpdateTask,
 } from '@/api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '@/api/generated/model';
+import { PullRequestList } from '@/components/github/PullRequestList';
+import { WorktreePanel } from '@/components/preview/WorktreePanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { invalidateTasks } from '@/services/queryInvalidation';
-import { PullRequestList } from '@/components/github/PullRequestList';
-import { WorktreePanel } from '@/components/preview/WorktreePanel';
 import { TaskTimeline } from './TaskTimeline';
 
 export function TaskDetailPage() {

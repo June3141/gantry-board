@@ -10,6 +10,7 @@ import {
   useUpdateProject,
 } from '@/api/generated/endpoints/projects/projects';
 import { MemberRole } from '@/api/generated/model';
+import { GitHubLinkSettings } from '@/components/github/GitHubLinkSettings';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import { useUiStore } from '@/stores/uiStore';
-import { GitHubLinkSettings } from '@/components/github/GitHubLinkSettings';
 
 export function ProjectSettingsModal({
   projectId,

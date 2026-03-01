@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { useListMembers } from '@/api/generated/endpoints/project-members/project-members';
 import { useDeleteTask, useGetTask, useUpdateTask } from '@/api/generated/endpoints/tasks/tasks';
 import type { TaskPriority, TaskStatus } from '@/api/generated/model';
+import { PullRequestList } from '@/components/github/PullRequestList';
+import { WorktreePanel } from '@/components/preview/WorktreePanel';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { invalidateTasks } from '@/services/queryInvalidation';
 import { useUiStore } from '@/stores/uiStore';
-import { PullRequestList } from '@/components/github/PullRequestList';
-import { WorktreePanel } from '@/components/preview/WorktreePanel';
 import { TaskTimeline } from './TaskTimeline';
 
 export function TaskDetailModal() {
