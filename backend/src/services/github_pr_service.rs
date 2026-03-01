@@ -7,7 +7,7 @@ use crate::repositories::github_pr_repository;
 
 /// Upsert a pull request linked to a task.
 /// Inserts a new record or updates an existing one (matched by github_link_id + pr_number + task_id).
-#[tracing::instrument(skip(pool))]
+#[tracing::instrument(skip(pool, pr), fields(pr_number = pr.pr_number))]
 pub async fn upsert_pr(
     pool: &SqlitePool,
     github_link_id: Uuid,
@@ -15,6 +15,10 @@ pub async fn upsert_pr(
     pr: &LinkedPr,
 ) -> AppResult<GitHubPullRequest> {
     let id = Uuid::new_v4();
+    let state = match pr.state.as_str() {
+        "closed" => "closed",
+        _ => "open",
+    };
     github_pr_repository::upsert(
         pool,
         id,
@@ -23,7 +27,7 @@ pub async fn upsert_pr(
         pr.pr_number as i64,
         &pr.title,
         &pr.url,
-        &pr.state,
+        state,
         pr.is_merged,
         pr.author.as_deref(),
     )

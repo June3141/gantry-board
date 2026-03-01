@@ -64,11 +64,6 @@ pub async fn upsert(
     is_merged: bool,
     author: Option<&str>,
 ) -> AppResult<GitHubPullRequest> {
-    let db_state = match state {
-        "closed" => "closed",
-        _ => "open",
-    };
-
     sqlx::query(
         r#"
         INSERT INTO github_pull_requests (id, github_link_id, task_id, pr_number, title, url, state, is_merged, author)
@@ -88,7 +83,7 @@ pub async fn upsert(
     .bind(pr_number)
     .bind(title)
     .bind(url)
-    .bind(db_state)
+    .bind(state)
     .bind(is_merged)
     .bind(author)
     .execute(pool)
