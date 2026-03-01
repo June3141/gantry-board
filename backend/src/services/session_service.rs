@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::user::Session;
+use crate::repositories::session_repository;
 
 /// Create a new session for a user
 pub async fn create_session(
@@ -15,19 +16,7 @@ pub async fn create_session(
     let now = Utc::now();
     let expires_at = now + Duration::hours(duration_hours as i64);
 
-    sqlx::query(
-        r#"
-        INSERT INTO sessions (id, user_id, created_at, expires_at, last_active_at)
-        VALUES ($1, $2, $3, $4, $5)
-        "#,
-    )
-    .bind(id.to_string())
-    .bind(user_id.to_string())
-    .bind(now)
-    .bind(expires_at)
-    .bind(now)
-    .execute(pool)
-    .await?;
+    session_repository::insert(pool, id, user_id, now, expires_at).await?;
 
     Ok(Session {
         id: id.to_string(),
@@ -41,20 +30,7 @@ pub async fn create_session(
 /// Get session by ID, returns None if not found or expired
 pub async fn get_session(pool: &SqlitePool, session_id: Uuid) -> AppResult<Option<Session>> {
     let now = Utc::now();
-
-    let session = sqlx::query_as::<_, Session>(
-        r#"
-        SELECT id, user_id, created_at, expires_at, last_active_at
-        FROM sessions
-        WHERE id = $1 AND expires_at > $2
-        "#,
-    )
-    .bind(session_id.to_string())
-    .bind(now)
-    .fetch_optional(pool)
-    .await?;
-
-    Ok(session)
+    session_repository::find_by_id_not_expired(pool, session_id, now).await
 }
 
 /// Validate and update session's last_active_at timestamp
@@ -65,19 +41,8 @@ pub async fn validate_session(pool: &SqlitePool, session_id: Uuid) -> AppResult<
 
     match session {
         Some(sess) => {
-            // Update last_active_at
             let now = Utc::now();
-            sqlx::query(
-                r#"
-                UPDATE sessions
-                SET last_active_at = $1
-                WHERE id = $2
-                "#,
-            )
-            .bind(now)
-            .bind(session_id.to_string())
-            .execute(pool)
-            .await?;
+            session_repository::update_last_active_at(pool, session_id, now).await?;
 
             Ok(Session {
                 last_active_at: now,
@@ -90,32 +55,12 @@ pub async fn validate_session(pool: &SqlitePool, session_id: Uuid) -> AppResult<
 
 /// Delete a session (logout)
 pub async fn delete_session(pool: &SqlitePool, session_id: Uuid) -> AppResult<()> {
-    sqlx::query(
-        r#"
-        DELETE FROM sessions
-        WHERE id = $1
-        "#,
-    )
-    .bind(session_id.to_string())
-    .execute(pool)
-    .await?;
-
-    Ok(())
+    session_repository::delete_by_id(pool, session_id).await
 }
 
 /// Delete all sessions for a user
 pub async fn delete_user_sessions(pool: &SqlitePool, user_id: Uuid) -> AppResult<()> {
-    sqlx::query(
-        r#"
-        DELETE FROM sessions
-        WHERE user_id = $1
-        "#,
-    )
-    .bind(user_id.to_string())
-    .execute(pool)
-    .await?;
-
-    Ok(())
+    session_repository::delete_by_user_id(pool, user_id).await
 }
 
 /// Delete all sessions for a user and create a new one atomically.
@@ -128,28 +73,13 @@ pub async fn rotate_session(
 ) -> AppResult<Session> {
     let mut tx = pool.begin().await?;
 
-    sqlx::query("DELETE FROM sessions WHERE user_id = $1")
-        .bind(user_id.to_string())
-        .execute(&mut *tx)
-        .await?;
+    session_repository::delete_by_user_id_tx(&mut tx, user_id).await?;
 
     let id = Uuid::new_v4();
     let now = Utc::now();
     let expires_at = now + Duration::hours(duration_hours as i64);
 
-    sqlx::query(
-        r#"
-        INSERT INTO sessions (id, user_id, created_at, expires_at, last_active_at)
-        VALUES ($1, $2, $3, $4, $5)
-        "#,
-    )
-    .bind(id.to_string())
-    .bind(user_id.to_string())
-    .bind(now)
-    .bind(expires_at)
-    .bind(now)
-    .execute(&mut *tx)
-    .await?;
+    session_repository::insert_tx(&mut tx, id, user_id, now, expires_at).await?;
 
     tx.commit().await?;
 
@@ -165,18 +95,7 @@ pub async fn rotate_session(
 /// Clean up expired sessions
 pub async fn cleanup_expired_sessions(pool: &SqlitePool) -> AppResult<u64> {
     let now = Utc::now();
-
-    let result = sqlx::query(
-        r#"
-        DELETE FROM sessions
-        WHERE expires_at <= $1
-        "#,
-    )
-    .bind(now)
-    .execute(pool)
-    .await?;
-
-    Ok(result.rows_affected())
+    session_repository::delete_expired(pool, now).await
 }
 
 #[cfg(test)]
@@ -190,7 +109,7 @@ mod tests {
         let req = RegisterRequest {
             email: format!("test-{}@example.com", Uuid::new_v4()),
             name: "Test User".to_string(),
-            password: "password123".to_string(),
+            password: "correct horse battery staple purple".to_string(),
         };
         let user = user_service::create_user(pool, &req)
             .await
