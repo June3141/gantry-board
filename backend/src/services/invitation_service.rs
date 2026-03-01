@@ -138,9 +138,8 @@ pub async fn accept_invitation(
 
     // Mark invitation as accepted (conditional on accepted_at still being NULL
     // to prevent double-accept race condition)
-    let rows =
-        invitation_repository::mark_accepted_tx(&mut *tx, invitation.id, user_id, Utc::now())
-            .await?;
+    let rows = invitation_repository::mark_accepted_tx(&mut tx, invitation.id, user_id, Utc::now())
+        .await?;
 
     if rows == 0 {
         return Err(AppError::Conflict(
@@ -154,7 +153,7 @@ pub async fn accept_invitation(
 
     // Check if already a member
     let is_member =
-        invitation_repository::is_project_member_tx(&mut *tx, invitation.project_id, user_id)
+        invitation_repository::is_project_member_tx(&mut tx, invitation.project_id, user_id)
             .await?;
 
     if !is_member {

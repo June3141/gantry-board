@@ -447,7 +447,7 @@ mod tests {
         let now = Utc::now();
         let mut tx = pool.begin().await.unwrap();
         insert_tx(
-            &mut *tx,
+            &mut tx,
             id,
             task_id,
             &AgentType::GeminiCli,
@@ -504,7 +504,7 @@ mod tests {
         let id = insert_test_session(&pool, task_id).await;
 
         let mut tx = pool.begin().await.unwrap();
-        let affected = update_prompt_tx(&mut *tx, id, "tx prompt")
+        let affected = update_prompt_tx(&mut tx, id, "tx prompt")
             .await
             .expect("update_prompt_tx");
         assert_eq!(affected, 1);
@@ -603,7 +603,7 @@ mod tests {
 
         // No active session initially
         let mut tx = pool.begin().await.unwrap();
-        let active = find_active_by_task_tx(&mut *tx, task_id)
+        let active = find_active_by_task_tx(&mut tx, task_id)
             .await
             .expect("find_active");
         assert!(active.is_none());
@@ -613,7 +613,7 @@ mod tests {
         insert_test_session(&pool, task_id).await;
 
         let mut tx = pool.begin().await.unwrap();
-        let active = find_active_by_task_tx(&mut *tx, task_id)
+        let active = find_active_by_task_tx(&mut tx, task_id)
             .await
             .expect("find_active");
         assert!(active.is_some());

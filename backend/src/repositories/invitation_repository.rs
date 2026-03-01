@@ -358,7 +358,7 @@ mod tests {
 
         let now = Utc::now();
         let mut tx = pool.begin().await.unwrap();
-        let rows = mark_accepted_tx(&mut *tx, id, acceptor_id, now)
+        let rows = mark_accepted_tx(&mut tx, id, acceptor_id, now)
             .await
             .expect("mark_accepted_tx");
         tx.commit().await.unwrap();
@@ -381,14 +381,14 @@ mod tests {
 
         let now = Utc::now();
         let mut tx = pool.begin().await.unwrap();
-        mark_accepted_tx(&mut *tx, id, acceptor_id, now)
+        mark_accepted_tx(&mut tx, id, acceptor_id, now)
             .await
             .expect("first accept");
         tx.commit().await.unwrap();
 
         // Second accept should return 0 rows
         let mut tx2 = pool.begin().await.unwrap();
-        let rows = mark_accepted_tx(&mut *tx2, id, acceptor_id, now)
+        let rows = mark_accepted_tx(&mut tx2, id, acceptor_id, now)
             .await
             .expect("second accept");
         tx2.commit().await.unwrap();
@@ -404,7 +404,7 @@ mod tests {
 
         // Not a member yet
         let mut tx = pool.begin().await.unwrap();
-        let is_member = is_project_member_tx(&mut *tx, project_id, user_id)
+        let is_member = is_project_member_tx(&mut tx, project_id, user_id)
             .await
             .expect("is_project_member_tx");
         tx.commit().await.unwrap();
@@ -427,7 +427,7 @@ mod tests {
 
         // Now is a member
         let mut tx2 = pool.begin().await.unwrap();
-        let is_member = is_project_member_tx(&mut *tx2, project_id, user_id)
+        let is_member = is_project_member_tx(&mut tx2, project_id, user_id)
             .await
             .expect("is_project_member_tx");
         tx2.commit().await.unwrap();
