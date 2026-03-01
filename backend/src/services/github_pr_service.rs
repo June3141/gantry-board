@@ -1,57 +1,13 @@
-use chrono::{DateTime, Utc};
-use sqlx::{FromRow, SqlitePool};
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::error::{AppError, AppResult};
-use crate::models::github::{GitHubPullRequest, LinkedPr, PrState};
-
-#[derive(FromRow)]
-struct PrRow {
-    id: String,
-    github_link_id: String,
-    task_id: String,
-    pr_number: i64,
-    title: String,
-    url: String,
-    state: String,
-    is_merged: bool,
-    author: Option<String>,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-}
-
-impl TryFrom<PrRow> for GitHubPullRequest {
-    type Error = uuid::Error;
-
-    fn try_from(row: PrRow) -> Result<Self, Self::Error> {
-        let state = match row.state.as_str() {
-            "closed" => PrState::Closed,
-            _ => PrState::Open,
-        };
-        Ok(GitHubPullRequest {
-            id: row.id.parse()?,
-            github_link_id: row.github_link_id.parse()?,
-            task_id: row.task_id.parse()?,
-            pr_number: row.pr_number,
-            title: row.title,
-            url: row.url,
-            state,
-            is_merged: row.is_merged,
-            author: row.author,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        })
-    }
-}
-
-fn row_to_pr(row: PrRow) -> AppResult<GitHubPullRequest> {
-    row.try_into()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
-}
+use crate::error::AppResult;
+use crate::models::github::{GitHubPullRequest, LinkedPr};
+use crate::repositories::github_pr_repository;
 
 /// Upsert a pull request linked to a task.
 /// Inserts a new record or updates an existing one (matched by github_link_id + pr_number + task_id).
-#[tracing::instrument(skip(pool))]
+#[tracing::instrument(skip(pool, pr), fields(pr_number = pr.pr_number))]
 pub async fn upsert_pr(
     pool: &SqlitePool,
     github_link_id: Uuid,
@@ -63,46 +19,19 @@ pub async fn upsert_pr(
         "closed" => "closed",
         _ => "open",
     };
-
-    sqlx::query(
-        r#"
-        INSERT INTO github_pull_requests (id, github_link_id, task_id, pr_number, title, url, state, is_merged, author)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ON CONFLICT (github_link_id, pr_number, task_id) DO UPDATE SET
-            title = excluded.title,
-            url = excluded.url,
-            state = excluded.state,
-            is_merged = excluded.is_merged,
-            author = excluded.author,
-            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-        "#,
+    github_pr_repository::upsert(
+        pool,
+        id,
+        github_link_id,
+        task_id,
+        pr.pr_number as i64,
+        &pr.title,
+        &pr.url,
+        state,
+        pr.is_merged,
+        pr.author.as_deref(),
     )
-    .bind(id.to_string())
-    .bind(github_link_id.to_string())
-    .bind(task_id.to_string())
-    .bind(pr.pr_number as i64)
-    .bind(&pr.title)
-    .bind(&pr.url)
-    .bind(state)
-    .bind(pr.is_merged)
-    .bind(&pr.author)
-    .execute(pool)
-    .await?;
-
-    let row = sqlx::query_as::<_, PrRow>(
-        r#"
-        SELECT id, github_link_id, task_id, pr_number, title, url, state, is_merged, author, created_at, updated_at
-        FROM github_pull_requests
-        WHERE github_link_id = $1 AND pr_number = $2 AND task_id = $3
-        "#,
-    )
-    .bind(github_link_id.to_string())
-    .bind(pr.pr_number as i64)
-    .bind(task_id.to_string())
-    .fetch_one(pool)
-    .await?;
-
-    row_to_pr(row)
+    .await
 }
 
 /// List all pull requests linked to a task.
@@ -111,19 +40,7 @@ pub async fn list_prs_for_task(
     pool: &SqlitePool,
     task_id: Uuid,
 ) -> AppResult<Vec<GitHubPullRequest>> {
-    let rows = sqlx::query_as::<_, PrRow>(
-        r#"
-        SELECT id, github_link_id, task_id, pr_number, title, url, state, is_merged, author, created_at, updated_at
-        FROM github_pull_requests
-        WHERE task_id = $1
-        ORDER BY pr_number
-        "#,
-    )
-    .bind(task_id.to_string())
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter().map(row_to_pr).collect()
+    github_pr_repository::find_all_by_task(pool, task_id).await
 }
 
 /// Find task IDs linked to a specific PR number within a github_link.
@@ -132,25 +49,13 @@ pub async fn find_task_ids_by_pr(
     github_link_id: Uuid,
     pr_number: i64,
 ) -> AppResult<Vec<Uuid>> {
-    let rows: Vec<(String,)> = sqlx::query_as(
-        "SELECT task_id FROM github_pull_requests WHERE github_link_id = $1 AND pr_number = $2",
-    )
-    .bind(github_link_id.to_string())
-    .bind(pr_number)
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|(id,)| {
-            id.parse::<Uuid>()
-                .map_err(|e| AppError::Internal(e.to_string()))
-        })
-        .collect()
+    github_pr_repository::find_task_ids_by_pr(pool, github_link_id, pr_number).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::github::PrState;
     use sqlx::sqlite::SqlitePoolOptions;
 
     async fn setup_db() -> SqlitePool {
