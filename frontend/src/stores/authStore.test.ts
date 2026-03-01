@@ -1,6 +1,6 @@
 import { HttpResponse, http } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { server } from '../test/mocks/server';
+import { server } from '@/test/mocks/server';
 import { useAuthStore } from './authStore';
 
 describe('authStore', () => {

@@ -26,6 +26,19 @@
         "useExhaustiveDependencies": "warn",
         "useHookAtTopLevel": "error"
       },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["../**"],
+                "message": "Use @/ path alias instead of ../ relative imports."
+              }
+            ]
+          }
+        }
+      },
       "a11y": {
         "noAutofocus": "off",
         "useKeyWithClickEvents": "off"
@@ -44,6 +57,9 @@
       "includes": ["src/api/generated/**"],
       "linter": {
         "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          },
           "suspicious": {
             "noConfusingVoidType": "off"
           }

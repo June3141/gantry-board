@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { TaskStatus } from '../api/generated/model';
+import type { TaskStatus } from '@/api/generated/model';
 
 interface UiState {
   isTaskModalOpen: boolean;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TaskStatus } from '../api/generated/model';
+import { TaskStatus } from '@/api/generated/model';
 import { useUiStore } from './uiStore';
 
 describe('uiStore', () => {
