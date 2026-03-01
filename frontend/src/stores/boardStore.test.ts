@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TaskPriority } from '../api/generated/model';
+import { TaskPriority } from '@/api/generated/model';
 import { useBoardStore } from './boardStore';
 
 describe('boardStore filters', () => {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { TaskPriority } from '../api/generated/model';
+import type { TaskPriority } from '@/api/generated/model';
 
 interface BoardState {
   activeTaskId: string | null;

@@ -14,13 +14,13 @@ import {
   useListComments,
 } from '@/api/generated/endpoints/task-comments/task-comments';
 import type { AgentSession, AgentType } from '@/api/generated/model';
+import { AgentOutputViewer } from '@/components/agent/AgentOutputViewer';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentEvents } from '@/hooks/useAgentEvents';
 import { useAgentStore } from '@/stores/agentStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
-import { AgentOutputViewer } from '../agent/AgentOutputViewer';
 import { ActivityFilter, type ActivityFilterValue } from './ActivityFilter';
 import { TimelineAgentSessionItem } from './TimelineAgentSessionItem';
 import { TimelineCommentItem } from './TimelineCommentItem';

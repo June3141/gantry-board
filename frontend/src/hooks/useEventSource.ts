@@ -6,16 +6,16 @@ import type {
   SyncResult,
   Task,
   TaskComment,
-} from '../api/generated/model';
-import { logger } from '../lib/logger';
-import { createRealtimeTransport } from '../lib/realtimeTransport';
+} from '@/api/generated/model';
+import { logger } from '@/lib/logger';
+import { createRealtimeTransport } from '@/lib/realtimeTransport';
 import {
   invalidateComments,
   invalidateMessages,
   invalidatePreviews,
   invalidateSessions,
   invalidateTasks,
-} from '../services/queryInvalidation';
+} from '@/services/queryInvalidation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 const sseLog = logger.child({ module: 'sse' });
