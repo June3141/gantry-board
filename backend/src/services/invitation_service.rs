@@ -1,12 +1,13 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
 use rand::Rng;
 use sha2::{Digest, Sha256};
-use sqlx::{FromRow, SqlitePool};
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::project::MemberRole;
 use crate::models::project_invitation::{InvitationInfo, ProjectInvitation};
+use crate::repositories::invitation_repository;
 
 const TOKEN_BYTES: usize = 32; // 256-bit
 const EXPIRY_HOURS: i64 = 72;
@@ -34,55 +35,6 @@ pub fn hash_token(token: &str) -> String {
     result.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-#[derive(FromRow)]
-struct InvitationRow {
-    id: String,
-    project_id: String,
-    invited_by: String,
-    invited_by_name: String,
-    project_name: String,
-    role: String,
-    expires_at: DateTime<Utc>,
-    accepted_at: Option<DateTime<Utc>>,
-    accepted_by: Option<String>,
-    created_at: DateTime<Utc>,
-}
-
-impl TryFrom<InvitationRow> for ProjectInvitation {
-    type Error = AppError;
-
-    fn try_from(row: InvitationRow) -> Result<Self, Self::Error> {
-        Ok(Self {
-            id: row
-                .id
-                .parse()
-                .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?,
-            project_id: row
-                .project_id
-                .parse()
-                .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?,
-            invited_by: row
-                .invited_by
-                .parse()
-                .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))?,
-            invited_by_name: row.invited_by_name,
-            project_name: row.project_name,
-            role: serde_json::from_value(serde_json::Value::String(row.role))
-                .map_err(|e| AppError::Internal(e.to_string()))?,
-            expires_at: row.expires_at,
-            accepted_at: row.accepted_at,
-            accepted_by: row
-                .accepted_by
-                .map(|s| {
-                    s.parse()
-                        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
-                })
-                .transpose()?,
-            created_at: row.created_at,
-        })
-    }
-}
-
 pub async fn create_invitation(
     pool: &SqlitePool,
     project_id: Uuid,
@@ -100,19 +52,15 @@ pub async fn create_invitation(
         .unwrap_or("member")
         .to_string();
 
-    sqlx::query(
-        r#"
-        INSERT INTO project_invitations (id, project_id, invited_by, token_hash, role, expires_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        "#,
+    invitation_repository::insert(
+        pool,
+        id,
+        project_id,
+        invited_by,
+        &token_hash,
+        &role_str,
+        expires_at,
     )
-    .bind(id.to_string())
-    .bind(project_id.to_string())
-    .bind(invited_by.to_string())
-    .bind(&token_hash)
-    .bind(&role_str)
-    .bind(expires_at)
-    .execute(pool)
     .await?;
 
     let invitation = get_invitation(pool, id).await?;
@@ -123,46 +71,14 @@ pub async fn get_invitation(
     pool: &SqlitePool,
     invitation_id: Uuid,
 ) -> AppResult<ProjectInvitation> {
-    let row = sqlx::query_as::<_, InvitationRow>(
-        r#"
-        SELECT i.id, i.project_id, i.invited_by, u.name AS invited_by_name,
-               p.name AS project_name, i.role, i.expires_at, i.accepted_at,
-               i.accepted_by, i.created_at
-        FROM project_invitations i
-        JOIN users u ON i.invited_by = u.id
-        JOIN projects p ON i.project_id = p.id
-        WHERE i.id = $1
-        "#,
-    )
-    .bind(invitation_id.to_string())
-    .fetch_optional(pool)
-    .await?;
-
-    row.ok_or_else(|| AppError::NotFound(format!("invitation not found: {invitation_id}")))
-        .and_then(ProjectInvitation::try_from)
+    invitation_repository::find_by_id(pool, invitation_id).await
 }
 
 pub async fn list_invitations(
     pool: &SqlitePool,
     project_id: Uuid,
 ) -> AppResult<Vec<ProjectInvitation>> {
-    let rows = sqlx::query_as::<_, InvitationRow>(
-        r#"
-        SELECT i.id, i.project_id, i.invited_by, u.name AS invited_by_name,
-               p.name AS project_name, i.role, i.expires_at, i.accepted_at,
-               i.accepted_by, i.created_at
-        FROM project_invitations i
-        JOIN users u ON i.invited_by = u.id
-        JOIN projects p ON i.project_id = p.id
-        WHERE i.project_id = $1
-        ORDER BY i.created_at DESC
-        "#,
-    )
-    .bind(project_id.to_string())
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter().map(ProjectInvitation::try_from).collect()
+    invitation_repository::find_all_by_project(pool, project_id).await
 }
 
 pub async fn delete_invitation(
@@ -170,12 +86,8 @@ pub async fn delete_invitation(
     project_id: Uuid,
     invitation_id: Uuid,
 ) -> AppResult<()> {
-    let result = sqlx::query("DELETE FROM project_invitations WHERE id = $1 AND project_id = $2")
-        .bind(invitation_id.to_string())
-        .bind(project_id.to_string())
-        .execute(pool)
-        .await?;
-    if result.rows_affected() == 0 {
+    let rows = invitation_repository::delete(pool, invitation_id, project_id).await?;
+    if rows == 0 {
         return Err(AppError::NotFound(format!(
             "invitation not found: {invitation_id}"
         )));
@@ -186,24 +98,9 @@ pub async fn delete_invitation(
 pub async fn get_invitation_by_token(pool: &SqlitePool, token: &str) -> AppResult<InvitationInfo> {
     let token_hash = hash_token(token);
 
-    let row = sqlx::query_as::<_, InvitationRow>(
-        r#"
-        SELECT i.id, i.project_id, i.invited_by, u.name AS invited_by_name,
-               p.name AS project_name, i.role, i.expires_at, i.accepted_at,
-               i.accepted_by, i.created_at
-        FROM project_invitations i
-        JOIN users u ON i.invited_by = u.id
-        JOIN projects p ON i.project_id = p.id
-        WHERE i.token_hash = $1
-        "#,
-    )
-    .bind(&token_hash)
-    .fetch_optional(pool)
-    .await?;
-
-    let invitation = row
-        .ok_or_else(|| AppError::NotFound("invalid invitation token".to_string()))
-        .and_then(ProjectInvitation::try_from)?;
+    let invitation = invitation_repository::find_by_token_hash(pool, &token_hash)
+        .await?
+        .ok_or_else(|| AppError::NotFound("invalid invitation token".to_string()))?;
 
     Ok(InvitationInfo {
         id: invitation.id,
@@ -223,24 +120,9 @@ pub async fn accept_invitation(
 ) -> AppResult<ProjectInvitation> {
     let token_hash = hash_token(token);
 
-    let row = sqlx::query_as::<_, InvitationRow>(
-        r#"
-        SELECT i.id, i.project_id, i.invited_by, u.name AS invited_by_name,
-               p.name AS project_name, i.role, i.expires_at, i.accepted_at,
-               i.accepted_by, i.created_at
-        FROM project_invitations i
-        JOIN users u ON i.invited_by = u.id
-        JOIN projects p ON i.project_id = p.id
-        WHERE i.token_hash = $1
-        "#,
-    )
-    .bind(&token_hash)
-    .fetch_optional(pool)
-    .await?;
-
-    let invitation = row
-        .ok_or_else(|| AppError::NotFound("invalid invitation token".to_string()))
-        .and_then(ProjectInvitation::try_from)?;
+    let invitation = invitation_repository::find_by_token_hash(pool, &token_hash)
+        .await?
+        .ok_or_else(|| AppError::NotFound("invalid invitation token".to_string()))?;
 
     if invitation.accepted_at.is_some() {
         return Err(AppError::Conflict(
@@ -256,16 +138,10 @@ pub async fn accept_invitation(
 
     // Mark invitation as accepted (conditional on accepted_at still being NULL
     // to prevent double-accept race condition)
-    let result = sqlx::query(
-        "UPDATE project_invitations SET accepted_at = $1, accepted_by = $2 WHERE id = $3 AND accepted_at IS NULL",
-    )
-    .bind(Utc::now())
-    .bind(user_id.to_string())
-    .bind(invitation.id.to_string())
-    .execute(&mut *tx)
-    .await?;
+    let rows = invitation_repository::mark_accepted_tx(&mut tx, invitation.id, user_id, Utc::now())
+        .await?;
 
-    if result.rows_affected() == 0 {
+    if rows == 0 {
         return Err(AppError::Conflict(
             "invitation has already been accepted".to_string(),
         ));
@@ -276,15 +152,11 @@ pub async fn accept_invitation(
     use crate::services::member_service;
 
     // Check if already a member
-    let existing = sqlx::query_scalar::<_, i32>(
-        "SELECT COUNT(*) FROM project_members WHERE project_id = $1 AND user_id = $2",
-    )
-    .bind(invitation.project_id.to_string())
-    .bind(user_id.to_string())
-    .fetch_one(&mut *tx)
-    .await?;
+    let is_member =
+        invitation_repository::is_project_member_tx(&mut tx, invitation.project_id, user_id)
+            .await?;
 
-    if existing == 0 {
+    if !is_member {
         member_service::add_member_tx(
             &mut tx,
             invitation.project_id,

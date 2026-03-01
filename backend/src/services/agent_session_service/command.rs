@@ -8,6 +8,7 @@ use crate::error::{AppError, AppResult};
 use crate::models::agent_session::{
     AgentSession, AgentSessionStatus, CreateAgentSessionRequest, UpdateAgentSessionRequest,
 };
+use crate::repositories::agent_session_repository;
 
 use super::query::get_agent_session;
 
@@ -19,19 +20,14 @@ pub async fn create_agent_session(
     let id = Uuid::new_v4();
     let now = Utc::now();
 
-    sqlx::query(
-        r#"
-        INSERT INTO agent_sessions (id, task_id, agent_type, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        "#,
+    agent_session_repository::insert(
+        pool,
+        id,
+        task_id,
+        &req.agent_type,
+        &AgentSessionStatus::Pending,
+        now,
     )
-    .bind(id.to_string())
-    .bind(task_id.to_string())
-    .bind(&req.agent_type)
-    .bind(&AgentSessionStatus::Pending)
-    .bind(now)
-    .bind(now)
-    .execute(pool)
     .await?;
 
     Ok(AgentSession {
@@ -57,19 +53,14 @@ pub async fn create_agent_session_tx(
     let id = Uuid::new_v4();
     let now = Utc::now();
 
-    sqlx::query(
-        r#"
-        INSERT INTO agent_sessions (id, task_id, agent_type, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        "#,
+    agent_session_repository::insert_tx(
+        conn,
+        id,
+        task_id,
+        &req.agent_type,
+        &AgentSessionStatus::Pending,
+        now,
     )
-    .bind(id.to_string())
-    .bind(task_id.to_string())
-    .bind(&req.agent_type)
-    .bind(&AgentSessionStatus::Pending)
-    .bind(now)
-    .bind(now)
-    .execute(&mut *conn)
     .await?;
 
     Ok(AgentSession {
@@ -87,14 +78,8 @@ pub async fn create_agent_session_tx(
 }
 
 pub async fn save_prompt(pool: &SqlitePool, session_id: Uuid, prompt: &str) -> AppResult<()> {
-    let result = sqlx::query(
-        "UPDATE agent_sessions SET prompt = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
-    )
-    .bind(prompt)
-    .bind(session_id.to_string())
-    .execute(pool)
-    .await?;
-    if result.rows_affected() == 0 {
+    let affected = agent_session_repository::update_prompt(pool, session_id, prompt).await?;
+    if affected == 0 {
         return Err(AppError::NotFound(format!(
             "Agent session {session_id} not found"
         )));
@@ -108,14 +93,8 @@ pub async fn save_prompt_tx(
     session_id: Uuid,
     prompt: &str,
 ) -> AppResult<()> {
-    let result = sqlx::query(
-        "UPDATE agent_sessions SET prompt = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
-    )
-    .bind(prompt)
-    .bind(session_id.to_string())
-    .execute(&mut *conn)
-    .await?;
-    if result.rows_affected() == 0 {
+    let affected = agent_session_repository::update_prompt_tx(conn, session_id, prompt).await?;
+    if affected == 0 {
         return Err(AppError::NotFound(format!(
             "Agent session {session_id} not found"
         )));
@@ -129,14 +108,9 @@ pub async fn save_worktree_name(
     session_id: Uuid,
     worktree_name: &str,
 ) -> AppResult<()> {
-    let result = sqlx::query(
-        "UPDATE agent_sessions SET worktree_name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
-    )
-    .bind(worktree_name)
-    .bind(session_id.to_string())
-    .execute(pool)
-    .await?;
-    if result.rows_affected() == 0 {
+    let affected =
+        agent_session_repository::update_worktree_name(pool, session_id, worktree_name).await?;
+    if affected == 0 {
         return Err(AppError::NotFound(format!(
             "Agent session {session_id} not found"
         )));
@@ -146,22 +120,11 @@ pub async fn save_worktree_name(
 
 /// Clear the worktree_name for a session after cleanup.
 pub async fn clear_worktree_name(pool: &SqlitePool, session_id: Uuid) -> AppResult<()> {
-    sqlx::query(
-        "UPDATE agent_sessions SET worktree_name = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
-    )
-    .bind(session_id.to_string())
-    .execute(pool)
-    .await?;
-    Ok(())
+    agent_session_repository::clear_worktree_name(pool, session_id).await
 }
 
-/// Recovered session info for logging and worktree cleanup.
-#[derive(Debug)]
-pub struct RecoveredSession {
-    pub id: String,
-    pub task_id: String,
-    pub worktree_name: Option<String>,
-}
+/// Re-export RecoveredSession from the repository.
+pub use agent_session_repository::RecoveredSession;
 
 /// Recover orphaned agent sessions by marking all active sessions as failed.
 ///
@@ -170,25 +133,7 @@ pub struct RecoveredSession {
 ///
 /// This function is idempotent -- calling it multiple times is safe.
 pub async fn recover_orphaned_sessions(pool: &SqlitePool) -> AppResult<Vec<RecoveredSession>> {
-    let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
-        r#"
-        UPDATE agent_sessions
-        SET status = 'failed', finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-        WHERE status IN ('running', 'paused', 'pending')
-        RETURNING id, task_id, worktree_name
-        "#,
-    )
-    .fetch_all(pool)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|(id, task_id, worktree_name)| RecoveredSession {
-            id,
-            task_id,
-            worktree_name,
-        })
-        .collect())
+    agent_session_repository::recover_orphaned(pool).await
 }
 
 fn validate_status_transition(from: &AgentSessionStatus, to: &AgentSessionStatus) -> AppResult<()> {
@@ -245,20 +190,15 @@ pub async fn update_agent_session(
         _ => None,
     };
 
-    sqlx::query(
-        r#"
-        UPDATE agent_sessions
-        SET status = $1, started_at = $2, finished_at = $3, updated_at = $4
-        WHERE id = $5 AND task_id = $6
-        "#,
+    agent_session_repository::update_status(
+        pool,
+        id,
+        task_id,
+        &req.status,
+        started_at,
+        finished_at,
+        now,
     )
-    .bind(&req.status)
-    .bind(started_at)
-    .bind(finished_at)
-    .bind(now)
-    .bind(id.to_string())
-    .bind(task_id.to_string())
-    .execute(pool)
     .await?;
 
     Ok(AgentSession {

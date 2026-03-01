@@ -1,9 +1,9 @@
-use chrono::Utc;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
-use crate::models::agent_session_output::{AgentSessionOutput, AgentSessionOutputRow};
+use crate::models::agent_session_output::AgentSessionOutput;
+use crate::repositories::agent_session_output_repository;
 
 use super::{MAX_CONTENT_SIZE, MAX_OUTPUTS_PER_SESSION};
 
@@ -25,43 +25,14 @@ pub async fn append_output(
         )));
     }
 
-    let row = sqlx::query_as::<_, AgentSessionOutputRow>(
-        r#"
-        INSERT INTO agent_session_outputs (session_id, sequence, content)
-        VALUES ($1, $2, $3)
-        RETURNING id, session_id, sequence, content, created_at
-        "#,
-    )
-    .bind(session_id.to_string())
-    .bind(sequence)
-    .bind(content)
-    .fetch_one(pool)
-    .await?;
-
-    row.try_into()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    agent_session_output_repository::insert_returning(pool, session_id, sequence, content).await
 }
 
 pub async fn get_outputs(
     pool: &SqlitePool,
     session_id: Uuid,
 ) -> AppResult<Vec<AgentSessionOutput>> {
-    let rows = sqlx::query_as::<_, AgentSessionOutputRow>(
-        r#"
-        SELECT id, session_id, sequence, content, created_at
-        FROM agent_session_outputs
-        WHERE session_id = $1
-        ORDER BY sequence ASC
-        "#,
-    )
-    .bind(session_id.to_string())
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    agent_session_output_repository::find_all_by_session(pool, session_id).await
 }
 
 pub async fn get_outputs_paginated(
@@ -70,25 +41,8 @@ pub async fn get_outputs_paginated(
     limit: i64,
     offset: i64,
 ) -> AppResult<Vec<AgentSessionOutput>> {
-    let rows = sqlx::query_as::<_, AgentSessionOutputRow>(
-        r#"
-        SELECT id, session_id, sequence, content, created_at
-        FROM agent_session_outputs
-        WHERE session_id = $1
-        ORDER BY sequence ASC
-        LIMIT $2 OFFSET $3
-        "#,
-    )
-    .bind(session_id.to_string())
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    agent_session_output_repository::find_by_session_paginated(pool, session_id, limit, offset)
+        .await
 }
 
 pub async fn get_outputs_after(
@@ -96,23 +50,12 @@ pub async fn get_outputs_after(
     session_id: Uuid,
     after_sequence: i64,
 ) -> AppResult<Vec<AgentSessionOutput>> {
-    let rows = sqlx::query_as::<_, AgentSessionOutputRow>(
-        r#"
-        SELECT id, session_id, sequence, content, created_at
-        FROM agent_session_outputs
-        WHERE session_id = $1 AND sequence > $2
-        ORDER BY sequence ASC
-        "#,
+    agent_session_output_repository::find_by_session_after_sequence(
+        pool,
+        session_id,
+        after_sequence,
     )
-    .bind(session_id.to_string())
-    .bind(after_sequence)
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter()
-        .map(|r| r.try_into())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e: uuid::Error| AppError::Internal(e.to_string()))
+    .await
 }
 
 /// Delete agent session outputs older than the given number of days.
@@ -120,21 +63,8 @@ pub async fn get_outputs_after(
 pub async fn cleanup_old_outputs(pool: &SqlitePool, retention_days: u64) -> AppResult<u64> {
     let retention_days_i64 = i64::try_from(retention_days)
         .map_err(|_| AppError::Internal("retention_days too large".to_string()))?;
-    let cutoff = Utc::now() - chrono::Duration::days(retention_days_i64);
-    let result = sqlx::query(
-        r#"
-        DELETE FROM agent_session_outputs
-        WHERE created_at <= $1
-          AND session_id IN (
-            SELECT id FROM agent_sessions
-            WHERE status IN ('completed', 'failed', 'cancelled')
-          )
-        "#,
-    )
-    .bind(cutoff.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string())
-    .execute(pool)
-    .await?;
-    Ok(result.rows_affected())
+    let cutoff = chrono::Utc::now() - chrono::Duration::days(retention_days_i64);
+    agent_session_output_repository::delete_old_for_terminal_sessions(pool, cutoff).await
 }
 
 #[cfg(test)]
