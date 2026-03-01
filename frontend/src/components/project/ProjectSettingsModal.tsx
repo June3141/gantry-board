@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import { useUiStore } from '@/stores/uiStore';
-import { GitHubLinkSettings } from '../github/GitHubLinkSettings';
+import { GitHubLinkSettings } from '@/components/github/GitHubLinkSettings';
 
 export function ProjectSettingsModal({
   projectId,

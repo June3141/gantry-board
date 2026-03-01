@@ -4,10 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from './App';
-import * as authApi from './api/generated/endpoints/auth/auth';
-import * as projectsApi from './api/generated/endpoints/projects/projects';
-import { useAuthStore } from './stores/authStore';
-import { useUiStore } from './stores/uiStore';
+import * as authApi from '@/api/generated/endpoints/auth/auth';
+import * as projectsApi from '@/api/generated/endpoints/projects/projects';
+import { useAuthStore } from '@/stores/authStore';
+import { useUiStore } from '@/stores/uiStore';
 
 // Mock EventSource for SSE
 class MockEventSource {
@@ -18,7 +18,7 @@ class MockEventSource {
 }
 vi.stubGlobal('EventSource', MockEventSource);
 
-vi.mock('./api/generated/endpoints/projects/projects', () => ({
+vi.mock('@/api/generated/endpoints/projects/projects', () => ({
   useListProjects: vi.fn(),
   useCreateProject: vi.fn(),
   useGetProject: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('./api/generated/endpoints/projects/projects', () => ({
   getGetProjectQueryKey: vi.fn(() => ['/api/projects']),
 }));
 
-vi.mock('./api/generated/endpoints/auth/auth', () => ({
+vi.mock('@/api/generated/endpoints/auth/auth', () => ({
   useLogin: vi.fn(),
   useLogout: vi.fn(),
   useRegister: vi.fn(),

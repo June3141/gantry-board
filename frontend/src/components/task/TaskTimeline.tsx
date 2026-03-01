@@ -20,7 +20,7 @@ import { useAgentEvents } from '@/hooks/useAgentEvents';
 import { useAgentStore } from '@/stores/agentStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
-import { AgentOutputViewer } from '../agent/AgentOutputViewer';
+import { AgentOutputViewer } from '@/components/agent/AgentOutputViewer';
 import { ActivityFilter, type ActivityFilterValue } from './ActivityFilter';
 import { TimelineAgentSessionItem } from './TimelineAgentSessionItem';
 import { TimelineCommentItem } from './TimelineCommentItem';

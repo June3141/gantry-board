@@ -7,8 +7,8 @@ import type { TaskPriority, TaskStatus } from '@/api/generated/model';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { invalidateTasks } from '@/services/queryInvalidation';
 import { useUiStore } from '@/stores/uiStore';
-import { PullRequestList } from '../github/PullRequestList';
-import { WorktreePanel } from '../preview/WorktreePanel';
+import { PullRequestList } from '@/components/github/PullRequestList';
+import { WorktreePanel } from '@/components/preview/WorktreePanel';
 import { TaskTimeline } from './TaskTimeline';
 
 export function TaskDetailModal() {

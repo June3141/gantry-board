@@ -15,8 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { invalidateTasks } from '@/services/queryInvalidation';
-import { PullRequestList } from '../github/PullRequestList';
-import { WorktreePanel } from '../preview/WorktreePanel';
+import { PullRequestList } from '@/components/github/PullRequestList';
+import { WorktreePanel } from '@/components/preview/WorktreePanel';
 import { TaskTimeline } from './TaskTimeline';
 
 export function TaskDetailPage() {
